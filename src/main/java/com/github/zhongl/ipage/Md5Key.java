@@ -20,7 +20,7 @@ public final class Md5Key {
         return new Md5Key(bytes);
     }
 
-    private Md5Key(byte[] md5Bytes) {
+    public Md5Key(byte[] md5Bytes) {
         this.md5Bytes = md5Bytes;
     }
 
