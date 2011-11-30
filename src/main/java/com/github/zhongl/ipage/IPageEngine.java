@@ -16,7 +16,7 @@ import static com.google.common.base.Preconditions.checkState;
 public class IPageEngine extends Engine {
 
     static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
-    static final String IPAGE_DIR = "com/github/zhongl/ipage";
+    static final String IPAGE_DIR = "ipage";
     static final String INDEX_DIR = "index";
 
     private final File dir;
