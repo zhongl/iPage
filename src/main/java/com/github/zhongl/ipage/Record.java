@@ -3,6 +3,7 @@ package com.github.zhongl.ipage;
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 /**
  * {@link Record} is wrapper of bytes, a minimized store unit.
@@ -35,7 +36,7 @@ public class Record {
 
     public int writeTo(ByteBuffer buffer) throws IOException {
         this.buffer.position(0);
-        buffer.putInt(length()).put(this.buffer);
+        buffer.putInt(length()).put(this.buffer.duplicate());
         return LENGTH_BYTES + length();
     }
 
@@ -60,7 +61,7 @@ public class Record {
     public String toString() {
         final StringBuilder sb = new StringBuilder();
         sb.append("Record");
-        sb.append("{buffer=").append(buffer);
+        sb.append("{bytes=").append(Arrays.toString(toBytes()));
         sb.append('}');
         return sb.toString();
     }
@@ -68,7 +69,7 @@ public class Record {
     byte[] toBytes() {
         if (buffer.isDirect()) {
             byte[] bytes = new byte[buffer.limit()];
-            buffer.get(bytes);
+            buffer.duplicate().get(bytes);
             return bytes;
         } else {
             return buffer.array();
