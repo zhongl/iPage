@@ -29,7 +29,7 @@ public class IPage implements Closeable, Iterable<Record> {
         this.baseDir = baseDir;
         this.chunkCapcity = chunkCapcity;
         this.chunks = chunks;
-        chunkOffsetRangeList = new ChunkOfferRangeList();
+        chunkOffsetRangeList = new ChunkOffsetRangeList();
     }
 
     public long append(Record record) throws IOException {
@@ -76,7 +76,9 @@ public class IPage implements Closeable, Iterable<Record> {
 
     @Override
     public void close() throws IOException {
-        lastRecentlyUsedChunk().close();
+        for (Chunk chunk : chunks) {
+            chunk.close();
+        }
     }
 
     @Override
@@ -152,7 +154,7 @@ public class IPage implements Closeable, Iterable<Record> {
 
     }
 
-    private class ChunkOfferRangeList extends AbstractList<Range> {
+    private class ChunkOffsetRangeList extends AbstractList<Range> {
         @Override
         public Range get(int index) {
             Chunk chunk = IPage.this.chunks.get(index);
