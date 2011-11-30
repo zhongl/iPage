@@ -66,7 +66,7 @@ public class Record {
         return sb.toString();
     }
 
-    byte[] toBytes() {
+    public byte[] toBytes() {
         if (buffer.isDirect()) {
             byte[] bytes = new byte[buffer.limit()];
             buffer.duplicate().get(bytes);
