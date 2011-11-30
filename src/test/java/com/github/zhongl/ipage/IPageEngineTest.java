@@ -4,6 +4,7 @@ import com.github.zhongl.util.DirBase;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -99,6 +100,12 @@ public class IPageEngineTest extends DirBase {
         FileContentAsserter.of(iPageFile).assertIs(concatToChunkContentWith(bytes1, bytes2));
 
         // TODO flushByCount
+    }
+
+    @Test
+    @Ignore("TODO")
+    public void put() throws Exception {
+        // TODO put
     }
 
     private byte[] md5KeyBytesOf(Record record) {

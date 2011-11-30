@@ -63,6 +63,16 @@ public class IPageEngine extends Engine {
         return callback.get();
     }
 
+    public boolean put(Md5Key key, Record record, FutureCallback<Record> callback) {
+        return submit(new Put(key, record, callback));
+    }
+
+    public Record put(Md5Key key, Record record) throws IOException, InterruptedException {
+        Sync<Record> callback = new Sync<Record>();
+        put(key, record, callback);
+        return callback.get();
+    }
+
     public boolean get(Md5Key key, FutureCallback<Record> callback) {
         return submit(new Get(key, callback));
     }
@@ -111,6 +121,15 @@ public class IPageEngine extends Engine {
         }
     }
 
+    private void tryFlushByCount() {
+        if (++count == flushCount) {
+            // TODO log count flush
+            flush();
+        }
+    }
+
+    private void resetCount() {count = 0;}
+
     private class Append extends Task<Md5Key> {
 
         private final Record record;
@@ -129,14 +148,25 @@ public class IPageEngine extends Engine {
         }
     }
 
-    private void tryFlushByCount() {
-        if (++count == flushCount) {
-            // TODO log count flush
-            flush();
+    private class Put extends Task<Record> {
+
+        private final Md5Key key;
+        private final Record record;
+
+        public Put(Md5Key key, Record record, FutureCallback<Record> callback) {
+            super(callback);
+            this.key = key;
+            this.record = record;
+        }
+
+        @Override
+        protected Record execute() throws IOException {
+            Long offset = index.put(key, ipage.append(record));
+            if (offset == null) return null;
+            tryFlushByCount();
+            return ipage.get(offset);
         }
     }
-
-    private void resetCount() {count = 0;}
 
     private class Get extends Task<Record> {
 
