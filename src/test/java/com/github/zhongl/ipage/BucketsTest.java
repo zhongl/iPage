@@ -1,5 +1,6 @@
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.util.FileBase;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import org.junit.Ignore;

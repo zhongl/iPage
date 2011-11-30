@@ -1,5 +1,6 @@
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.util.DirBase;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import org.junit.After;

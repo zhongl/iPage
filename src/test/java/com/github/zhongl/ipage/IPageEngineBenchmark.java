@@ -1,6 +1,7 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.benchmarker.*;
+import com.github.zhongl.util.DirBase;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import org.junit.After;
