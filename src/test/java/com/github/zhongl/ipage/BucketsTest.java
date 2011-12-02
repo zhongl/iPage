@@ -111,6 +111,15 @@ public class BucketsTest extends FileBase {
     }
 
     @Test
+    public void replace() throws Exception {
+        file = testFile("replace");
+        buckets = new Buckets(file, 1);
+        Md5Key key = Md5Key.valueOf("key".getBytes());
+        assertThat(buckets.put(key, 7L), is(nullValue()));
+        assertThat(buckets.put(key, 4L), is(7L));
+    }
+
+    @Test
     @Ignore("TODO")
     public void cleanup() throws Exception {
         // TODO cleanup

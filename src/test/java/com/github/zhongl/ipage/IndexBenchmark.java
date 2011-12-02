@@ -23,7 +23,7 @@ public class IndexBenchmark extends DirBase {
     public void benchmark() throws Exception {
         dir = testDir("benchmark");
 
-        index = Index.baseOn(dir).initBucketSize(100).build();
+        index = Index.baseOn(dir).initialBucketSize(100).build();
 
         CallableFactory addFactory = new AddFactory(index);
         CallableFactory replaceFactory = new ReplaceFactory(index);

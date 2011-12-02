@@ -46,10 +46,6 @@ public abstract class Engine {
         core.join(timeout);
     }
 
-    public boolean isRunning() {
-        return core.isAlive();
-    }
-
     protected final boolean submit(Task<?> task) {
         return tasks.offer(task);
     }

@@ -10,6 +10,7 @@ import java.util.concurrent.Callable;
 import static com.github.zhongl.ipage.RecordTest.item;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
@@ -25,22 +26,28 @@ public class KVEngineTest extends DirBase {
     }
 
     @Test
-    public void appendAndget() throws Exception {
-        dir = testDir("appendAndget");
+    public void putAndGetAndRemove() throws Exception {
+        dir = testDir("putAndGetAndRemove");
         engine = KVEngine.baseOn(dir).build();
         engine.startup();
 
         Record record = item("record");
         Md5Key key = Md5Key.valueOf(record);
 
-        AssertFutureCallback<Record> md5KeyCallback = new AssertFutureCallback<Record>();
-        AssertFutureCallback<Record> itemCallback = new AssertFutureCallback<Record>();
+        assertThat(engine.put(Md5Key.valueOf(record), record), is(nullValue()));
 
-        engine.put(Md5Key.valueOf(record), record, md5KeyCallback);
-        md5KeyCallback.assertResult(is(nullValue(Record.class)));
+        assertThat(engine.get(key), is(record));
+        assertThat(engine.remove(key), is(record));
+    }
 
-        engine.get(key, itemCallback);
-        itemCallback.assertResult(is(record));
+    @Test
+    public void getAndRemoveNonExistKey() throws Exception {
+        dir = testDir("getAndRemoveNonExistKey");
+        engine = KVEngine.baseOn(dir).build();
+        engine.startup();
+        Md5Key key = Md5Key.valueOf("non-exist".getBytes());
+        assertThat(engine.get(key), is(nullValue()));
+        assertThat(engine.remove(key), is(nullValue()));
     }
 
     @Test

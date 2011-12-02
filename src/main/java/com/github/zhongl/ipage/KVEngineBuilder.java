@@ -98,7 +98,7 @@ class KVEngineBuilder {
 
     private Index newIndex() throws IOException {
         initBucketSize = (initBucketSize == UNSET) ? Buckets.DEFAULT_SIZE : initBucketSize;
-        return Index.baseOn(new File(dir, INDEX_DIR)).initBucketSize(initBucketSize).build();
+        return Index.baseOn(new File(dir, INDEX_DIR)).initialBucketSize(initBucketSize).build();
     }
 
     private IPage newIPage() throws IOException {

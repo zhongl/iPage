@@ -9,8 +9,4 @@ public class OverflowException extends IllegalStateException {
     public OverflowException() {
         super();
     }
-
-    public OverflowException(String msg) {
-        super(msg);
-    }
 }
