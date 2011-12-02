@@ -12,9 +12,9 @@ import java.util.Collection;
 import java.util.concurrent.Callable;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class IPageEngineBenchmark extends DirBase {
+public class KVEngineBenchmark extends DirBase {
 
-    private IPageEngine engine;
+    private KVEngine engine;
 
     @After
     public void tearDown() throws Exception {
@@ -27,7 +27,7 @@ public class IPageEngineBenchmark extends DirBase {
     public void setUp() throws Exception {
         super.setUp();
         dir = testDir("benchmark");
-        engine = IPageEngine.baseOn(dir)
+        engine = KVEngine.baseOn(dir)
                 .initBucketSize(100)
                 .flushByCount(20000)
                 .flushByIntervalMilliseconds(5000L)
@@ -39,7 +39,7 @@ public class IPageEngineBenchmark extends DirBase {
     @Test
     public void benchmark() throws Exception {
 
-        CallableFactory addFactory = new AddFactory(engine);
+        CallableFactory addFactory = new PutFactory(engine);
         CallableFactory getFactory = new GetFactory(engine);
         CallableFactory removeFactory = new RemoveFactory(engine);
 
@@ -57,19 +57,19 @@ public class IPageEngineBenchmark extends DirBase {
     }
 
     abstract static class OperationFactory implements CallableFactory {
-        protected final IPageEngine engine;
+        protected final KVEngine engine;
         private int count;
 
-        public OperationFactory(IPageEngine engine) {this.engine = engine;}
+        public OperationFactory(KVEngine engine) {this.engine = engine;}
 
         protected Record genRecord() {
             return new Record(Bytes.concat(Ints.toByteArray(count++), new byte[1020]));
         }
     }
 
-    private static class AddFactory extends OperationFactory {
+    private static class PutFactory extends OperationFactory {
 
-        public AddFactory(IPageEngine engine) {
+        public PutFactory(KVEngine engine) {
             super(engine);
         }
 
@@ -78,7 +78,8 @@ public class IPageEngineBenchmark extends DirBase {
             return new Callable<Object>() {
                 @Override
                 public Object call() throws Exception {
-                    return engine.append(genRecord());
+                    Record record = genRecord();
+                    return engine.put(Md5Key.valueOf(record), record);
                 }
             };
         }
@@ -87,7 +88,7 @@ public class IPageEngineBenchmark extends DirBase {
 
     private static class GetFactory extends OperationFactory {
 
-        public GetFactory(IPageEngine engine) {
+        public GetFactory(KVEngine engine) {
             super(engine);
         }
 
@@ -105,7 +106,7 @@ public class IPageEngineBenchmark extends DirBase {
 
     private static class RemoveFactory extends OperationFactory {
 
-        public RemoveFactory(IPageEngine engine) {
+        public RemoveFactory(KVEngine engine) {
             super(engine);
         }
 

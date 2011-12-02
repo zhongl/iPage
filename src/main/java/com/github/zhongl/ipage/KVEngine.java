@@ -13,7 +13,7 @@ import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @ThreadSafe
-public class IPageEngine extends Engine {
+public class KVEngine extends Engine {
 
     static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
     static final String IPAGE_DIR = "ipage";
@@ -26,7 +26,7 @@ public class IPageEngine extends Engine {
 
     private volatile int count = 0;
 
-    public IPageEngine(
+    public KVEngine(
             final File dir,
             int chunkCapacity,
             int initBucketSize,
@@ -53,16 +53,6 @@ public class IPageEngine extends Engine {
 
     // TODO @Count monitor
     // TODO @Elapse monitor
-    public boolean append(Record record, FutureCallback<Md5Key> callback) {
-        return submit(new Append(record, callback));
-    }
-
-    public Md5Key append(Record record) throws IOException, InterruptedException {
-        Sync<Md5Key> callback = new Sync<Md5Key>();
-        append(record, callback);
-        return callback.get();
-    }
-
     public boolean put(Md5Key key, Record record, FutureCallback<Record> callback) {
         return submit(new Put(key, record, callback));
     }
@@ -96,7 +86,7 @@ public class IPageEngine extends Engine {
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
-        sb.append("IPageEngine");
+        sb.append("KVEngine");
         sb.append("{dir=").append(dir);
         sb.append(", com.github.zhongl.ipage=").append(ipage);
         sb.append(", index=").append(index);
@@ -130,24 +120,6 @@ public class IPageEngine extends Engine {
 
     private void resetCount() {count = 0;}
 
-    private class Append extends Task<Md5Key> {
-
-        private final Record record;
-
-        public Append(Record record, FutureCallback<Md5Key> callback) {
-            super(callback);
-            this.record = record;
-        }
-
-        @Override
-        protected Md5Key execute() throws IOException {
-            Md5Key key = Md5Key.valueOf(record);
-            index.put(key, ipage.append(record));
-            tryFlushByCount();
-            return key;
-        }
-    }
-
     private class Put extends Task<Record> {
 
         private final Md5Key key;
@@ -163,6 +135,7 @@ public class IPageEngine extends Engine {
         protected Record execute() throws IOException {
             Long offset = index.put(key, ipage.append(record));
             if (offset == null) return null;
+            // TODO remove the old record
             tryFlushByCount();
             return ipage.get(offset);
         }
@@ -255,7 +228,7 @@ public class IPageEngine extends Engine {
             return this;
         }
 
-        public IPageEngine build() throws IOException {
+        public KVEngine build() throws IOException {
             chunkCapacity = (chunkCapacity == UNSET) ? Chunk.DEFAULT_CAPACITY : chunkCapacity;
             initBucketSize = (initBucketSize == UNSET) ? Buckets.DEFAULT_SIZE : initBucketSize;
             backlog = (backlog == UNSET) ? DEFAULT_BACKLOG : backlog;
@@ -263,7 +236,7 @@ public class IPageEngine extends Engine {
             flushIntervalMilliseconds =
                     (flushIntervalMilliseconds == UNSET) ?
                             DEFAULT_FLUSH_INTERVAL_MILLISECONDS : flushIntervalMilliseconds;
-            return new IPageEngine(dir, chunkCapacity, initBucketSize, backlog, flushIntervalMilliseconds, flushCount);
+            return new KVEngine(dir, chunkCapacity, initBucketSize, backlog, flushIntervalMilliseconds, flushCount);
         }
     }
 }

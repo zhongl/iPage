@@ -4,7 +4,6 @@ import com.github.zhongl.util.DirBase;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -13,10 +12,11 @@ import java.nio.ByteBuffer;
 import static com.github.zhongl.ipage.ChunkContentUtils.concatToChunkContentWith;
 import static com.github.zhongl.ipage.RecordTest.item;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class IPageEngineTest extends DirBase {
-    private IPageEngine engine;
+public class KVEngineTest extends DirBase {
+    private KVEngine engine;
 
     @After
     public void tearDown() throws Exception {
@@ -29,17 +29,17 @@ public class IPageEngineTest extends DirBase {
     @Test
     public void appendAndget() throws Exception {
         dir = testDir("appendAndget");
-        engine = IPageEngine.baseOn(dir).build();
+        engine = KVEngine.baseOn(dir).build();
         engine.startup();
 
         Record record = item("record");
         Md5Key key = Md5Key.valueOf(record);
 
-        AssertFutureCallback<Md5Key> md5KeyCallback = new AssertFutureCallback<Md5Key>();
+        AssertFutureCallback<Record> md5KeyCallback = new AssertFutureCallback<Record>();
         AssertFutureCallback<Record> itemCallback = new AssertFutureCallback<Record>();
 
-        engine.append(record, md5KeyCallback);
-        md5KeyCallback.assertResult(is(key));
+        engine.put(Md5Key.valueOf(record), record, md5KeyCallback);
+        md5KeyCallback.assertResult(is(nullValue(Record.class)));
 
         engine.get(key, itemCallback);
         itemCallback.assertResult(is(record));
@@ -48,10 +48,10 @@ public class IPageEngineTest extends DirBase {
     @Test
     public void flushByInterval() throws Exception {
         dir = testDir("flushByInterval");
-        File indexFile = new File(new File(dir, IPageEngine.INDEX_DIR), "0");
-        File iPageFile = new File(new File(dir, IPageEngine.IPAGE_DIR), "0");
+        File indexFile = new File(new File(dir, KVEngine.INDEX_DIR), "0");
+        File iPageFile = new File(new File(dir, KVEngine.IPAGE_DIR), "0");
 
-        engine = IPageEngine.baseOn(dir)
+        engine = KVEngine.baseOn(dir)
                 .initBucketSize(1)
                 .flushByCount(1000)
                 .flushByIntervalMilliseconds(100L)
@@ -61,7 +61,7 @@ public class IPageEngineTest extends DirBase {
 
         byte[] bytes = "record".getBytes();
         Record record = new Record(bytes);
-        engine.append(record);
+        engine.put(Md5Key.valueOf(record), record);
 
         Thread.sleep(100L);
 
@@ -73,10 +73,10 @@ public class IPageEngineTest extends DirBase {
     @Test
     public void flushByCount() throws Exception {
         dir = testDir("flushByInterval");
-        File indexFile = new File(new File(dir, IPageEngine.INDEX_DIR), "0");
-        File iPageFile = new File(new File(dir, IPageEngine.IPAGE_DIR), "0");
+        File indexFile = new File(new File(dir, KVEngine.INDEX_DIR), "0");
+        File iPageFile = new File(new File(dir, KVEngine.IPAGE_DIR), "0");
 
-        engine = IPageEngine.baseOn(dir)
+        engine = KVEngine.baseOn(dir)
                 .initBucketSize(1)
                 .flushByCount(2)
                 .flushByIntervalMilliseconds(1000L)
@@ -89,8 +89,8 @@ public class IPageEngineTest extends DirBase {
         Record record1 = new Record(bytes1);
         Record record2 = new Record(bytes2);
 
-        engine.append(record1);
-        engine.append(record2);
+        engine.put(Md5Key.valueOf(record1), record1);
+        engine.put(Md5Key.valueOf(record2), record2);
 
         byte[] indexContent = Bytes.concat(
                 new byte[] {1}, md5KeyBytesOf(record1), Longs.toByteArray(0L),
@@ -100,12 +100,6 @@ public class IPageEngineTest extends DirBase {
         FileContentAsserter.of(iPageFile).assertIs(concatToChunkContentWith(bytes1, bytes2));
 
         // TODO flushByCount
-    }
-
-    @Test
-    @Ignore("TODO")
-    public void put() throws Exception {
-        // TODO put
     }
 
     private byte[] md5KeyBytesOf(Record record) {

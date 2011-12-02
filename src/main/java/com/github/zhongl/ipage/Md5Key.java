@@ -7,6 +7,8 @@ import javax.annotation.concurrent.ThreadSafe;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @ThreadSafe
 public final class Md5Key {
@@ -20,16 +22,25 @@ public final class Md5Key {
         return new Md5Key(bytes);
     }
 
+    public static Md5Key valueOf(Record record) {
+        byte[] bytes = DigestUtils.md5(record.toBytes());
+        return new Md5Key(bytes);
+    }
+
+    public static Md5Key valueOf(byte[] bytes) {
+        return new Md5Key(DigestUtils.md5(bytes));
+    }
+
+
     public Md5Key(byte[] md5Bytes) {
+        checkArgument(md5Bytes.length == LENGTH, "Invalid md5 bytes length %s", md5Bytes.length);
         this.md5Bytes = md5Bytes;
     }
 
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
-        sb.append("Md5Key");
-        sb.append("{md5Bytes=").append(Hex.encodeHexString(md5Bytes));
-        sb.append('}');
+        sb.append("Md5Key").append("{md5Bytes=").append(Hex.encodeHexString(md5Bytes)).append('}');
         return sb.toString();
     }
 
@@ -48,15 +59,6 @@ public final class Md5Key {
     @Override
     public int hashCode() {
         return Arrays.hashCode(md5Bytes);
-    }
-
-    public static Md5Key valueOf(Record record) {
-        byte[] bytes = DigestUtils.md5(record.toBytes());
-        return new Md5Key(bytes);
-    }
-
-    public static Md5Key valueOf(byte[] bytes) {
-        return new Md5Key(DigestUtils.md5(bytes));
     }
 
     public void writeTo(ByteBuffer buffer) {
