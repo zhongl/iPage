@@ -1,6 +1,5 @@
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.util.Timer;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.FutureCallback;
 
@@ -23,13 +22,11 @@ public abstract class Engine {
     private final long timeout;
     private final TimeUnit timeUnit;
     private final Core core;
-    private final Timer timer;
 
-    public Engine(long tickPeriod, TimeUnit unit, int backlog) {
-        this.timeout = tickPeriod / 2;
+    public Engine(long timeout, TimeUnit unit, int backlog) {
+        this.timeout = timeout;
         this.timeUnit = unit;
         this.tasks = new LinkedBlockingQueue<Runnable>(backlog);
-        timer = new Timer(unit.toNanos(tickPeriod));
         core = new Core(getClass().getSimpleName());
     }
 
@@ -57,10 +54,6 @@ public abstract class Engine {
         return tasks.offer(task);
     }
 
-    protected final void resetTick() {
-        timer.reset();
-    }
-
     private class Core extends Thread {
 
         public Core(String name) {
@@ -73,7 +66,7 @@ public abstract class Engine {
             while (true) {
                 try {
                     Runnable task = tasks.poll(timeout, timeUnit);
-                    if (timer.timeout()) onTick(); // try tick
+                    hearbeat();
                     if (task == null) continue;
                     if (task instanceof Shutdown) break;
                     task.run();
@@ -87,7 +80,8 @@ public abstract class Engine {
 
     }
 
-    protected void onTick() {}
+    /** Overwrite this method for some time-sensitive stuff. */
+    protected void hearbeat() {}
 
     private static class Shutdown implements Runnable {
         @Override
@@ -95,7 +89,7 @@ public abstract class Engine {
     }
 
     /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-    protected abstract static class Task<T> implements Runnable {
+    public abstract static class Task<T> implements Runnable {
         protected final FutureCallback<T> callback;
 
         public Task(FutureCallback<T> callback) {this.callback = callback;}

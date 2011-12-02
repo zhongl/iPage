@@ -28,9 +28,9 @@ public class KVEngineBenchmark extends DirBase {
         super.setUp();
         dir = testDir("benchmark");
         engine = KVEngine.baseOn(dir)
-                .initBucketSize(100)
+                .initialBucketSize(100)
                 .flushByCount(20000)
-                .flushByIntervalMilliseconds(5000L)
+                .flushByElapseMilliseconds(5000L)
                 .chunkCapacity(1024 * 1024 * 32)
                 .build();
         engine.startup();

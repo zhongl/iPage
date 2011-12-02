@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
@@ -25,6 +26,12 @@ class FileContentAsserter {
         byte[] actual = new byte[expect.length];
         System.arraycopy(content, 0, actual, 0, actual.length);
         assertThat(actual, is(expect));
+    }
+
+    public void assertIsNot(byte[] expect) {
+        byte[] actual = new byte[expect.length];
+        System.arraycopy(content, 0, actual, 0, actual.length);
+        assertThat(actual, is(not(expect)));
     }
 
 }

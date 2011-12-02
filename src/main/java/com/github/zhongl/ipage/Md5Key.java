@@ -11,7 +11,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @ThreadSafe
-public final class Md5Key {
+public class Md5Key {
 
     public static final int LENGTH = 16;
     private final byte[] md5Bytes;

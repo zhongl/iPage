@@ -20,7 +20,7 @@ import static com.google.common.base.Preconditions.checkState;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @NotThreadSafe
-public final class Index implements Closeable {
+public class Index implements Closeable {
 
     private final File baseDir;
     private final int initBucketSize;
@@ -86,7 +86,7 @@ public final class Index implements Closeable {
         final StringBuilder sb = new StringBuilder();
         sb.append("Index");
         sb.append("{baseDir=").append(baseDir);
-        sb.append(", initBucketSize=").append(initBucketSize);
+        sb.append(", initialBucketSize=").append(initBucketSize);
         sb.append(", bucketsList=").append(bucketsList);
         sb.append('}');
         return sb.toString();
