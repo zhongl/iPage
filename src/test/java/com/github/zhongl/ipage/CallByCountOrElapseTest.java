@@ -1,6 +1,5 @@
-package com.github.zhongl.util;
+package com.github.zhongl.ipage;
 
-import com.github.zhongl.ipage.CallByCountOrElapse;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -35,7 +34,6 @@ public class CallByCountOrElapseTest {
         Thread.sleep(elapseMilliseconds);
         assertThat(callByCountOrElapse.tryCallByElapse(), is(true)); // run and reset
         assertThat(callByCountOrElapse.tryCallByCount(), is(false));
-
     }
 
     @Test

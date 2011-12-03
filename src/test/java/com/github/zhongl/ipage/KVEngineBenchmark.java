@@ -29,9 +29,10 @@ public class KVEngineBenchmark extends DirBase {
         dir = testDir("benchmark");
         engine = KVEngine.baseOn(dir)
                 .initialBucketSize(100)
-                .flushByCount(20000)
-                .flushByElapseMilliseconds(5000L)
+                .flushByCount(5)
+                .flushByElapseMilliseconds(10L)
                 .chunkCapacity(1024 * 1024 * 32)
+                .groupCommit(true)
                 .build();
         engine.startup();
     }
@@ -44,13 +45,13 @@ public class KVEngineBenchmark extends DirBase {
         CallableFactory removeFactory = new RemoveFactory(engine);
 
         CallableFactory concatCallableFactory = new ConcatCallableFactory(
-                new FixInstanceSizeFactory(10000, addFactory),
-                new FixInstanceSizeFactory(10000, getFactory),
-                new FixInstanceSizeFactory(10000, removeFactory)
+                new FixInstanceSizeFactory(1000, addFactory),
+                new FixInstanceSizeFactory(1000, getFactory),
+                new FixInstanceSizeFactory(1000, removeFactory)
         );
 
         Collection<Statistics> statisticses =
-                new Benchmarker(concatCallableFactory, 8, 30000).benchmark(); // setup concurrent 1, because engine is not thread-safe
+                new Benchmarker(concatCallableFactory, 8, 3000).benchmark(); // setup concurrent 1, because engine is not thread-safe
         for (Statistics statisticse : statisticses) {
             System.out.println(statisticse);
         }
