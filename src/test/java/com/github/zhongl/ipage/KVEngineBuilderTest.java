@@ -11,7 +11,7 @@ public class KVEngineBuilderTest extends DirBase {
     @Test
     public void fullConfig() throws Exception {
         dir = testDir("fullConfig");
-        new KVEngineBuilder(new File("."))
+        new KVEngineBuilder(dir)
                 .backlog(10)
                 .initialBucketSize(256)
                 .chunkCapacity(4096)
