@@ -60,7 +60,7 @@ public class KVEngineTest extends DirBase {
         long elapseMilliseconds = 100L;
         Callable<?> flusher = mock(Callable.class);
 
-        engine = new KVEngine(10L, 10, ipage, index, new CallByCountOrElapse(count, elapseMilliseconds, flusher));
+        engine = new KVEngine(10L, 10, Group.NULL, ipage, index, new CallByCountOrElapse(count, elapseMilliseconds, flusher));
         engine.startup();
 
         engine.put(mock(Md5Key.class), mock(Record.class));
@@ -81,7 +81,7 @@ public class KVEngineTest extends DirBase {
         long elapseMilliseconds = 100L;
         Callable<?> flusher = mock(Callable.class);
 
-        engine = new KVEngine(10L, 10, ipage, index, new CallByCountOrElapse(count, elapseMilliseconds, flusher));
+        engine = new KVEngine(10L, 10, Group.NULL, ipage, index, new CallByCountOrElapse(count, elapseMilliseconds, flusher));
         engine.startup();
 
         engine.put(mock(Md5Key.class), mock(Record.class));
@@ -90,6 +90,5 @@ public class KVEngineTest extends DirBase {
 
         verify(flusher, times(1)).call();
     }
-
 
 }

@@ -26,6 +26,7 @@ class KVEngineBuilder {
     private long flushElapseMilliseconds = UNSET;
     private int backlog = UNSET;
     private int flushCount = UNSET;
+    private boolean groupCommit = false;
 
     public KVEngineBuilder(File dir) {
         this.dir = dir;
@@ -69,6 +70,11 @@ class KVEngineBuilder {
         return this;
     }
 
+    public KVEngineBuilder groupCommit(boolean b) {
+        groupCommit = b;
+        return this;
+    }
+
     public KVEngine build() throws IOException {
         final IPage ipage = newIPage();
         final Index index = newIndex();
@@ -83,9 +89,10 @@ class KVEngineBuilder {
             }
         });
 
-        long pollTimeout = flushElapseMilliseconds / 2;
+        long pollTimeout = flushElapseMilliseconds / 2; // smaller poll timeout can guarantee accuration of flushing time.
         backlog = (backlog == UNSET) ? DEFAULT_BACKLOG : backlog;
-        return new KVEngine(pollTimeout, backlog, ipage, index, callByCountOrElapse);
+        Group group = groupCommit ? Group.newInstance() : Group.NULL;
+        return new KVEngine(pollTimeout, backlog, group, ipage, index, callByCountOrElapse);
     }
 
     private CallByCountOrElapse newCallFlushByCountOrElapse(Callable<Object> flusher) {

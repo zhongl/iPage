@@ -1,13 +1,14 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.CallByCountOrElapse;
-import com.github.zhongl.util.Sync;
+import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
@@ -19,9 +20,11 @@ public class KVEngine extends Engine {
     private final IPage ipage;
     private final Index index;
     private final CallByCountOrElapse callByCountOrElapse;
+    private final Group group;
 
-    public KVEngine(long pollTimeout, int backlog, IPage ipage, Index index, CallByCountOrElapse callByCountOrElapse) {
+    public KVEngine(long pollTimeout, int backlog, Group group, IPage ipage, Index index, CallByCountOrElapse callByCountOrElapse) {
         super(pollTimeout, DEFAULT_TIME_UNIT, backlog);
+        this.group = group;
         this.ipage = ipage;
         this.index = index;
         this.callByCountOrElapse = callByCountOrElapse;
@@ -41,7 +44,7 @@ public class KVEngine extends Engine {
     // TODO @Count monitor
     // TODO @Elapse monitor
     public boolean put(Md5Key key, Record record, FutureCallback<Record> callback) {
-        return submit(new Put(key, record, callback));
+        return submit(new Put(key, record, group.decorate(callback)));
     }
 
     public Record put(Md5Key key, Record record) throws IOException, InterruptedException {
@@ -61,7 +64,7 @@ public class KVEngine extends Engine {
     }
 
     public boolean remove(Md5Key key, FutureCallback<Record> callback) {
-        return submit(new Remove(key, callback));
+        return submit(new Remove(key, group.decorate(callback)));
     }
 
     public Record remove(Md5Key key) throws IOException, InterruptedException {
@@ -83,17 +86,21 @@ public class KVEngine extends Engine {
     @Override
     protected void hearbeat() {
         try {
-            callByCountOrElapse.tryCallByElapse();
+            if (callByCountOrElapse.tryCallByElapse()) group.commit();
         } catch (Exception e) {
-            e.printStackTrace();  // TODO right
+            group.rollback(e);
+            e.printStackTrace();  // TODO log
         }
     }
 
     private void tryCallByCount() {
         try {
-            callByCountOrElapse.tryCallByCount();
+            if (callByCountOrElapse.tryCallByCount()) {
+                group.commit();
+            }
         } catch (Exception e) {
-            e.printStackTrace();  // TODO right
+            group.rollback(e);
+            e.printStackTrace();  // TODO log
         }
     }
 
@@ -108,7 +115,7 @@ public class KVEngine extends Engine {
 
     }
 
-    public class Put extends Operation {
+    private class Put extends Operation {
 
         private final Record record;
 
@@ -120,15 +127,15 @@ public class KVEngine extends Engine {
         @Override
         protected Record execute() throws IOException {
             Long offset = index.put(key, ipage.append(record));
+            group.register(callback);
+            tryCallByCount();
             if (offset == null) return null;
             // TODO remove the old record
-            tryCallByCount();
             return ipage.get(offset);
         }
-
     }
 
-    public class Get extends Operation {
+    private class Get extends Operation {
 
         private Get(Md5Key key, FutureCallback<Record> callback) {
             super(key, callback);
@@ -142,7 +149,7 @@ public class KVEngine extends Engine {
         }
     }
 
-    public class Remove extends Operation {
+    private class Remove extends Operation {
 
         private Remove(Md5Key key, FutureCallback<Record> callback) {
             super(key, callback);
@@ -151,12 +158,39 @@ public class KVEngine extends Engine {
         @Override
         protected Record execute() throws Throwable {
             Long offset = index.remove(key);
+            group.register(callback);
+            tryCallByCount();
             // TODO use a slide window to async truncate iPage.
             if (offset == null) return null;
             Record record = ipage.get(offset);
-            tryCallByCount();
             return record;
         }
 
+    }
+
+    private static class Sync<T> implements FutureCallback<T> {
+
+        private final CountDownLatch latch = new CountDownLatch(1);
+        private T result;
+        private Throwable t;
+
+        @Override
+        public void onSuccess(T result) {
+            this.result = result;
+            latch.countDown();
+        }
+
+        public T get() throws IOException, InterruptedException {
+            latch.await();
+            Throwables.propagateIfPossible(t, IOException.class); // cast IOException and throw
+            if (t != null) Throwables.propagate(t); // cast RuntimeException Or Error and throw
+            return result;
+        }
+
+        @Override
+        public void onFailure(Throwable t) {
+            this.t = t;
+            latch.countDown();
+        }
     }
 }
