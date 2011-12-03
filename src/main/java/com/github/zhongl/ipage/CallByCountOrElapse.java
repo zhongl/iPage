@@ -1,4 +1,4 @@
-package com.github.zhongl.util;
+package com.github.zhongl.ipage;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.concurrent.Callable;
@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-public final class CallByCountOrElapse {
+final class CallByCountOrElapse {
 
     private final ByCount byCount;
     private final ByElapse byElapse;

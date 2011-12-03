@@ -1,6 +1,5 @@
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.util.CallByCountOrElapse;
 import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.FutureCallback;

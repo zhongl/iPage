@@ -1,6 +1,5 @@
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.util.CallByCountOrElapse;
 import com.github.zhongl.util.DirBase;
 import org.junit.After;
 import org.junit.Test;
