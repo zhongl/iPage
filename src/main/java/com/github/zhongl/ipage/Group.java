@@ -65,6 +65,41 @@ abstract class Group {
      */
     public abstract void register(FutureCallback<?> callback);
 
+    private static class DefaultGroup extends Group {
+
+        private final Queue<GroupableFutureCallback<?>> pendingCallbacks = new LinkedList<GroupableFutureCallback<?>>();
+
+        @Override
+        public void commit() {
+            while (true) {
+                GroupableFutureCallback<?> callback = pendingCallbacks.poll();
+                if (callback == null) break;
+                callback.commit();
+            }
+        }
+
+        @Override
+        public void rollback(Throwable t) {
+            while (true) {
+                GroupableFutureCallback<?> callback = pendingCallbacks.poll();
+                if (callback == null) break;
+                callback.rollback(t);
+            }
+        }
+
+        @Override
+        public <T> FutureCallback<T> decorate(FutureCallback<T> callback) {
+            return new GroupableFutureCallback<T>(callback);
+        }
+
+        @Override
+        public void register(FutureCallback<?> callback) {
+            if (callback instanceof GroupableFutureCallback) {
+                pendingCallbacks.add((GroupableFutureCallback<?>) callback);
+            }
+        }
+    }
+
     private static class GroupableFutureCallback<T> implements FutureCallback<T> {
 
         private final FutureCallback<T> delegate;
@@ -90,41 +125,4 @@ abstract class Group {
             delegate.onFailure(t); // trigger rollback failure
         }
     }
-
-    private static class DefaultGroup extends Group {
-
-        private final Queue<GroupableFutureCallback<?>> callbacks = new LinkedList<GroupableFutureCallback<?>>();
-
-        @Override
-        public void commit() {
-            while (true) {
-                GroupableFutureCallback<?> callback = callbacks.poll();
-                if (callback == null) break;
-                callback.commit();
-            }
-        }
-
-
-        @Override
-        public void rollback(Throwable t) {
-            while (true) {
-                GroupableFutureCallback<?> callback = callbacks.poll();
-                if (callback == null) break;
-                callback.rollback(t);
-            }
-        }
-
-        @Override
-        public <T> FutureCallback<T> decorate(FutureCallback<T> callback) {
-            return new GroupableFutureCallback<T>(callback);
-        }
-
-        @Override
-        public void register(FutureCallback<?> callback) {
-            if (callback instanceof GroupableFutureCallback) {
-                callbacks.add((GroupableFutureCallback<?>) callback);
-            }
-        }
-    }
-
 }
