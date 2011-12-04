@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
+import static com.github.zhongl.ipage.Recovery.IPageRecoverer;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
@@ -102,6 +103,8 @@ public class IPage implements Closeable, Iterable<Record> {
         chunks.add(toTruncateChunk.truncate(offset));
     }
 
+    public void recoverBy(IPageRecoverer iPageRecoverer) {}
+
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder();
@@ -112,6 +115,7 @@ public class IPage implements Closeable, Iterable<Record> {
         sb.append('}');
         return sb.toString();
     }
+
 
     public static final class Builder {
 
@@ -145,7 +149,7 @@ public class IPage implements Closeable, Iterable<Record> {
 
             ArrayList<Chunk> chunks = new ArrayList<Chunk>(files.length);
             for (File file : files) {
-                // TODO validate chunks
+                // TODO validateAndRecoverBy chunks
                 Chunk chunk = new Chunk(Long.parseLong(file.getName()), file, chunkCapacity);
                 chunks.add(0, chunk); // reverse order to make sure the appending chunk at first.
             }

@@ -74,8 +74,22 @@ class KVEngineBuilder {
     }
 
     public KVEngine build() throws IOException {
+        DataSecurity dataSecurity = null;
+        boolean exists = dir.exists();
+        if (!exists) dir.mkdirs();
+        dataSecurity = new DataSecurity(dir);
+
         final IPage ipage = newIPage();
         final Index index = newIndex();
+
+        if (exists) {
+            try {
+                dataSecurity.validate();
+            } catch (UnsafeDataStateException e) {
+                new Recovery(index, ipage).run();
+            }
+        }
+
 
         CallByCountOrElapse callByCountOrElapse = newCallFlushByCountOrElapse(new Callable<Object>() {
 
@@ -90,7 +104,7 @@ class KVEngineBuilder {
         long pollTimeout = flushElapseMilliseconds / 2; // smaller poll timeout can guarantee accuration of flushing time.
         backlog = (backlog == UNSET) ? DEFAULT_BACKLOG : backlog;
         Group group = groupCommit ? Group.newInstance() : Group.NULL;
-        return new KVEngine(pollTimeout, backlog, group, ipage, index, callByCountOrElapse);
+        return new KVEngine(pollTimeout, backlog, group, ipage, index, callByCountOrElapse, dataSecurity);
     }
 
     private CallByCountOrElapse newCallFlushByCountOrElapse(Callable<Object> flusher) {

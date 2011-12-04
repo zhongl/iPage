@@ -29,6 +29,7 @@ public class KVEngineGroupCommitTest {
     private Index index;
     private Callable flusher;
     private Group group;
+    private DataSecurity dataSecurity;
 
     @After
     public void tearDown() throws Exception {
@@ -45,12 +46,13 @@ public class KVEngineGroupCommitTest {
         index = mock(Index.class);
         flusher = mock(Callable.class);
         group = Group.newInstance();
+        dataSecurity = mock(DataSecurity.class);
     }
 
     @Test
     public void groupCommitByCount() throws Exception {
         CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(2, Long.MAX_VALUE, flusher);
-        engine = new KVEngine(10L, 10, group, ipage, index, callByCountOrElapse);
+        engine = new KVEngine(10L, 10, group, ipage, index, callByCountOrElapse, dataSecurity);
         engine.startup();
 
         byte[] bytes = "value".getBytes();
@@ -70,7 +72,7 @@ public class KVEngineGroupCommitTest {
         doThrow(e).when(flusher).call();
 
         CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(2, Long.MAX_VALUE, flusher);
-        engine = new KVEngine(10L, 10, group, ipage, index, callByCountOrElapse);
+        engine = new KVEngine(10L, 10, group, ipage, index, callByCountOrElapse, dataSecurity);
         engine.startup();
 
         byte[] bytes = "value".getBytes();
@@ -97,7 +99,7 @@ public class KVEngineGroupCommitTest {
     @Test
     public void groupCommitByElapse() throws Exception {
         CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(Integer.MAX_VALUE, 10L, flusher);
-        engine = new KVEngine(10L, 10, group, ipage, index, callByCountOrElapse);
+        engine = new KVEngine(10L, 10, group, ipage, index, callByCountOrElapse, dataSecurity);
         engine.startup();
 
         byte[] bytes = "value".getBytes();
@@ -110,7 +112,7 @@ public class KVEngineGroupCommitTest {
         doThrow(e).when(flusher).call();
 
         CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(Integer.MAX_VALUE, 10L, flusher);
-        engine = new KVEngine(10L, 10, group, ipage, index, callByCountOrElapse);
+        engine = new KVEngine(10L, 10, group, ipage, index, callByCountOrElapse, dataSecurity);
         engine.startup();
 
         byte[] bytes = "value".getBytes();
@@ -122,7 +124,8 @@ public class KVEngineGroupCommitTest {
         doThrow(new IOException()).when(index).put(any(Md5Key.class), anyLong());
 
         CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(Integer.MAX_VALUE, 10L, flusher);
-        engine = new KVEngine(10L, 10, group, ipage, index, callByCountOrElapse);
+
+        engine = new KVEngine(10L, 10, group, ipage, index, callByCountOrElapse, dataSecurity);
         engine.startup();
 
         byte[] bytes = "value".getBytes();

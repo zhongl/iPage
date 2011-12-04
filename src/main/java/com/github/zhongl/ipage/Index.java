@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static com.github.zhongl.ipage.Recovery.IndexRecoverer;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
@@ -105,6 +106,13 @@ public class Index implements Closeable {
         return Buckets.NULL_OFFSET;
     }
 
+    public void recoverBy(IndexRecoverer indexRecoverer) throws IOException {
+        for (Buckets buckets : bucketsList) {
+            boolean recovered = buckets.validateAndRecoverBy(indexRecoverer);
+            if (recovered)
+                break; // crash can cause only one buckets broken, so break loop if it has already recovered one
+        }
+    }
 
     public static Builder baseOn(File dir) {
         return new Builder(dir);

@@ -2,6 +2,7 @@ package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.DirectByteBufferCleaner;
 import com.google.common.io.Files;
+import org.apache.commons.codec.digest.DigestUtils;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
@@ -9,7 +10,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
+import java.util.Arrays;
 
+import static com.github.zhongl.ipage.Recovery.IndexRecoverer;
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 
 /**
@@ -42,7 +45,10 @@ final class Buckets implements Closeable {
     }
 
     public Long put(Md5Key key, Long offset) {
-        return buckets[hashAndMod(key)].put(key, offset);
+        Bucket bucket = buckets[hashAndMod(key)];
+        Long preoffset = bucket.put(key, offset);
+        bucket.updateDigest();
+        return preoffset;
     }
 
     public Long get(Md5Key key) {
@@ -50,7 +56,10 @@ final class Buckets implements Closeable {
     }
 
     public Long remove(Md5Key key) {
-        return buckets[hashAndMod(key)].remove(key);
+        Bucket bucket = buckets[hashAndMod(key)];
+        Long preoffset = bucket.remove(key);
+        bucket.updateDigest();
+        return preoffset;
     }
 
     @Override
@@ -98,6 +107,18 @@ final class Buckets implements Closeable {
         return sb.toString();
     }
 
+    public boolean validateAndRecoverBy(IndexRecoverer indexRecoverer) throws IOException {
+        for (Bucket bucket : buckets) {
+            try {
+                bucket.validate();
+            } catch (UnsafeDataStateException e) {
+                bucket.recoverBy(indexRecoverer);
+                return true; // crash can cause only one bucket broken
+            }
+        }
+        return false;
+    }
+
     /**
      * {@link Buckets.Bucket} has 163
      * {@link Buckets.Bucket.Slot} for storing tuple of
@@ -110,9 +131,11 @@ final class Buckets implements Closeable {
 
         public static final int LENGTH = Integer.getInteger("com.github.zhongl.ipage.bucket.length", 4096); // default 4K
         private final Slot[] slots;
+        private final ByteBuffer buffer;
 
         public Bucket(ByteBuffer buffer) {
-            slots = createSlots(buffer);
+            this.buffer = buffer;
+            slots = createSlots(buffer.duplicate());
         }
 
         private Slot[] createSlots(ByteBuffer buffer) {
@@ -139,9 +162,7 @@ final class Buckets implements Closeable {
                 // continue to check rest slots whether contain the key.
             }
             if (firstReleased < 0) throw new OverflowException();
-            Long previous = slots[firstReleased].add(key, offset);
-            updateDigest();
-            return previous;
+            return slots[firstReleased].add(key, offset);
         }
 
         public Long get(Md5Key key) {
@@ -156,16 +177,45 @@ final class Buckets implements Closeable {
             for (Slot slot : slots) {
                 if (slot.state() == Slot.State.EMPTY) return NULL_OFFSET; // because rest slots are all empty
                 if (slot.state() == Slot.State.OCCUPIED && slot.keyEquals(key)) {
-                    Long previous = slot.release();
-                    updateDigest();
-                    return previous;
+                    return slot.release();
                 }
             }
             return NULL_OFFSET;
         }
 
-        private void updateDigest() {
-            // TODO updateDigest
+        public void validate() throws UnsafeDataStateException {
+            if (slots[0].state() == Slot.State.EMPTY) return;// this is a empty bucket, no need to validate
+            if (!Arrays.equals(readMd5(), calculateMd5())) throw new UnsafeDataStateException();
+        }
+
+        public void recoverBy(IndexRecoverer indexRecoverer) throws IOException {
+            for (Slot slot : slots) {
+                if (slot.state() == Slot.State.EMPTY) break; // no more slot for recovery
+                Record record = indexRecoverer.getRecordIn(slot.offset());
+                if (slot.keyEquals(Md5Key.valueOf(record))) continue;
+                slot.release();
+                break; // only one slot can be broken if crashed
+            }
+        }
+
+        public void updateDigest() {
+            byte[] md5 = calculateMd5();
+            buffer.position(LENGTH - 16);
+            buffer.put(md5);
+        }
+
+        private byte[] readMd5() {
+            byte[] md5 = new byte[16];
+            buffer.position(LENGTH - 16);
+            buffer.get(md5);
+            return md5;
+        }
+
+        private byte[] calculateMd5() {
+            byte[] allSlotBytes = new byte[Slot.LENGTH * slots.length];
+            buffer.position(0);
+            buffer.get(allSlotBytes);
+            return DigestUtils.md5(allSlotBytes);
         }
 
         /**

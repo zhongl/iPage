@@ -1,7 +1,6 @@
 package com.github.zhongl.ipage;
 
 import com.google.common.base.Throwables;
-import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.concurrent.ThreadSafe;
@@ -19,21 +18,28 @@ public class KVEngine extends Engine {
     private final IPage ipage;
     private final Index index;
     private final CallByCountOrElapse callByCountOrElapse;
+    private final DataSecurity dataSecurity;
     private final Group group;
 
-    public KVEngine(long pollTimeout, int backlog, Group group, IPage ipage, Index index, CallByCountOrElapse callByCountOrElapse) {
+    public KVEngine(long pollTimeout, int backlog, Group group, IPage ipage, Index index, CallByCountOrElapse callByCountOrElapse, DataSecurity dataSecurity) {
         super(pollTimeout, DEFAULT_TIME_UNIT, backlog);
         this.group = group;
         this.ipage = ipage;
         this.index = index;
         this.callByCountOrElapse = callByCountOrElapse;
+        this.dataSecurity = dataSecurity;
     }
 
     @Override
     public void shutdown() {
         super.shutdown();
-        Closeables.closeQuietly(index);
-        Closeables.closeQuietly(ipage);
+        try {
+            index.close();
+            ipage.close();
+            dataSecurity.safeClose();
+        } catch (IOException e) {
+            e.printStackTrace();  // TODO log e
+        }
     }
 
     public static KVEngineBuilder baseOn(File dir) {

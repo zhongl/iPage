@@ -52,6 +52,7 @@ public class KVEngineTest extends DirBase {
     @Test
     public void flushByCountFirst() throws Exception {
         dir = testDir("flushByCountFirst");
+        dir.mkdirs();
 
         IPage ipage = mock(IPage.class);
         Index index = mock(Index.class);
@@ -59,7 +60,9 @@ public class KVEngineTest extends DirBase {
         long elapseMilliseconds = 100L;
         Callable<?> flusher = mock(Callable.class);
 
-        engine = new KVEngine(10L, 10, Group.NULL, ipage, index, new CallByCountOrElapse(count, elapseMilliseconds, flusher));
+        DataSecurity dataSecurity = new DataSecurity(dir);
+        CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(count, elapseMilliseconds, flusher);
+        engine = new KVEngine(10L, 10, Group.NULL, ipage, index, callByCountOrElapse, dataSecurity);
         engine.startup();
 
         engine.put(mock(Md5Key.class), mock(Record.class));
@@ -73,6 +76,7 @@ public class KVEngineTest extends DirBase {
     @Test
     public void flushByElapseFirst() throws Exception {
         dir = testDir("flushByElapseFirst");
+        dir.mkdirs();
 
         IPage ipage = mock(IPage.class);
         Index index = mock(Index.class);
@@ -80,7 +84,9 @@ public class KVEngineTest extends DirBase {
         long elapseMilliseconds = 100L;
         Callable<?> flusher = mock(Callable.class);
 
-        engine = new KVEngine(10L, 10, Group.NULL, ipage, index, new CallByCountOrElapse(count, elapseMilliseconds, flusher));
+        DataSecurity dataSecurity = new DataSecurity(dir);
+        CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(count, elapseMilliseconds, flusher);
+        engine = new KVEngine(10L, 10, Group.NULL, ipage, index, callByCountOrElapse, dataSecurity);
         engine.startup();
 
         engine.put(mock(Md5Key.class), mock(Record.class));

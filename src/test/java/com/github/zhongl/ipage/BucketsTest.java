@@ -2,13 +2,20 @@ package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.FileBase;
 import com.google.common.io.Files;
+import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static com.github.zhongl.ipage.Recovery.IndexRecoverer;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class BucketsTest extends FileBase {
@@ -54,6 +61,42 @@ public class BucketsTest extends FileBase {
         assertThat(buckets.put(key, offset), is(nullValue()));
         assertThat(buckets.remove(key), is(offset));
         assertThat(buckets.get(key), is(nullValue()));
+    }
+
+    @Test
+    public void validateWithoutRecovery() throws Exception {
+        file = testFile("validateAndRecoverBy");
+
+        buckets = new Buckets(file, 1);
+        IndexRecoverer indexRecoverer = mock(IndexRecoverer.class);
+        assertThat(buckets.validateAndRecoverBy(indexRecoverer), is(false));// validateAndRecoverBy a empty bucket
+
+        buckets.put(Md5Key.valueOf("key".getBytes()), 7L);
+        buckets.close();
+        buckets = new Buckets(file, 1);
+        doReturn(new Record("key".getBytes())).when(indexRecoverer).getRecordIn(anyLong());
+        assertThat(buckets.validateAndRecoverBy(indexRecoverer), is(false)); // validateAndRecoverBy a exist bucket
+    }
+
+    @Test
+    public void validateWithRecovery() throws Exception {
+        file = testFile("validateWithRecovery");
+        byte[] md5Bytes = DigestUtils.md5("value");
+        byte[] bucketMd5 = DigestUtils.md5("bucket");
+        byte[] brokenBucketContent = Bytes.concat(
+                new byte[] {1},
+                md5Bytes,
+                Longs.toByteArray(7L),
+                new byte[4055],
+                bucketMd5
+        );
+        Files.write(brokenBucketContent, file); // mock broken buckets file.
+
+        buckets = new Buckets(file, 1);
+
+        IndexRecoverer indexRecoverer = mock(IndexRecoverer.class);
+        doReturn(new Record("broken".getBytes())).when(indexRecoverer).getRecordIn(anyLong());
+        assertThat(buckets.validateAndRecoverBy(indexRecoverer), is(true));
     }
 
     @Test
