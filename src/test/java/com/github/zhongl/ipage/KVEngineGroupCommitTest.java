@@ -13,6 +13,8 @@ import java.util.concurrent.Future;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
@@ -79,14 +81,14 @@ public class KVEngineGroupCommitTest {
         try {
             putFuture.get();
             fail("No exception.");
-        } catch (Exception ex) {
-            assertThat(ex.getCause(), is((Throwable) e));
+        } catch (Throwable t) {
+            assertThat(t.getCause(), is((Throwable) e));
         }
         try {
             removeFuture.get();
             fail("No exception.");
-        } catch (Exception ex) {
-            assertThat(ex.getCause(), is((Throwable) e));
+        } catch (Throwable t) {
+            assertThat(t.getCause(), is((Throwable) e));
         }
 
         service.shutdown();
@@ -106,6 +108,18 @@ public class KVEngineGroupCommitTest {
     public void groupRollbackByElapse() throws Exception {
         IOException e = new IOException();
         doThrow(e).when(flusher).call();
+
+        CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(Integer.MAX_VALUE, 10L, flusher);
+        engine = new KVEngine(10L, 10, group, ipage, index, callByCountOrElapse);
+        engine.startup();
+
+        byte[] bytes = "value".getBytes();
+        engine.put(Md5Key.valueOf(bytes), new Record(bytes));
+    }
+
+    @Test(expected = IOException.class)
+    public void writeFailure() throws Exception {
+        doThrow(new IOException()).when(index).put(any(Md5Key.class), anyLong());
 
         CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(Integer.MAX_VALUE, 10L, flusher);
         engine = new KVEngine(10L, 10, group, ipage, index, callByCountOrElapse);

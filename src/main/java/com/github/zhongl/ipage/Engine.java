@@ -16,7 +16,9 @@ import java.util.concurrent.TimeUnit;
 @ThreadSafe
 public abstract class Engine {
 
-    public static final Shutdown SHUTDOWN = new Shutdown();
+    public static final Runnable SHUTDOWN = new Runnable() {
+        public void run() {}
+    };
 
     private final BlockingQueue<Runnable> tasks; // TODO monitor
     private final long timeout;
@@ -64,14 +66,13 @@ public abstract class Engine {
                     Runnable task = tasks.poll(timeout, timeUnit);
                     hearbeat();
                     if (task == null) continue;
-                    if (task instanceof Shutdown) break;
+                    if (task == SHUTDOWN) break;
                     task.run();
                 } catch (InterruptedException e) {
                     interrupted = true;
-                    continue;
                 }
             }
-            if (interrupted) Thread.currentThread().interrupted();
+            if (interrupted) Thread.currentThread().interrupt();
         }
 
     }
@@ -79,12 +80,6 @@ public abstract class Engine {
     /** Overwrite this method for some time-sensitive stuff. */
     protected void hearbeat() {}
 
-    private static class Shutdown implements Runnable {
-        @Override
-        public void run() { }
-    }
-
-    /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
     public abstract static class Task<T> implements Runnable {
         protected final FutureCallback<T> callback;
 

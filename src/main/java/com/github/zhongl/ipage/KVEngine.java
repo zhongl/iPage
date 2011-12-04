@@ -86,20 +86,18 @@ public class KVEngine extends Engine {
     protected void hearbeat() {
         try {
             if (callByCountOrElapse.tryCallByElapse()) group.commit();
-        } catch (Exception e) {
-            group.rollback(e);
-            e.printStackTrace();  // TODO log
+        } catch (Throwable t) {
+            group.rollback(t);
+            t.printStackTrace();  // TODO log
         }
     }
 
     private void tryCallByCount() {
         try {
-            if (callByCountOrElapse.tryCallByCount()) {
-                group.commit();
-            }
-        } catch (Exception e) {
-            group.rollback(e);
-            e.printStackTrace();  // TODO log
+            if (callByCountOrElapse.tryCallByCount()) group.commit();
+        } catch (Throwable t) {
+            group.rollback(t);
+            t.printStackTrace();  // TODO log
         }
     }
 

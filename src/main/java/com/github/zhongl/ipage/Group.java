@@ -6,16 +6,20 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.util.LinkedList;
 import java.util.Queue;
 
-/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+/**
+ * {@link com.github.zhongl.ipage.Group}
+ *
+ * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
+ */
 @NotThreadSafe
-public abstract class Group {
+abstract class Group {
 
     public static final Group NULL = new Group() {
         @Override
         public void commit() {}
 
         @Override
-        public void rollback(Exception e) { }
+        public void rollback(Throwable t) { }
 
         @Override
         public <T> FutureCallback<T> decorate(FutureCallback<T> callback) {
@@ -26,25 +30,39 @@ public abstract class Group {
         public void register(FutureCallback<?> callback) { }
     };
 
-    public abstract void commit();
-
     public static Group newInstance() {
         return new DefaultGroup();
     }
 
-    public abstract void rollback(Exception e);
+    /**
+     * Commit all pending groupable {@link com.google.common.util.concurrent.FutureCallback}s, and there
+     * {@link com.google.common.util.concurrent.FutureCallback#onSuccess(Object)} will be invoked.
+     */
+    public abstract void commit();
+
+    /**
+     * Rollback all pending groupable {@link com.google.common.util.concurrent.FutureCallback}s, and there
+     * {@link com.google.common.util.concurrent.FutureCallback#onFailure(Throwable)} will be invoked.
+     *
+     * @param t {@link Throwable}
+     */
+    public abstract void rollback(Throwable t);
 
     /**
      * Decorate {@link com.google.common.util.concurrent.FutureCallback} to a new one, which can be grouped for
      * committing or rollbacking.
      *
      * @param callback {@link com.google.common.util.concurrent.FutureCallback}
-     * @param <T>
      *
      * @return groupable {@link com.google.common.util.concurrent.FutureCallback}
      */
     public abstract <T> FutureCallback<T> decorate(FutureCallback<T> callback);
 
+    /**
+     * Register {@link com.google.common.util.concurrent.FutureCallback} for committing or rollbacking.
+     *
+     * @param callback {@link com.google.common.util.concurrent.FutureCallback}
+     */
     public abstract void register(FutureCallback<?> callback);
 
     private static class GroupableFutureCallback<T> implements FutureCallback<T> {
@@ -68,8 +86,8 @@ public abstract class Group {
             delegate.onSuccess(result);
         }
 
-        void rollback(Exception e) {
-            delegate.onFailure(e); // trigger rollback failure
+        void rollback(Throwable t) {
+            delegate.onFailure(t); // trigger rollback failure
         }
     }
 
@@ -88,11 +106,11 @@ public abstract class Group {
 
 
         @Override
-        public void rollback(Exception e) {
+        public void rollback(Throwable t) {
             while (true) {
                 GroupableFutureCallback<?> callback = callbacks.poll();
                 if (callback == null) break;
-                callback.rollback(e);
+                callback.rollback(t);
             }
         }
 

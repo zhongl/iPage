@@ -76,8 +76,8 @@ public class GroupTest {
             assertThat(done, is(false));
         }
 
-        public void assertFailure(Exception e) {
-            assertThat((Exception) t, is(e));
+        public void assertFailure(Throwable t) {
+            assertThat(this.t, is(t));
         }
     }
 }
