@@ -190,7 +190,6 @@ final class Buckets implements Closeable {
 
         public void recoverBy(IndexRecoverer indexRecoverer) throws IOException {
             for (Slot slot : slots) {
-                if (slot.state() == Slot.State.EMPTY) break; // no more slot for recovery
                 Record record = indexRecoverer.getRecordIn(slot.offset());
                 if (slot.keyEquals(Md5Key.valueOf(record))) continue;
                 slot.release();
