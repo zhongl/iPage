@@ -9,7 +9,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import static com.github.zhongl.ipage.Recovery.IndexRecoverer;
+import static com.github.zhongl.ipage.Recovery.RecordFinder;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
@@ -68,14 +68,14 @@ public class BucketsTest extends FileBase {
         file = testFile("validateAndRecoverBy");
 
         buckets = new Buckets(file, 1);
-        IndexRecoverer indexRecoverer = mock(IndexRecoverer.class);
-        assertThat(buckets.validateAndRecoverBy(indexRecoverer), is(false));// validateAndRecoverBy a empty bucket
+        RecordFinder recordFinder = mock(RecordFinder.class);
+        assertThat(buckets.validateAndRecoverBy(recordFinder), is(false));// validateAndRecoverBy a empty bucket
 
         buckets.put(Md5Key.valueOf("key".getBytes()), 7L);
         buckets.close();
         buckets = new Buckets(file, 1);
-        doReturn(new Record("key".getBytes())).when(indexRecoverer).getRecordIn(anyLong());
-        assertThat(buckets.validateAndRecoverBy(indexRecoverer), is(false)); // validateAndRecoverBy a exist bucket
+        doReturn(new Record("key".getBytes())).when(recordFinder).getRecordIn(anyLong());
+        assertThat(buckets.validateAndRecoverBy(recordFinder), is(false)); // validateAndRecoverBy a exist bucket
     }
 
     @Test
@@ -98,10 +98,10 @@ public class BucketsTest extends FileBase {
 
         buckets = new Buckets(file, 1);
 
-        IndexRecoverer indexRecoverer = mock(IndexRecoverer.class);
-        doReturn(new Record("value0".getBytes())).when(indexRecoverer).getRecordIn(4L);
-        doReturn(new Record("broken".getBytes())).when(indexRecoverer).getRecordIn(7L); // broken index
-        assertThat(buckets.validateAndRecoverBy(indexRecoverer), is(true));
+        RecordFinder recordFinder = mock(RecordFinder.class);
+        doReturn(new Record("value0".getBytes())).when(recordFinder).getRecordIn(4L);
+        doReturn(new Record("broken".getBytes())).when(recordFinder).getRecordIn(7L); // broken index
+        assertThat(buckets.validateAndRecoverBy(recordFinder), is(true));
     }
 
     @Test

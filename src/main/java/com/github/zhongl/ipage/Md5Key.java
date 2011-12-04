@@ -48,12 +48,8 @@ public class Md5Key {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
         Md5Key md5Key = (Md5Key) o;
-
-        if (!Arrays.equals(md5Bytes, md5Key.md5Bytes)) return false;
-
-        return true;
+        return Arrays.equals(md5Bytes, md5Key.md5Bytes);
     }
 
     @Override

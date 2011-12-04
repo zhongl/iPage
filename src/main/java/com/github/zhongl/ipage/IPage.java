@@ -9,7 +9,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
-import static com.github.zhongl.ipage.Recovery.IPageRecoverer;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
@@ -103,7 +102,9 @@ public class IPage implements Closeable, Iterable<Record> {
         chunks.add(toTruncateChunk.truncate(offset));
     }
 
-    public void recoverBy(IPageRecoverer iPageRecoverer) {}
+    public void recover() throws IOException {
+        lastRecentlyUsedChunk().recover();
+    }
 
     @Override
     public String toString() {

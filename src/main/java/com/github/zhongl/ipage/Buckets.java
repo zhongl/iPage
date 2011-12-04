@@ -12,7 +12,7 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.Arrays;
 
-import static com.github.zhongl.ipage.Recovery.IndexRecoverer;
+import static com.github.zhongl.ipage.Recovery.RecordFinder;
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 
 /**
@@ -107,12 +107,12 @@ final class Buckets implements Closeable {
         return sb.toString();
     }
 
-    public boolean validateAndRecoverBy(IndexRecoverer indexRecoverer) throws IOException {
+    public boolean validateAndRecoverBy(RecordFinder recordFinder) throws IOException {
         for (Bucket bucket : buckets) {
             try {
                 bucket.validate();
             } catch (UnsafeDataStateException e) {
-                bucket.recoverBy(indexRecoverer);
+                bucket.recoverBy(recordFinder);
                 return true; // crash can cause only one bucket broken
             }
         }
@@ -188,12 +188,13 @@ final class Buckets implements Closeable {
             if (!Arrays.equals(readMd5(), calculateMd5())) throw new UnsafeDataStateException();
         }
 
-        public void recoverBy(IndexRecoverer indexRecoverer) throws IOException {
+        public void recoverBy(RecordFinder recordFinder) throws IOException {
             for (Slot slot : slots) {
-                Record record = indexRecoverer.getRecordIn(slot.offset());
-                if (slot.keyEquals(Md5Key.valueOf(record))) continue;
-                slot.release();
-                break; // only one slot can be broken if crashed
+                Record record = recordFinder.getRecordIn(slot.offset());
+                if (record == null || !slot.keyEquals(Md5Key.valueOf(record))) {
+                    slot.release();
+                    break; // only one slot can be broken if crashed
+                }
             }
         }
 

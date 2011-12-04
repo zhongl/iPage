@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 /**
  * {@link Record} is wrapper of bytes, a minimized store unit.
  *
@@ -17,7 +19,9 @@ public class Record {
 
     public static Record readFrom(ByteBuffer byteBuffer) throws IOException {
         int length = byteBuffer.getInt();
+        checkArgument(length > 0, "Invalid length %s", length);
         int limit = byteBuffer.position() + length;
+        checkArgument(limit <= byteBuffer.limit(), "Half content");
         byteBuffer.limit(limit);
         return new Record(byteBuffer.slice());
     }
@@ -44,12 +48,8 @@ public class Record {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
         Record record = (Record) o;
-
-        if (buffer != null ? !buffer.equals(record.buffer) : record.buffer != null) return false;
-
-        return true;
+        return !(buffer != null ? !buffer.equals(record.buffer) : record.buffer != null);
     }
 
     @Override
