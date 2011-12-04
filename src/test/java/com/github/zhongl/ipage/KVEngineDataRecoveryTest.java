@@ -2,8 +2,6 @@ package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.DirBase;
 import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -16,21 +14,15 @@ public class KVEngineDataRecoveryTest extends DirBase {
 
     private KVEngine engine;
 
-
-    @Before
-    public void setUp() throws Exception {
-        engine = KVEngine.baseOn(dir).build();
-    }
-
     @After
     public void tearDown() throws Exception {
         if (engine != null) engine.shutdown();
     }
 
     @Test
-    @Ignore("TODO")
     public void dataIsOkButDotSafeNotExist() throws Exception {
         dir = testDir("dataIsOkButDotSafeNotExist");
+        engine = KVEngine.baseOn(dir).build();
         engine.startup();
 
         Record record = new Record("value".getBytes());
@@ -42,6 +34,6 @@ public class KVEngineDataRecoveryTest extends DirBase {
         assertThat(delete, is(true));
 
         engine = KVEngine.baseOn(dir).build();
-        // TODO dataIsOkButDotSafeNotExist
+
     }
 }

@@ -7,20 +7,16 @@ public class Recovery implements Runnable {
 
     private final Index index;
     private final IPage ipage;
-    private final RecordFinder recordFinder;
-    private final IPageRecoverer iPageRecoverer;
 
     public Recovery(Index index, IPage ipage) {
         this.index = index;
         this.ipage = ipage;
-        recordFinder = new InnerRecordFinder();
-        iPageRecoverer = new InnerIPageRecoverer();
     }
 
     @Override
     public void run() {
         try {
-            index.recoverBy(recordFinder);
+            index.recoverBy(new InnerRecordFinder());
             ipage.recover();
         } catch (IOException e) {
             throw new IllegalStateException("Can't run recovery, because:", e);
@@ -31,9 +27,7 @@ public class Recovery implements Runnable {
         Record getRecordIn(long offset) throws IOException;
     }
 
-    public interface IPageRecoverer {}
-
-    private class InnerRecordFinder implements RecordFinder {
+    class InnerRecordFinder implements RecordFinder {
         @Override
         public Record getRecordIn(long offset) throws IOException {
             try {
@@ -44,5 +38,4 @@ public class Recovery implements Runnable {
         }
     }
 
-    private class InnerIPageRecoverer implements IPageRecoverer {}
 }

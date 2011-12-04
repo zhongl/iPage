@@ -38,7 +38,8 @@ public abstract class Engine {
 
     public void shutdown() {
         try {
-            tasks.put(SHUTDOWN);
+            if (core.isAlive())
+                tasks.put(SHUTDOWN);
         } catch (InterruptedException e) {
             Throwables.propagate(e);
         }
