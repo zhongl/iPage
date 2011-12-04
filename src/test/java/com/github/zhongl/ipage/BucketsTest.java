@@ -81,11 +81,15 @@ public class BucketsTest extends FileBase {
     @Test
     public void validateWithRecovery() throws Exception {
         file = testFile("validateWithRecovery");
-        byte[] md5Bytes = DigestUtils.md5("value");
+        byte[] md5Bytes0 = DigestUtils.md5("value0");
+        byte[] md5Bytes1 = DigestUtils.md5("value1");
         byte[] bucketMd5 = DigestUtils.md5("bucket");
         byte[] brokenBucketContent = Bytes.concat(
                 new byte[] {1},
-                md5Bytes,
+                md5Bytes0,
+                Longs.toByteArray(4L),
+                new byte[] {1},
+                md5Bytes1,
                 Longs.toByteArray(7L),
                 new byte[4055],
                 bucketMd5
@@ -95,7 +99,8 @@ public class BucketsTest extends FileBase {
         buckets = new Buckets(file, 1);
 
         IndexRecoverer indexRecoverer = mock(IndexRecoverer.class);
-        doReturn(new Record("broken".getBytes())).when(indexRecoverer).getRecordIn(anyLong());
+        doReturn(new Record("value0".getBytes())).when(indexRecoverer).getRecordIn(4L);
+        doReturn(new Record("broken".getBytes())).when(indexRecoverer).getRecordIn(7L); // broken index
         assertThat(buckets.validateAndRecoverBy(indexRecoverer), is(true));
     }
 
