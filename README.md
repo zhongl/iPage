@@ -41,9 +41,9 @@ Please see [issues](https://github.com/zhongl/iPage/issues?sort=created&directio
 
 # Get started
 
-## Precondition
+## Preconditions
 
-Suppose you enviroment has:
+Make sure your enviroment has:
 
 * [Git](http://git-scm.com/)
 * [Maven](http://maven.apache.org/)
