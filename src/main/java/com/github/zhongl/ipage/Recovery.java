@@ -16,8 +16,8 @@ public class Recovery implements Runnable {
     @Override
     public void run() {
         try {
-            index.recoverBy(new InnerRecordFinder());
             ipage.recover();
+            index.recoverBy(new InnerRecordFinder());
         } catch (IOException e) {
             throw new IllegalStateException("Can't run recovery, because:", e);
         }
