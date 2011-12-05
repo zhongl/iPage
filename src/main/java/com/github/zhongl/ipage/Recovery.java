@@ -1,9 +1,11 @@
 package com.github.zhongl.ipage;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class Recovery implements Runnable {
+@NotThreadSafe
+class Recovery implements Runnable {
 
     private final Index index;
     private final IPage ipage;

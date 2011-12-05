@@ -1,5 +1,6 @@
 package com.github.zhongl.ipage;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.Callable;
@@ -8,6 +9,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+@NotThreadSafe
 class KVEngineBuilder {
 
     static final long DEFAULT_FLUSH_ELAPSE_MILLISECONDS = 10L;

@@ -1,5 +1,6 @@
 package com.github.zhongl.ipage;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
 import java.io.IOException;
 
@@ -7,6 +8,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+@NotThreadSafe
 class DataSecurity {
 
     private static final String SAFE = ".safe";

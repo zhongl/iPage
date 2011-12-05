@@ -1,8 +1,10 @@
 package com.github.zhongl.ipage;
 
+import javax.annotation.concurrent.ThreadSafe;
 import java.util.AbstractList;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+@ThreadSafe
 class Range {
 
     private final long begin;
