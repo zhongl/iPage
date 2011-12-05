@@ -33,6 +33,8 @@ Please see [issues](https://github.com/zhongl/iPage/issues?sort=created&directio
 
 ## Enviroment
 
+* Linux 2.6.18-164.el5
+* OpenJDK 64-Bit Server VM (build 1.6.0-b09, mixed mode)
 * Intel(R) Xeon(R) CPU E5620  @ 2.40GHz 8 core
 * Memory 24GB
 * SCSI 1TB
