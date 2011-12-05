@@ -8,7 +8,6 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 
-import static com.github.zhongl.ipage.RecordTest.item;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
@@ -48,7 +47,7 @@ public class IPageTest extends DirBase {
         iPage = IPage.baseOn(dir).build();
         assertThat(iPage.get(0L), is(nullValue()));
 
-        Record record = item("1");
+        Record record = new Record("1".getBytes());
         long offset = iPage.append(record);
 
         assertThat(iPage.get(offset), is(record));
@@ -58,7 +57,7 @@ public class IPageTest extends DirBase {
     public void getFromNonAppendingChunk() throws Exception {
         dir = testDir("getFromNonAppendingChunk");
         iPage = IPage.baseOn(dir).chunkCapacity(4096).build();
-        Record record = item("0123456789ab");
+        Record record = new Record("0123456789ab".getBytes());
         for (int i = 0; i < 257; i++) {
             iPage.append(record);
         }
@@ -75,7 +74,7 @@ public class IPageTest extends DirBase {
         dir = testDir("truncateByOffset");
         iPage = IPage.baseOn(dir).chunkCapacity(4096).build();
 
-        Record record = item("0123456789ab");
+        Record record = new Record("0123456789ab".getBytes());
         for (int i = 0; i < 513; i++) {
             iPage.append(record);
         }
@@ -110,7 +109,7 @@ public class IPageTest extends DirBase {
 
         // create a iPage with two chunk
         iPage = IPage.baseOn(dir).build();
-        Record record = item("0123456789ab");
+        Record record = new Record("0123456789ab".getBytes());
         for (int i = 0; i < 257; i++) {
             iPage.append(record);
         }
@@ -121,7 +120,7 @@ public class IPageTest extends DirBase {
 
         // load and verify
         iPage = IPage.baseOn(dir).build();
-        Record newRecord = item("newRecord");
+        Record newRecord = new Record("newRecord".getBytes());
         long offset = iPage.append(newRecord);
 
         assertThat(iPage.get(0L), is(record));
@@ -148,8 +147,8 @@ public class IPageTest extends DirBase {
     }
 
     private void assertAppendAndDurableBy(boolean close) throws IOException {
-        assertThat(iPage.append(item("item1")), is(0L));
-        assertThat(iPage.append(item("item2")), is(9L));
+        assertThat(iPage.append(new Record("item1".getBytes())), is(0L));
+        assertThat(iPage.append(new Record("item2".getBytes())), is(9L));
         if (close) {
             iPage.close();
         } else {

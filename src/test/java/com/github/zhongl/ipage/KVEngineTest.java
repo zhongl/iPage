@@ -6,7 +6,6 @@ import org.junit.Test;
 
 import java.util.concurrent.Callable;
 
-import static com.github.zhongl.ipage.RecordTest.item;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
@@ -30,10 +29,10 @@ public class KVEngineTest extends DirBase {
         engine = KVEngine.baseOn(dir).build();
         engine.startup();
 
-        Record record = item("record");
+        Record record = new Record("record".getBytes());
         Md5Key key = Md5Key.valueOf(record);
 
-        assertThat(engine.put(Md5Key.valueOf(record), record), is(nullValue()));
+        assertThat(engine.put(key, record), is(nullValue()));
 
         assertThat(engine.get(key), is(record));
         assertThat(engine.remove(key), is(record));
