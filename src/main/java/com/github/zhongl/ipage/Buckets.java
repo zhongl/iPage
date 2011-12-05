@@ -113,6 +113,7 @@ final class Buckets implements Closeable {
                 bucket.validate();
             } catch (UnsafeDataStateException e) {
                 bucket.recoverBy(recordFinder);
+                bucket.updateDigest();
                 return true; // crash can cause only one bucket broken
             }
         }
