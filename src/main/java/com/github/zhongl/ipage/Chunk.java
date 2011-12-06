@@ -17,6 +17,7 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.DirectByteBufferCleaner;
+import com.google.common.collect.AbstractIterator;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.io.InputSupplier;
@@ -68,19 +69,22 @@ final class Chunk implements Closeable, Iterable<Record> {
     }
 
     public Record get(long offset) throws IOException {
-        ensureMap();
-        int newPosition = (int) (offset - beginPositionInIPage);
         try {
-            ByteBuffer duplicate = mappedByteBuffer.duplicate();
-            duplicate.position(newPosition);
-            duplicate.limit(writePosition);
-            return Record.readFrom(duplicate); // buffer to avoid modification of mappedDirectBuffer .
+            return getInternal((int) (offset - beginPositionInIPage));
         } catch (RuntimeException e) {
             /**
              * include {@link IllegalArgumentException}, {@link java.nio.BufferUnderflowException},
              */
-            throw new IllegalArgumentException("Can't get record with nvalid offset " + offset);
+            throw new IllegalArgumentException("Can't get record with invalid offset " + offset);
         }
+    }
+
+    private Record getInternal(int offset) throws IOException {
+        ensureMap();
+        ByteBuffer duplicate = mappedByteBuffer.duplicate();
+        duplicate.position(offset);
+        duplicate.limit(writePosition);
+        return Record.readFrom(duplicate); // buffer to avoid modification of mappedDirectBuffer .
     }
 
     @Override
@@ -158,7 +162,7 @@ final class Chunk implements Closeable, Iterable<Record> {
         int offset = 0;
         while (offset < writePosition) {
             try {
-                Record record = get(offset);
+                Record record = getInternal(offset);
                 offset += Record.LENGTH_BYTES + record.length();
             } catch (RuntimeException e) { // read a broken record
                 writePosition = offset;
@@ -166,32 +170,26 @@ final class Chunk implements Closeable, Iterable<Record> {
         }
     }
 
-    private class RecordIterator implements Iterator<Record> {
+    private class RecordIterator extends AbstractIterator<Record> {
         private int offset;
         private final int limit;
 
-        private RecordIterator(int limit) {this.limit = limit;}
-
-
-        @Override
-        public boolean hasNext() {
-            return offset < limit;
+        private RecordIterator(int limit) {
+            this.limit = limit;
         }
 
         @Override
-        public Record next() {
+        protected Record computeNext() {
             try {
-                Record record = get(offset);
+                if (offset >= limit) return endOfData();
+                Record record = getInternal(offset);
                 offset += Record.LENGTH_BYTES + record.length();
                 return record;
             } catch (IOException e) {
                 throw new RuntimeException(e);
+            } catch (RuntimeException e) { // read the appending chunk may cause the exception.
+                return endOfData();
             }
-        }
-
-        @Override
-        public void remove() {
-            throw new UnsupportedOperationException();
         }
     }
 }

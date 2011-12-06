@@ -18,7 +18,6 @@ package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.FileBase;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -143,23 +142,11 @@ public class IPageTest extends FileBase {
         assertThat(iPage.get(offset), is(newRecord));
     }
 
-    @Test(expected = IllegalStateException.class)
-    @Ignore("TODO")
-    public void invalidChunkLength() throws Exception {
-        // TODO invalidChunkLength
-    }
-
     @Test(expected = IllegalArgumentException.class)
     public void invalidDir() throws Exception {
         dir = testDir("invalidDir");
         dir.createNewFile();
         IPage.baseOn(dir);
-    }
-
-    @Test
-    @Ignore("TODO")
-    public void iteratePage() throws Exception {
-        // TODO iteratePage
     }
 
     private void assertAppendAndDurableBy(boolean close) throws IOException {

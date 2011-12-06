@@ -23,14 +23,17 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.AbstractList;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-public class IPage implements Closeable, Iterable<Record> {
+public class IPage implements Closeable {
 
     private final File baseDir;
     private final int chunkCapcity;
@@ -97,11 +100,6 @@ public class IPage implements Closeable, Iterable<Record> {
         }
     }
 
-    @Override
-    public Iterator<Record> iterator() {
-        return null;  // TODO iterator
-    }
-
     /**
      * Remove {@link Record} before the offset.
      *
@@ -156,23 +154,21 @@ public class IPage implements Closeable, Iterable<Record> {
 
         public IPage build() throws IOException {
             chunkCapacity = (chunkCapacity == UNSET) ? Chunk.DEFAULT_CAPACITY : chunkCapacity;
-            List<Chunk> chunks = validateAndLoadExistChunks();
+            List<Chunk> chunks = loadExistChunks();
             return new IPage(baseDir, chunkCapacity, chunks);
         }
 
-        private List<Chunk> validateAndLoadExistChunks() throws IOException {
+        private List<Chunk> loadExistChunks() throws IOException {
             File[] files = baseDir.listFiles(new NumberFileNameFilter());
             Arrays.sort(files, new FileNumberNameComparator());
 
             ArrayList<Chunk> chunks = new ArrayList<Chunk>(files.length);
             for (File file : files) {
-                // TODO validateAndRecoverBy chunks
                 Chunk chunk = new Chunk(Long.parseLong(file.getName()), file, chunkCapacity);
                 chunks.add(0, chunk); // reverse order to make sure the appending chunk at first.
             }
             return chunks;
         }
-
     }
 
     private class ChunkOffsetRangeList extends AbstractList<Range> {
