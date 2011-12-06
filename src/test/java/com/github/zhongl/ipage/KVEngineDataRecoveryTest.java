@@ -16,7 +16,7 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.util.DirBase;
+import com.github.zhongl.util.FileBase;
 import org.junit.After;
 import org.junit.Test;
 
@@ -26,7 +26,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class KVEngineDataRecoveryTest extends DirBase {
+public class KVEngineDataRecoveryTest extends FileBase {
 
     private KVEngine engine;
 

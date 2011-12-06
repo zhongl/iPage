@@ -17,7 +17,7 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.benchmarker.*;
-import com.github.zhongl.util.DirBase;
+import com.github.zhongl.util.FileBase;
 import com.google.common.primitives.Ints;
 import org.junit.After;
 import org.junit.Test;
@@ -26,7 +26,7 @@ import java.util.Collection;
 import java.util.concurrent.Callable;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class IndexBenchmark extends DirBase {
+public class IndexBenchmark extends FileBase {
 
     private Index index;
 

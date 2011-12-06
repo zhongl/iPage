@@ -16,7 +16,7 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.util.DirBase;
+import com.github.zhongl.util.FileBase;
 import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -29,7 +29,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class IPageTest extends DirBase {
+public class IPageTest extends FileBase {
     public static final boolean CLOSE = true;
     public static final boolean FLUSH = false;
 

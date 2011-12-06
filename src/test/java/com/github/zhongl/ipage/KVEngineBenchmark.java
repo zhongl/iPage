@@ -17,7 +17,7 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.benchmarker.*;
-import com.github.zhongl.util.DirBase;
+import com.github.zhongl.util.FileBase;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import org.junit.After;
@@ -28,7 +28,7 @@ import java.util.Collection;
 import java.util.concurrent.Callable;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class KVEngineBenchmark extends DirBase {
+public class KVEngineBenchmark extends FileBase {
 
     private KVEngine engine;
 

@@ -16,13 +16,13 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.util.DirBase;
+import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 
 import java.io.File;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class KVEngineBuilderTest extends DirBase {
+public class KVEngineBuilderTest extends FileBase {
 
     @Test
     public void fullConfig() throws Exception {

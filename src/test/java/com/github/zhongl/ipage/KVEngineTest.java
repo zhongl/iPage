@@ -16,7 +16,7 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.util.DirBase;
+import com.github.zhongl.util.FileBase;
 import org.junit.After;
 import org.junit.Test;
 
@@ -28,7 +28,7 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class KVEngineTest extends DirBase {
+public class KVEngineTest extends FileBase {
     private KVEngine engine;
 
     @After

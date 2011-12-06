@@ -48,6 +48,7 @@ final class Buckets implements Closeable {
     private final MappedByteBuffer mappedByteBuffer;
     private final Bucket[] buckets;
     private final File file;
+    private int occupiedSlots;
 
     public Buckets(File file, int size) throws IOException {
         this.file = file;
@@ -64,6 +65,7 @@ final class Buckets implements Closeable {
         Bucket bucket = buckets[hashAndMod(key)];
         Long preoffset = bucket.put(key, offset);
         bucket.updateDigest();
+        if (preoffset == null) occupiedSlots++; // add a new key
         return preoffset;
     }
 
@@ -74,7 +76,10 @@ final class Buckets implements Closeable {
     public Long remove(Md5Key key) {
         Bucket bucket = buckets[hashAndMod(key)];
         Long preoffset = bucket.remove(key);
-        bucket.updateDigest();
+        if (preoffset != null) { // remove an exist key
+            bucket.updateDigest();
+            occupiedSlots--;
+        }
         return preoffset;
     }
 
@@ -92,8 +97,16 @@ final class Buckets implements Closeable {
         Bucket[] buckets = new Bucket[size];
         for (int i = 0; i < buckets.length; i++) {
             buckets[i] = new Bucket(slice(mappedByteBuffer, i * Bucket.LENGTH, Bucket.LENGTH));
+            calculateOccupiedSlotOf(buckets[i]);
         }
         return buckets;
+    }
+
+    private void calculateOccupiedSlotOf(Bucket bucket) {
+        Bucket.Slot[] slots = bucket.slots;
+        for (Bucket.Slot slot : slots) {
+            if (slot.state() == Bucket.Slot.State.OCCUPIED) occupiedSlots++;
+        }
     }
 
     public void flush() {
@@ -111,7 +124,9 @@ final class Buckets implements Closeable {
     }
 
     public void cleanupIfAllKeyRemoved() {
-        // TODO cleanupIfAllKeyRemoved
+        if (occupiedSlots > 0) return;
+        file.delete();
+        // TODO log a warn if fail to delete
     }
 
     @Override

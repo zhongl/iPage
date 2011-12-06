@@ -16,11 +16,11 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.util.DirBase;
+import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class DataSecurityTest extends DirBase {
+public class DataSecurityTest extends FileBase {
 
     private DataSecurity dataSecurity;
 

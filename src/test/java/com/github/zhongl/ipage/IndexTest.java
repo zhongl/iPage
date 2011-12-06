@@ -16,7 +16,7 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.util.DirBase;
+import com.github.zhongl.util.FileBase;
 import com.google.common.primitives.Ints;
 import org.junit.After;
 import org.junit.Test;
@@ -28,7 +28,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class IndexTest extends DirBase {
+public class IndexTest extends FileBase {
 
     private Index index;
 
@@ -58,6 +58,26 @@ public class IndexTest extends DirBase {
         index.put(Md5Key.valueOf(Ints.toByteArray(163)), 7L);
 
         assertExistFile("0");
+        assertExistFile("1");
+    }
+
+    @Test
+    public void autoremoveMigratedBuckets() throws Exception {
+        dir = testDir("autoremoveMigratedBuckets");
+        index = Index.baseOn(dir).initialBucketSize(1).build();
+
+        for (int i = 0; i < 164; i++) {
+            index.put(Md5Key.valueOf(Ints.toByteArray(i)), 7L);
+        }
+
+        assertExistFile("0");
+        assertExistFile("1");
+
+        for (int i = 0; i < 164; i++) {
+            index.get(Md5Key.valueOf(Ints.toByteArray(i)));
+        }
+
+        assertNotExistFile("0");
         assertExistFile("1");
     }
 

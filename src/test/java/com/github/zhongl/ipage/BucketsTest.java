@@ -22,7 +22,6 @@ import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static com.github.zhongl.ipage.Recovery.RecordFinder;
@@ -184,9 +183,16 @@ public class BucketsTest extends FileBase {
     }
 
     @Test
-    @Ignore("TODO")
     public void cleanup() throws Exception {
-        // TODO cleanup
+        file = testFile("cleanup");
+        buckets = new Buckets(file, 1);
+        Md5Key key = Md5Key.valueOf("key".getBytes());
+        buckets.remove(key); // test remove a non-exist key with no effect
+        buckets.put(key, 7L);
+        buckets.put(key, 7L);
+        buckets.remove(key);
+        buckets.cleanupIfAllKeyRemoved();
+        assertThat(file.exists(), is(false));
     }
 
     private void fillFullBuckets() throws Exception {
