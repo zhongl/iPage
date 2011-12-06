@@ -25,6 +25,7 @@ Please see [issues](https://github.com/zhongl/iPage/issues?sort=created&directio
 
 ## Configuration
 
+* Concurrency threads is 8
 * Read and write data is 1KB
 * Synchronize invocation
 * Flush by count 5 or elapse 10ms
