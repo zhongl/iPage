@@ -14,21 +14,23 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.kvengine;
+package com.github.zhongl.ipage;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import java.io.File;
+import java.io.IOException;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class RecoveryTest {
+class ChunkFactory<T> {
 
-    @Test(expected = IllegalStateException.class)
-    @Ignore("TODO")
-    public void runFailureBecauseOfIOException() throws Exception {
-//        Index index = mock(Index.class);
-//        IPage iPage = mock(IPage.class);
-//        doThrow(new IOException()).when(index).recoverBy(any(Recovery.RecordFinder.class));
-//        new Recovery(index, iPage).run();
+    private final long chunkCapacity;
+    private final ByteBufferAccessor<T> accessor;
+
+    ChunkFactory(long chunkCapacity, ByteBufferAccessor<T> accessor) {
+        this.accessor = accessor;
+        this.chunkCapacity = chunkCapacity;
     }
 
+    public Chunk<T> create(long beginPositionInIPage, File file) throws IOException {
+        return new Chunk<T>(beginPositionInIPage, file, chunkCapacity, accessor);
+    }
 }

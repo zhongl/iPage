@@ -33,13 +33,13 @@ public class KVEngine extends Engine {
 
     static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
 
-    private final IPage ipage;
+    private final IPage<Record> ipage;
     private final Index index;
     private final CallByCountOrElapse callByCountOrElapse;
     private final DataSecurity dataSecurity;
     private final Group group;
 
-    public KVEngine(long pollTimeout, int backlog, Group group, IPage ipage, Index index, CallByCountOrElapse callByCountOrElapse, DataSecurity dataSecurity) {
+    public KVEngine(long pollTimeout, int backlog, Group group, IPage<Record> ipage, Index index, CallByCountOrElapse callByCountOrElapse, DataSecurity dataSecurity) {
         super(pollTimeout, DEFAULT_TIME_UNIT, backlog);
         this.group = group;
         this.ipage = ipage;

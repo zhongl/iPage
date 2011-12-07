@@ -28,15 +28,15 @@ import java.util.List;
 public class IPage<T> implements Closeable {
 
     private final File baseDir;
-    private final IPageBuilder<T>.ChunkFactory chunkFactory;
-    private final List<Chunk> chunks; // TODO use LRU to cache chunks
+    private final ChunkFactory chunkFactory;
+    private final List<Chunk<T>> chunks; // TODO use LRU to cache chunks
     private final AbstractList<Range> chunkOffsetRangeList;
 
-    public static IPageBuilder baseOn(File dir) {
-        return new IPageBuilder(dir);
+    public static <T> IPageBuilder<T> baseOn(File dir) {
+        return new IPageBuilder<T>(dir);
     }
 
-    IPage(File baseDir, IPageBuilder<T>.ChunkFactory chunkFactory, List<Chunk> chunks) {
+    IPage(File baseDir, ChunkFactory chunkFactory, List<Chunk<T>> chunks) {
         this.baseDir = baseDir;
         this.chunkFactory = chunkFactory;
         this.chunks = chunks;
@@ -57,15 +57,15 @@ public class IPage<T> implements Closeable {
         // TODO releaseChunkIfNecessary
     }
 
-    private Chunk lastRecentlyUsedChunk() throws IOException {
+    private Chunk<T> lastRecentlyUsedChunk() throws IOException {
         if (chunks.isEmpty()) return grow();
         return chunks.get(0);
     }
 
-    private Chunk grow() throws IOException {
+    private Chunk<T> grow() throws IOException {
         long beginPositionInIPage = chunks.isEmpty() ? 0L : lastRecentlyUsedChunk().endPositionInIPage() + 1;
         File file = new File(baseDir, beginPositionInIPage + "");
-        Chunk chunk = chunkFactory.create(beginPositionInIPage, file);
+        Chunk<T> chunk = chunkFactory.create(beginPositionInIPage, file);
         chunks.add(0, chunk);
         return chunk;
     }
@@ -73,10 +73,10 @@ public class IPage<T> implements Closeable {
     public T get(long offset) throws IOException {
         if (chunks.isEmpty()) return null;
         releaseChunkIfNecessary();
-        return (T) chunkIn(offset).get(offset);
+        return chunkIn(offset).get(offset);
     }
 
-    private Chunk chunkIn(long offset) {
+    private Chunk<T> chunkIn(long offset) {
         int index = Range.binarySearch(chunkOffsetRangeList, offset);
         return chunks.get(index);
     }
@@ -88,7 +88,7 @@ public class IPage<T> implements Closeable {
 
     @Override
     public void close() throws IOException {
-        for (Chunk chunk : chunks) {
+        for (Chunk<T> chunk : chunks) {
             chunk.close();
         }
     }
@@ -100,9 +100,9 @@ public class IPage<T> implements Closeable {
      */
     public void truncate(long offset) throws IOException {
         int index = Range.binarySearch(chunkOffsetRangeList, offset);
-        Chunk toTruncateChunk = chunks.get(index);
-        List<Chunk> toRmoved = chunks.subList(index + 1, chunks.size());
-        for (Chunk chunk : toRmoved) {
+        Chunk<T> toTruncateChunk = chunks.get(index);
+        List<Chunk<T>> toRmoved = chunks.subList(index + 1, chunks.size());
+        for (Chunk<T> chunk : toRmoved) {
             chunk.erase();
         }
         toRmoved.clear();
@@ -113,21 +113,10 @@ public class IPage<T> implements Closeable {
         lastRecentlyUsedChunk().recover();
     }
 
-    @Override
-    public String toString() {
-        final StringBuilder sb = new StringBuilder();
-        sb.append("IPage");
-        sb.append("{baseDir=").append(baseDir);
-        sb.append(", chunkCapacity=").append(chunkFactory);
-        sb.append(", chunks=").append(chunks);
-        sb.append('}');
-        return sb.toString();
-    }
-
     private class ChunkOffsetRangeList extends AbstractList<Range> {
         @Override
         public Range get(int index) {
-            Chunk chunk = chunks.get(index);
+            Chunk<T> chunk = chunks.get(index);
             return new Range(chunk.beginPositionInIPage(), chunk.endPositionInIPage());
         }
 

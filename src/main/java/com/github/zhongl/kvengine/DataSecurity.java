@@ -16,8 +16,6 @@
 
 package com.github.zhongl.kvengine;
 
-import com.github.zhongl.ipage.UnsafeDataStateException;
-
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
 import java.io.IOException;

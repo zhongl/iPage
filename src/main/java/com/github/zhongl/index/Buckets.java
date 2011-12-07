@@ -16,10 +16,8 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.kvengine.Md5Key;
 import com.github.zhongl.ipage.OverflowException;
-import com.github.zhongl.kvengine.Record;
-import com.github.zhongl.ipage.UnsafeDataStateException;
+import com.github.zhongl.kvengine.Md5Key;
 import com.github.zhongl.util.DirectByteBufferCleaner;
 import com.google.common.io.Files;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -30,9 +28,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
-import java.util.Arrays;
 
-import static com.github.zhongl.ipage.Recovery.RecordFinder;
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 
 /**
@@ -142,18 +138,18 @@ final class Buckets implements Closeable {
         return sb.toString();
     }
 
-    public boolean validateAndRecoverBy(RecordFinder recordFinder) throws IOException {
-        for (Bucket bucket : buckets) {
-            try {
-                bucket.validate();
-            } catch (UnsafeDataStateException e) {
-                bucket.recoverBy(recordFinder);
-                bucket.updateDigest();
-                return true; // crash can cause only one bucket broken
-            }
-        }
-        return false;
-    }
+//    public boolean validateAndRecoverBy(RecordFinder recordFinder) throws IOException {
+//        for (Bucket bucket : buckets) {
+//            try {
+//                bucket.validate();
+//            } catch (UnsafeDataStateException e) {
+//                bucket.recoverBy(recordFinder);
+//                bucket.updateDigest();
+//                return true; // crash can cause only one bucket broken
+//            }
+//        }
+//        return false;
+//    }
 
     /**
      * {@link Buckets.Bucket} has 163
@@ -219,20 +215,20 @@ final class Buckets implements Closeable {
             return NULL_OFFSET;
         }
 
-        public void validate() throws UnsafeDataStateException {
-            if (slots[0].state() == Slot.State.EMPTY) return;// this is a empty bucket, no need to validate
-            if (!Arrays.equals(readMd5(), calculateMd5())) throw new UnsafeDataStateException();
-        }
-
-        public void recoverBy(RecordFinder recordFinder) throws IOException {
-            for (Slot slot : slots) {
-                Record record = recordFinder.getRecordIn(slot.offset());
-                if (record == null || !slot.keyEquals(Md5Key.valueOf(record))) {
-                    slot.release();
-                    break; // only one slot can be broken if crashed
-                }
-            }
-        }
+//        public void validate() throws UnsafeDataStateException {
+//            if (slots[0].state() == Slot.State.EMPTY) return;// this is a empty bucket, no need to validate
+//            if (!Arrays.equals(readMd5(), calculateMd5())) throw new UnsafeDataStateException();
+//        }
+//
+//        public void recoverBy(RecordFinder recordFinder) throws IOException {
+//            for (Slot slot : slots) {
+//                Record record = recordFinder.getRecordIn(slot.offset());
+//                if (record == null || !slot.keyEquals(Md5Key.valueOf(record))) {
+//                    slot.release();
+//                    break; // only one slot can be broken if crashed
+//                }
+//            }
+//        }
 
         public void updateDigest() {
             byte[] md5 = calculateMd5();

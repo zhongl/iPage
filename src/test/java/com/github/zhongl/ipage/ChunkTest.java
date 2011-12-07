@@ -20,6 +20,7 @@ import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Iterator;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
@@ -44,6 +45,22 @@ public class ChunkTest extends FileBase {
         long offset = chunk.append(record);
         assertThat(offset, is(0L));
         assertThat(chunk.get(offset), is(record));
+    }
+
+    @Test
+    public void iterate() throws Exception {
+        file = testFile("iterate");
+        newChunk();
+
+        for (int i = 0; i < 10; i++) {
+            chunk.append("" + i);
+        }
+
+        Iterator<String> iterator = chunk.iterator();
+        for (int i = 0; iterator.hasNext(); i++) {
+            assertThat(iterator.next(), is(i + ""));
+        }
+
     }
 
     @Test
@@ -120,12 +137,28 @@ public class ChunkTest extends FileBase {
         chunk.endPositionInIPage();
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void getByInvalidOffset() throws Exception {
+        file = testFile("getByInvalidOffset");
+        newChunk();
+        chunk.append("record");
+        chunk.get(1L);
+    }
+
     @Test
     public void closeAfterErase() throws Exception {
         file = testFile("closeAfterErase");
         newChunk();
         chunk.erase();
         chunk.close();
+    }
+
+    @Test
+    public void eraseAfterErase() throws Exception {
+        file = testFile("eraseAfterErase");
+        newChunk();
+        chunk.erase();
+        chunk.erase();
     }
 
     @Test
@@ -142,6 +175,14 @@ public class ChunkTest extends FileBase {
         newChunk();
         chunk.close();
         chunk.flush();
+    }
+
+    @Test
+    public void closeAfterClose() throws Exception {
+        file = testFile("closeAfterClose");
+        newChunk();
+        chunk.close();
+        chunk.close();
     }
 
     private void newChunk() throws IOException {

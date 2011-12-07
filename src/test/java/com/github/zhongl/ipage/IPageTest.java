@@ -16,7 +16,6 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.kvengine.Record;
 import com.github.zhongl.util.FileBase;
 import com.github.zhongl.util.FileContentAsserter;
 import org.junit.After;
@@ -34,7 +33,7 @@ public class IPageTest extends FileBase {
     public static final boolean CLOSE = true;
     public static final boolean FLUSH = false;
 
-    private IPage iPage;
+    private IPage<String> iPage;
 
     @After
     public void tearDown() throws Exception {
@@ -45,7 +44,7 @@ public class IPageTest extends FileBase {
     public void createAndAppendAndClose() throws Exception {
         dir = testDir("createAndAppendAndClose");
         assertThat(dir.exists(), is(false));
-        iPage = IPage.baseOn(dir).accessor(new StringAccessor()).build();
+        newIPage();
         assertAppendAndDurableBy(CLOSE);
     }
 
@@ -53,7 +52,7 @@ public class IPageTest extends FileBase {
     public void createAndAppendAndFlush() throws Exception {
         dir = testDir("createAndAppendAndFlush");
         assertThat(dir.exists(), is(false));
-        iPage = IPage.baseOn(dir).build();
+        newIPage();
         assertAppendAndDurableBy(FLUSH);
     }
 
@@ -61,10 +60,10 @@ public class IPageTest extends FileBase {
     public void getAfterAppended() throws Exception {
         dir = testDir("getAfterAppended");
 
-        iPage = IPage.baseOn(dir).build();
+        newIPage();
         assertThat(iPage.get(0L), is(nullValue()));
 
-        Record record = new Record("1".getBytes());
+        String record = "value";
         long offset = iPage.append(record);
 
         assertThat(iPage.get(offset), is(record));
@@ -73,8 +72,8 @@ public class IPageTest extends FileBase {
     @Test
     public void getFromNonAppendingChunk() throws Exception {
         dir = testDir("getFromNonAppendingChunk");
-        iPage = IPage.baseOn(dir).chunkCapacity(4096).build();
-        Record record = new Record("0123456789ab".getBytes());
+        newIPage();
+        String record = "0123456789ab";
         for (int i = 0; i < 257; i++) {
             iPage.append(record);
         }
@@ -89,9 +88,9 @@ public class IPageTest extends FileBase {
     @Test
     public void truncateByOffset() throws Exception {
         dir = testDir("truncateByOffset");
-        iPage = IPage.baseOn(dir).chunkCapacity(4096).build();
+        newIPage();
 
-        Record record = new Record("0123456789ab".getBytes());
+        String record = "0123456789ab";
         for (int i = 0; i < 513; i++) {
             iPage.append(record);
         }
@@ -125,8 +124,8 @@ public class IPageTest extends FileBase {
         dir = testDir("loadExist");
 
         // create a iPage with two chunk
-        iPage = IPage.baseOn(dir).build();
-        Record record = new Record("0123456789ab".getBytes());
+        newIPage();
+        String record = "0123456789ab";
         for (int i = 0; i < 257; i++) {
             iPage.append(record);
         }
@@ -136,8 +135,8 @@ public class IPageTest extends FileBase {
         assertExistFile("4096");
 
         // load and verify
-        iPage = IPage.baseOn(dir).build();
-        Record newRecord = new Record("newRecord".getBytes());
+        newIPage();
+        String newRecord = "newRecord";
         long offset = iPage.append(newRecord);
 
         assertThat(iPage.get(0L), is(record));
@@ -151,9 +150,13 @@ public class IPageTest extends FileBase {
         IPage.baseOn(dir);
     }
 
+    private void newIPage() throws IOException {
+        iPage = IPage.<String>baseOn(dir).accessor(new StringAccessor()).chunkCapacity(4096).build();
+    }
+
     private void assertAppendAndDurableBy(boolean close) throws IOException {
-        assertThat(iPage.append(new Record("item1".getBytes())), is(0L));
-        assertThat(iPage.append(new Record("item2".getBytes())), is(9L));
+        assertThat(iPage.append("item1"), is(0L));
+        assertThat(iPage.append("item2"), is(9L));
         if (close) {
             iPage.close();
         } else {

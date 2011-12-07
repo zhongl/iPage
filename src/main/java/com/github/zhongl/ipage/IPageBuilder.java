@@ -33,42 +33,41 @@ public final class IPageBuilder<T> {
     private static final int UNSET = -1;
 
     private final File baseDir;
-    private final ChunkFactory chunkFactory;
     private int chunkCapacity = UNSET;
-    private ByteBufferAccessor accessor;
+    private ByteBufferAccessor<T> byteBufferAccessor;
 
     IPageBuilder(File dir) {
         if (!dir.exists()) checkState(dir.mkdirs(), "Can not create directory: %s", dir);
         checkArgument(dir.isDirectory(), "%s should be a directory.", dir);
         baseDir = dir;
-        chunkFactory = new ChunkFactory();
     }
 
-    public IPageBuilder chunkCapacity(int value) {
+    public IPageBuilder<T> chunkCapacity(int value) {
         checkState(chunkCapacity == UNSET, "Chunk capacity can only set once.");
         checkArgument(value >= Chunk.DEFAULT_CAPACITY, "Chunk capacity should not less than %s", Chunk.DEFAULT_CAPACITY);
         chunkCapacity = value;
         return this;
     }
 
-    public IPageBuilder accessor(ByteBufferAccessor<T> accessor) {
-        // TODO checkState
+    public IPageBuilder<T> accessor(ByteBufferAccessor<T> accessor) {
         checkNotNull(accessor);
-        this.accessor = accessor;
+        this.byteBufferAccessor = accessor;
         return this;
     }
 
-    public IPage build() throws IOException {
+    public IPage<T> build() throws IOException {
         chunkCapacity = (chunkCapacity == UNSET) ? Chunk.DEFAULT_CAPACITY : chunkCapacity;
-        List<Chunk> chunks = loadExistChunks();
-        return new IPage(baseDir, chunkFactory, chunks);
+        checkNotNull(byteBufferAccessor, "ByteBufferAccessor should not be null.");
+        ChunkFactory<T> chunkFactory = new ChunkFactory<T>(chunkCapacity, byteBufferAccessor);
+        List<Chunk<T>> chunks = loadExistChunks(chunkFactory);
+        return new IPage<T>(baseDir, chunkFactory, chunks);
     }
 
-    private List<Chunk> loadExistChunks() throws IOException {
+    private List<Chunk<T>> loadExistChunks(ChunkFactory<T> chunkFactory) throws IOException {
         File[] files = baseDir.listFiles(new NumberFileNameFilter());
         Arrays.sort(files, new FileNumberNameComparator());
 
-        ArrayList<Chunk> chunks = new ArrayList<Chunk>(files.length);
+        ArrayList<Chunk<T>> chunks = new ArrayList<Chunk<T>>(files.length);
         for (File file : files) {
             long beginPositionInIPage = Long.parseLong(file.getName());
             chunks.add(0, chunkFactory.create(beginPositionInIPage, file)); // reverse order to make sure the appending chunk at first.
@@ -76,10 +75,4 @@ public final class IPageBuilder<T> {
         return chunks;
     }
 
-    class ChunkFactory {
-
-        public Chunk create(long beginPositionInIPage, File file) throws IOException {
-            return new Chunk(beginPositionInIPage, file, chunkCapacity, accessor);
-        }
-    }
 }

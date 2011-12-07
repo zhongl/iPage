@@ -18,14 +18,13 @@ package com.github.zhongl.kvengine;
 
 import com.github.zhongl.index.Index;
 import com.github.zhongl.ipage.IPage;
-import com.github.zhongl.kvengine.Record;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-class Recovery implements Runnable {
+public class Recovery implements Runnable {
 
     private final Index index;
     private final IPage ipage;
@@ -37,27 +36,27 @@ class Recovery implements Runnable {
 
     @Override
     public void run() {
-        try {
-            ipage.recover();
-            index.recoverBy(new InnerRecordFinder());
-        } catch (IOException e) {
-            throw new IllegalStateException("Can't run recovery, because:", e);
-        }
+//        try {
+//            ipage.recover();
+//            index.recoverBy(new InnerRecordFinder());
+//        } catch (IOException e) {
+//            throw new IllegalStateException("Can't run recovery, because:", e);
+//        }
     }
 
     public interface RecordFinder {
         Record getRecordIn(long offset) throws IOException;
     }
 
-    class InnerRecordFinder implements RecordFinder {
-        @Override
-        public Record getRecordIn(long offset) throws IOException {
-            try {
-                return ipage.get(offset);
-            } catch (IllegalArgumentException e) {
-                return null;// offset or length is illegal
-            }
-        }
-    }
+//    class InnerRecordFinder implements RecordFinder {
+//        @Override
+//        public Record getRecordIn(long offset) throws IOException {
+//            try {
+//                return ipage.get(offset);
+//            } catch (IllegalArgumentException e) {
+//                return null;// offset or length is illegal
+//            }
+//        }
+//    }
 
 }

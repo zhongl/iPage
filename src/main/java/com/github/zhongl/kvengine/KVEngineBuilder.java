@@ -16,13 +16,8 @@
 
 package com.github.zhongl.kvengine;
 
-import com.github.zhongl.index.Buckets;
 import com.github.zhongl.index.Index;
-import com.github.zhongl.ipage.Chunk;
 import com.github.zhongl.ipage.IPage;
-import com.github.zhongl.ipage.Recovery;
-import com.github.zhongl.ipage.UnsafeDataStateException;
-import com.google.common.base.Preconditions;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
@@ -58,8 +53,8 @@ class KVEngineBuilder {
 
     public KVEngineBuilder chunkCapacity(int value) {
         checkState(chunkCapacity == UNSET, "Chunk capacity can only set once.");
-        Preconditions.checkArgument(value >= Chunk.DEFAULT_CAPACITY,
-                "Chunk capacity should not less than " + Chunk.DEFAULT_CAPACITY);
+//        Preconditions.checkArgument(value >= Chunk.DEFAULT_CAPACITY,
+//                "Chunk capacity should not less than " + Chunk.DEFAULT_CAPACITY);
         chunkCapacity = value;
         return this;
     }
@@ -142,12 +137,12 @@ class KVEngineBuilder {
     }
 
     private Index newIndex() throws IOException {
-        initBucketSize = (initBucketSize == UNSET) ? Buckets.DEFAULT_SIZE : initBucketSize;
+//        initBucketSize = (initBucketSize == UNSET) ? Buckets.DEFAULT_SIZE : initBucketSize;
         return Index.baseOn(new File(dir, INDEX_DIR)).initialBucketSize(initBucketSize).build();
     }
 
     private IPage newIPage() throws IOException {
-        chunkCapacity = (chunkCapacity == UNSET) ? Chunk.DEFAULT_CAPACITY : chunkCapacity;
+//        chunkCapacity = (chunkCapacity == UNSET) ? Chunk.DEFAULT_CAPACITY : chunkCapacity;
         return IPage.baseOn(new File(dir, IPAGE_DIR)).chunkCapacity(chunkCapacity).build();
     }
 }

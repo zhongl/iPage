@@ -74,6 +74,7 @@ final class Chunk<T> implements Closeable, Iterable<T> {
     }
 
     public T get(long offset) throws IOException {
+        checkState(!erased, "Chunk has already erased.");
         try {
             return getInternal((int) (offset - beginPositionInIPage));
         } catch (RuntimeException e) {
@@ -85,7 +86,6 @@ final class Chunk<T> implements Closeable, Iterable<T> {
     }
 
     private T getInternal(int offset) throws IOException {
-        checkState(!erased, "Chunk has already erased.");
         ensureMap();
         ByteBuffer duplicate = mappedByteBuffer.duplicate();// avoid modification of mappedDirectBuffer.
         duplicate.position(offset);
@@ -95,17 +95,12 @@ final class Chunk<T> implements Closeable, Iterable<T> {
 
     @Override
     public void close() throws IOException {
-        if (!erased && mappedByteBuffer != null) {
-            flush();
-            DirectByteBufferCleaner.clean(mappedByteBuffer);
-            mappedByteBuffer = null;
-            trim();
-        }
+        if (flush() && releaseBuffer()) setLength(writePosition);
     }
 
     public long endPositionInIPage() {
         checkState(!erased, "Chunk has already erased.");
-        return beginPositionInIPage + writePosition;
+        return beginPositionInIPage + writePosition - 1;
     }
 
     public long beginPositionInIPage() {
@@ -113,9 +108,10 @@ final class Chunk<T> implements Closeable, Iterable<T> {
         return beginPositionInIPage;
     }
 
-    public void flush() throws IOException {
-        if (erased || mappedByteBuffer == null) return;
+    public boolean flush() throws IOException {
+        if (erased || mappedByteBuffer == null) return false;
         mappedByteBuffer.force();
+        return true;
     }
 
     @Override
@@ -126,19 +122,39 @@ final class Chunk<T> implements Closeable, Iterable<T> {
 
     public void erase() throws IOException {
         if (erased) return;
-        close();
-        checkState(file.delete(), "Can't delete file %s ", file);
         erased = true;
+        releaseBuffer();
+        setLength(0L);
+        deleteFile();
+    }
+
+    private void deleteFile() {
+        File deleted = new File(file.getParentFile(), "-" + file.getName() + "-");
+        checkState(file.renameTo(deleted), "Can't delete file %s", file); // void deleted failed
+        checkState(deleted.delete(), "Can't delete file %s", file);
+    }
+
+    private void setLength(long value) throws IOException {
+        RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
+        randomAccessFile.setLength(value);
+        randomAccessFile.close();
     }
 
     public Dimidiation dimidiate(long offset) {
         checkState(!erased, "Chunk has already erased.");
-        return new Dimidiation((int) (offset - beginPositionInIPage));
+        return new Dimidiation((offset));
     }
 
     @Deprecated
     public void recover() throws IOException {
         // TODO use dimidate
+    }
+
+    private boolean releaseBuffer() throws IOException {
+        if (mappedByteBuffer == null) return false;
+        DirectByteBufferCleaner.clean(mappedByteBuffer);
+        mappedByteBuffer = null;
+        return true;
     }
 
     private void checkOverFlowIfAppend(T record) {
@@ -149,12 +165,6 @@ final class Chunk<T> implements Closeable, Iterable<T> {
     private void ensureMap() throws IOException {
         // TODO maybe a closed state is needed for prevent remap
         if (mappedByteBuffer == null) mappedByteBuffer = Files.map(file, READ_WRITE, capacity);
-    }
-
-    private void trim() throws IOException {
-        RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
-        randomAccessFile.setLength(writePosition);
-        randomAccessFile.close();
     }
 
     private class RecordIterator extends AbstractIterator<T> {
@@ -168,6 +178,8 @@ final class Chunk<T> implements Closeable, Iterable<T> {
         @Override
         protected T computeNext() {
             try {
+                // TODO Slove concurrent modification problem
+                checkState(!erased, "Chunk has already erased.");
                 if (offset >= limit) return endOfData();
                 T record = getInternal(offset);
                 offset += byteBufferAccessor.lengthOf(record);
@@ -181,19 +193,19 @@ final class Chunk<T> implements Closeable, Iterable<T> {
     }
 
     public class Dimidiation {
-        private final int offset;
+        private final long offset;
 
-        public Dimidiation(int offset) {
+        public Dimidiation(long offset) {
             this.offset = offset;
         }
 
         public Chunk<T> left() throws IOException {
-            writePosition = offset;
+            writePosition = (int) (offset - beginPositionInIPage());
             return Chunk.this;
         }
 
         public Chunk<T> right() throws IOException {
-            long length = endPositionInIPage() - offset;
+            long length = endPositionInIPage() - offset + 1;
             File rightPiece = new File(file.getParentFile(), offset + "");
             InputSupplier<InputStream> source = ByteStreams.slice(Files.newInputStreamSupplier(file), offset, length);
             Files.copy(source, rightPiece);

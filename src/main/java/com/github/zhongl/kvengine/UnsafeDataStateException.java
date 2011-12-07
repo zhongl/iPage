@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.kvengine;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-class UnsafeDataStateException extends Exception {}
+public class UnsafeDataStateException extends Exception {}
