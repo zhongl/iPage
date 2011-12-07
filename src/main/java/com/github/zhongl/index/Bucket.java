@@ -30,12 +30,12 @@ import static com.github.zhongl.util.ByteBuffers.slice;
 /**
  * {@link Bucket} has 163
  * {@link com.github.zhongl.index.Slot} for storing tuple of
- * {@link com.github.zhongl.index.Md5Key} and offset of {@link com.github.zhongl.kvengine.Record} in
+ * {@link com.github.zhongl.index.Md5Key} and offset of {@link com.github.zhongl.kvengine.Entry} in
  * {@link com.github.zhongl.ipage.IPage}.
  * <p/>
  * Every slot has a head byte to indicate it is empty, occupied or released.
  */
-class Bucket implements ValidateOrRecover<Slot> {
+class Bucket implements ValidateOrRecover<Slot, IOException> {
 
     public static final int LENGTH = Integer.getInteger("com.github.zhongl.ipage.bucket.length", 4096); // default 4K
     private final Slot[] slots;
@@ -105,7 +105,7 @@ class Bucket implements ValidateOrRecover<Slot> {
     }
 
     @Override
-    public boolean validateOrRecoverBy(Validator<Slot> validator) throws IOException {
+    public boolean validateOrRecoverBy(Validator<Slot, IOException> validator) throws IOException {
         for (Slot slot : slots) {
             if (validator.validate(slot)) continue;
             slot.release();

@@ -16,6 +16,7 @@
 
 package com.github.zhongl.kvengine;
 
+import com.github.zhongl.accessor.CommonAccessors;
 import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 
@@ -27,10 +28,11 @@ public class KVEngineBuilderTest extends FileBase {
     @Test
     public void fullConfig() throws Exception {
         dir = testDir("fullConfig");
-        new KVEngineBuilder(dir)
+        new KVEngineBuilder<String>(dir)
                 .backlog(10)
                 .initialBucketSize(256)
                 .chunkCapacity(4096)
+                .valueAccessor(CommonAccessors.STRING)
                 .flushByCount(5)
                 .flushByElapseMilliseconds(500L)
                 .build();
@@ -39,7 +41,7 @@ public class KVEngineBuilderTest extends FileBase {
     @Test
     public void defaultConfig() throws Exception {
         dir = testDir("defaultConfig");
-        new KVEngineBuilder(dir).build();
+        new KVEngineBuilder(dir).valueAccessor(CommonAccessors.STRING).build();
     }
 
     @Test(expected = IllegalArgumentException.class)

@@ -143,13 +143,13 @@ public class IPageTest extends FileBase {
         }
         assertThat(iPage.get(35L), is(7 + ""));
 
-        Validator<String> stringValidator = new Validator<String>() {
+        Validator<String, IOException> stringValidator = new Validator<String, IOException>() {
             @Override
-            public boolean validate(String value) {
+            public boolean validate(String value) throws IOException {
                 return !value.equals(7 + "");
             }
         };
-        iPage.validateAndRecoverBy(stringValidator);
+        iPage.validateOrRecoverBy(stringValidator);
 
         assertThat(iPage.get(30L), is(6 + ""));
         assertThat(iPage.get(35L), is(nullValue()));
@@ -175,7 +175,7 @@ public class IPageTest extends FileBase {
     }
 
     private void newIPage() throws IOException {
-        iPage = IPage.<String>baseOn(dir).byteBufferAccessor(CommonAccessors.STRING).chunkCapacity(4096).build();
+        iPage = IPage.<String>baseOn(dir).accessor(CommonAccessors.STRING).chunkCapacity(4096).build();
     }
 
     private void assertAppendAndDurableBy(boolean close) throws IOException {

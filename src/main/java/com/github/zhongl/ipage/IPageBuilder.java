@@ -50,7 +50,7 @@ public final class IPageBuilder<T> {
         return this;
     }
 
-    public IPageBuilder<T> byteBufferAccessor(Accessor<T> instance) {
+    public IPageBuilder<T> accessor(Accessor<T> instance) {
         checkNotNull(instance);
         this.accessor = instance;
         return this;
@@ -58,7 +58,7 @@ public final class IPageBuilder<T> {
 
     public IPage<T> build() throws IOException {
         chunkCapacity = (chunkCapacity == UNSET) ? Chunk.DEFAULT_CAPACITY : chunkCapacity;
-        checkNotNull(accessor, "Accessor should not be null.");
+        checkNotNull(accessor, "EntryAccessor should not be null.");
         ChunkFactory<T> chunkFactory = new ChunkFactory<T>(chunkCapacity, accessor);
         List<Chunk<T>> chunks = loadExistChunks(chunkFactory);
         return new IPage<T>(baseDir, chunkFactory, chunks);

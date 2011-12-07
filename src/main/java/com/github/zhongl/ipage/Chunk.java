@@ -34,26 +34,21 @@ import java.util.Iterator;
 import static com.google.common.base.Preconditions.checkState;
 
 /**
- * {@link com.github.zhongl.ipage.Chunk} File structure :
- * <ul>
- * <p/>
- * <li>{@link com.github.zhongl.ipage.Chunk} = {@link T}* </li>
- * <li>{@link T} = length:4bytes bytes</li>
- * </ul>
+ * {@link com.github.zhongl.ipage.Chunk}
  *
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @NotThreadSafe
-final class Chunk<T> extends MappedFile implements Iterable<T>, Closeable {
+public final class Chunk<T> extends MappedFile implements Iterable<T>, Closeable {
 
-    static final int DEFAULT_CAPACITY = 4096; // 4k
+    public static final int DEFAULT_CAPACITY = 4096; // 4k
     private final Accessor<T> accessor;
     private final long beginPositionInIPage;
 
     private volatile int writePosition = 0;
     private volatile boolean erased;
 
-    Chunk(long beginPositionInIPage, File file, long capacity, Accessor<T> accessor) throws IOException {
+    public Chunk(long beginPositionInIPage, File file, long capacity, Accessor<T> accessor) throws IOException {
         super(file, capacity);
         this.beginPositionInIPage = beginPositionInIPage;
         this.accessor = accessor;
@@ -114,11 +109,11 @@ final class Chunk<T> extends MappedFile implements Iterable<T>, Closeable {
         return new Dimidiation((offset));
     }
 
-    public Long findOffsetOfFirstInvalidRecordBy(Validator<T> validator) throws IOException {
+    public Long findOffsetOfFirstInvalidRecordBy(Validator<T, IOException> validator) throws IOException {
         long offset = beginPositionInIPage;
-        while (true) {
+        while (offset < writePosition) {
             T object = get(offset);
-            if (!validator.validate(object)) break;
+            if (!validator.validate(object)) return offset;
             offset += accessor.byteLengthOf(object);
         }
         return null;
@@ -130,7 +125,7 @@ final class Chunk<T> extends MappedFile implements Iterable<T>, Closeable {
         sb.append("Chunk");
         sb.append("{file=").append(file);
         sb.append(", capacity=").append(capacity);
-        sb.append(", byteBufferAccessor=").append(accessor.getClass().getName());
+        sb.append(", accessor=").append(accessor.getClass().getName());
         sb.append(", beginPositionInIPage=").append(beginPositionInIPage);
         sb.append(", writePosition=").append(writePosition);
         sb.append(", erased=").append(erased);

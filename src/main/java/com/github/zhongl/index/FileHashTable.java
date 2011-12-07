@@ -32,7 +32,7 @@ import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 
 /**
  * {@link FileHashTable} is a file-based hash map for mapping
- * {@link Md5Key} and offset of {@link com.github.zhongl.kvengine.Record} in
+ * {@link Md5Key} and offset of {@link com.github.zhongl.kvengine.Entry} in
  * {@link com.github.zhongl.ipage.IPage}.
  * <p/>
  * It is a implemente of separate chain hash table, more infomation you can find in "Data Structures & Algorithms In Java".
@@ -40,7 +40,7 @@ import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @NotThreadSafe
-public final class FileHashTable implements ValidateOrRecover<Slot> {
+public final class FileHashTable implements ValidateOrRecover<Slot, IOException> {
 
     public static final Long NULL_OFFSET = null;
     public static final int DEFAULT_SIZE = 256;
@@ -142,7 +142,7 @@ public final class FileHashTable implements ValidateOrRecover<Slot> {
     }
 
     @Override
-    public boolean validateOrRecoverBy(Validator<Slot> validator) throws IOException {
+    public boolean validateOrRecoverBy(Validator<Slot, IOException> validator) throws IOException {
         checkState(!cleaned && !closed, "FileHashTable %s has already cleaned or closed.", file);
         for (Bucket bucket : buckets) {
             if (bucket.checkCRC()) continue;

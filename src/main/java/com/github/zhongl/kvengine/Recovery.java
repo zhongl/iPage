@@ -17,6 +17,8 @@
 package com.github.zhongl.kvengine;
 
 import com.github.zhongl.index.Index;
+import com.github.zhongl.index.Slot;
+import com.github.zhongl.integerity.Validator;
 import com.github.zhongl.ipage.IPage;
 
 import javax.annotation.concurrent.NotThreadSafe;
@@ -24,39 +26,36 @@ import java.io.IOException;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-public class Recovery implements Runnable {
+public class Recovery<V> implements Runnable {
 
     private final Index index;
-    private final IPage ipage;
+    private final IPage<Entry<V>> ipage;
 
-    public Recovery(Index index, IPage ipage) {
+    public Recovery(Index index, IPage<Entry<V>> ipage) {
         this.index = index;
         this.ipage = ipage;
     }
 
     @Override
     public void run() {
-//        try {
-//            ipage.recover();
-//            index.validateAndRecoverBy(new InnerRecordFinder());
-//        } catch (IOException e) {
-//            throw new IllegalStateException("Can't run recovery, because:", e);
-//        }
+        try {
+            index.validateOrRecoverBy(new Validator<Slot, IOException>() {
+                @Override
+                public boolean validate(Slot slot) throws IOException {
+                    Entry<V> entry = ipage.get(slot.offset());
+                    if (entry == null) return false;
+                    return entry.key().equals(slot.key());
+                }
+            });
+            ipage.validateOrRecoverBy(new Validator<Entry<V>, IOException>() {
+                @Override
+                public boolean validate(Entry<V> entry) throws IOException {
+                    return index.get(entry.key()) != null;
+                }
+            });
+        } catch (IOException e) {
+            throw new IllegalStateException("Can't run recovery, because:", e);
+        }
     }
-
-    public interface RecordFinder {
-        Record getRecordIn(long offset) throws IOException;
-    }
-
-//    class InnerRecordFinder implements RecordFinder {
-//        @Override
-//        public Record getRecordIn(long offset) throws IOException {
-//            try {
-//                return ipage.get(offset);
-//            } catch (IllegalArgumentException e) {
-//                return null;// offset or length is illegal
-//            }
-//        }
-//    }
 
 }

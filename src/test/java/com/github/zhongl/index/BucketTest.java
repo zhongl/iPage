@@ -22,6 +22,7 @@ import com.google.common.primitives.Longs;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import static org.hamcrest.Matchers.is;
@@ -47,7 +48,7 @@ public class BucketTest {
         );
         Bucket bucket = new Bucket(ByteBuffer.wrap(brokenBucketContent));// mock broken fileHashTable file.
 
-        Validator<Slot> validator = new Validator<Slot>() {
+        Validator<Slot, IOException> validator = new Validator<Slot, IOException>() {
             @Override
             public boolean validate(Slot slot) {
                 return slot.offset() < 10L;

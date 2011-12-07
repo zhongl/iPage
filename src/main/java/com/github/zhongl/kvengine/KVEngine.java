@@ -30,23 +30,30 @@ import java.util.concurrent.TimeUnit;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @ThreadSafe
-public class KVEngine extends Engine {
+public class KVEngine<T> extends Engine {
 
     static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
 
-    private final IPage<Record> ipage;
+    private final IPage<Entry<T>> ipage;
     private final Index index;
     private final CallByCountOrElapse callByCountOrElapse;
-    private final DataSecurity dataSecurity;
+    private final DataIntegerity dataIntegerity;
     private final Group group;
 
-    public KVEngine(long pollTimeout, int backlog, Group group, IPage<Record> ipage, Index index, CallByCountOrElapse callByCountOrElapse, DataSecurity dataSecurity) {
+    public KVEngine(long pollTimeout,
+                    int backlog,
+                    Group group,
+                    IPage<Entry<T>> ipage,
+                    Index index,
+                    CallByCountOrElapse callByCountOrElapse,
+                    DataIntegerity dataIntegerity
+    ) {
         super(pollTimeout, DEFAULT_TIME_UNIT, backlog);
         this.group = group;
         this.ipage = ipage;
         this.index = index;
         this.callByCountOrElapse = callByCountOrElapse;
-        this.dataSecurity = dataSecurity;
+        this.dataIntegerity = dataIntegerity;
     }
 
     @Override
@@ -55,56 +62,46 @@ public class KVEngine extends Engine {
         try {
             index.close();
             ipage.close();
-            dataSecurity.safeClose();
+            dataIntegerity.safeClose();
         } catch (IOException e) {
             e.printStackTrace();  // TODO log e
         }
     }
 
-    public static KVEngineBuilder baseOn(File dir) {
-        return new KVEngineBuilder(dir);
+    public static <V> KVEngineBuilder<V> baseOn(File dir) {
+        return new KVEngineBuilder<V>(dir);
     }
 
     // TODO @Count monitor
     // TODO @Elapse monitor
-    public boolean put(Md5Key key, Record record, FutureCallback<Record> callback) {
-        return submit(new Put(key, record, group.decorate(callback)));
+    public boolean put(Md5Key key, T value, FutureCallback<T> callback) {
+        return submit(new Put(key, value, group.decorate(callback)));
     }
 
-    public Record put(Md5Key key, Record record) throws IOException, InterruptedException {
-        Sync<Record> callback = new Sync<Record>();
-        put(key, record, callback);
+    public T put(Md5Key key, T value) throws IOException, InterruptedException {
+        Sync<T> callback = new Sync<T>();
+        put(key, value, callback);
         return callback.get();
     }
 
-    public boolean get(Md5Key key, FutureCallback<Record> callback) {
+    public boolean get(Md5Key key, FutureCallback<T> callback) {
         return submit(new Get(key, callback));
     }
 
-    public Record get(Md5Key key) throws IOException, InterruptedException {
-        Sync<Record> callback = new Sync<Record>();
+    public T get(Md5Key key) throws IOException, InterruptedException {
+        Sync<T> callback = new Sync<T>();
         get(key, callback);
         return callback.get();
     }
 
-    public boolean remove(Md5Key key, FutureCallback<Record> callback) {
+    public boolean remove(Md5Key key, FutureCallback<T> callback) {
         return submit(new Remove(key, group.decorate(callback)));
     }
 
-    public Record remove(Md5Key key) throws IOException, InterruptedException {
-        Sync<Record> callback = new Sync<Record>();
+    public T remove(Md5Key key) throws IOException, InterruptedException {
+        Sync<T> callback = new Sync<T>();
         remove(key, callback);
         return callback.get();
-    }
-
-    @Override
-    public String toString() {
-        final StringBuilder sb = new StringBuilder();
-        sb.append("KVEngine");
-        sb.append("{ipage=").append(ipage);
-        sb.append(", index=").append(index);
-        sb.append('}');
-        return sb.toString();
     }
 
     @Override
@@ -126,11 +123,11 @@ public class KVEngine extends Engine {
         }
     }
 
-    public abstract class Operation extends Task<Record> {
+    public abstract class Operation extends Task<T> {
 
         protected final Md5Key key;
 
-        public Operation(Md5Key key, FutureCallback<Record> callback) {
+        public Operation(Md5Key key, FutureCallback<T> callback) {
             super(callback);
             this.key = key;
         }
@@ -139,53 +136,52 @@ public class KVEngine extends Engine {
 
     private class Put extends Operation {
 
-        private final Record record;
+        private final T value;
 
-        private Put(Md5Key key, Record record, FutureCallback<Record> callback) {
+        private Put(Md5Key key, T value, FutureCallback<T> callback) {
             super(key, callback);
-            this.record = record;
+            this.value = value;
         }
 
         @Override
-        protected Record execute() throws IOException {
-            Long offset = index.put(key, ipage.append(record));
+        protected T execute() throws IOException {
+            Long offset = index.put(key, ipage.append(new Entry<T>(key, value)));
             group.register(callback);
             tryCallByCount();
             if (offset == null) return null;
-            // TODO remove the old record
-            return ipage.get(offset);
+            // TODO remove the old value
+            return ipage.get(offset).value();
         }
     }
 
     private class Get extends Operation {
 
-        private Get(Md5Key key, FutureCallback<Record> callback) {
+        private Get(Md5Key key, FutureCallback<T> callback) {
             super(key, callback);
         }
 
         @Override
-        protected Record execute() throws Throwable {
+        protected T execute() throws Throwable {
             Long offset = index.get(key);
             if (offset == null) return null;
-            return ipage.get(offset);
+            return ipage.get(offset).value();
         }
     }
 
     private class Remove extends Operation {
 
-        private Remove(Md5Key key, FutureCallback<Record> callback) {
+        private Remove(Md5Key key, FutureCallback<T> callback) {
             super(key, callback);
         }
 
         @Override
-        protected Record execute() throws Throwable {
+        protected T execute() throws Throwable {
             Long offset = index.remove(key);
             group.register(callback);
             tryCallByCount();
             // TODO use a slide window to async truncate iPage.
             if (offset == null) return null;
-            Record record = ipage.get(offset);
-            return record;
+            return ipage.get(offset).value();
         }
 
     }

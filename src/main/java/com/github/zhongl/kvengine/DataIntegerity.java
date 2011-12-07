@@ -25,12 +25,12 @@ import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-class DataSecurity {
+class DataIntegerity {
 
     private static final String SAFE = ".safe";
     private final File dir;
 
-    public DataSecurity(File dir) {
+    public DataIntegerity(File dir) {
         checkArgument(dir.exists() && dir.isDirectory(), "%s should be an existed directory", dir);
         this.dir = dir;
     }
@@ -45,7 +45,6 @@ class DataSecurity {
         if (!file.exists()) throw new UnsafeDataStateException();
         checkState(file.delete(), "Can't not remove " + SAFE);
     }
-
 
     public void safeClose() throws IOException {
         new File(dir, SAFE).createNewFile();

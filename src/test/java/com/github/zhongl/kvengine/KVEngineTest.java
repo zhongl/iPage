@@ -16,6 +16,7 @@
 
 package com.github.zhongl.kvengine;
 
+import com.github.zhongl.accessor.CommonAccessors;
 import com.github.zhongl.index.Index;
 import com.github.zhongl.index.Md5Key;
 import com.github.zhongl.ipage.IPage;
@@ -28,11 +29,13 @@ import java.util.concurrent.Callable;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.*;
+import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class KVEngineTest extends FileBase {
-    private KVEngine engine;
+    private KVEngine<String> engine;
 
     @After
     public void tearDown() throws Exception {
@@ -45,22 +48,22 @@ public class KVEngineTest extends FileBase {
     @Test
     public void putAndGetAndRemove() throws Exception {
         dir = testDir("putAndGetAndRemove");
-        engine = KVEngine.baseOn(dir).build();
+        engine = KVEngine.<String>baseOn(dir).valueAccessor(CommonAccessors.STRING).build();
         engine.startup();
 
-        Record record = new Record("record".getBytes());
-        Md5Key key = Md5Key.valueOf(record);
+        String value = "value";
+        Md5Key key = Md5Key.generate(value.getBytes());
 
-        assertThat(engine.put(key, record), is(nullValue()));
+        assertThat(engine.put(key, value), is(nullValue()));
 
-        assertThat(engine.get(key), is(record));
-        assertThat(engine.remove(key), is(record));
+        assertThat(engine.get(key), is(value));
+        assertThat(engine.remove(key), is(value));
     }
 
     @Test
     public void getAndRemoveNonExistKey() throws Exception {
         dir = testDir("getAndRemoveNonExistKey");
-        engine = KVEngine.baseOn(dir).build();
+        engine = KVEngine.<String>baseOn(dir).valueAccessor(CommonAccessors.STRING).build();
         engine.startup();
         Md5Key key = Md5Key.generate("non-exist".getBytes());
         assertThat(engine.get(key), is(nullValue()));
@@ -72,20 +75,21 @@ public class KVEngineTest extends FileBase {
         dir = testDir("flushByCountFirst");
         dir.mkdirs();
 
-        IPage ipage = mock(IPage.class);
+        IPage<Entry<String>> ipage = mock(IPage.class);
+        doReturn(new Entry(mock(Md5Key.class), "")).when(ipage).get(anyLong());
         Index index = mock(Index.class);
         int count = 2;
         long elapseMilliseconds = 100L;
         Callable<?> flusher = mock(Callable.class);
 
-        DataSecurity dataSecurity = new DataSecurity(dir);
+        DataIntegerity dataIntegerity = new DataIntegerity(dir);
         CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(count, elapseMilliseconds, flusher);
-        engine = new KVEngine(10L, 10, Group.NULL, ipage, index, callByCountOrElapse, dataSecurity);
+        engine = new KVEngine<String>(10L, 10, Group.NULL, ipage, index, callByCountOrElapse, dataIntegerity);
         engine.startup();
 
-        engine.put(mock(Md5Key.class), mock(Record.class));
+        engine.put(mock(Md5Key.class), "");
         Thread.sleep(elapseMilliseconds / 2);
-        engine.put(mock(Md5Key.class), mock(Record.class)); // flush by count and reset
+        engine.put(mock(Md5Key.class), ""); // flush by count and reset
         Thread.sleep(elapseMilliseconds / 2);
 
         verify(flusher, times(1)).call();
@@ -96,20 +100,22 @@ public class KVEngineTest extends FileBase {
         dir = testDir("flushByElapseFirst");
         dir.mkdirs();
 
-        IPage ipage = mock(IPage.class);
+        IPage<Entry<String>> ipage = mock(IPage.class);
+        doReturn(new Entry(mock(Md5Key.class), "value")).when(ipage).get(anyLong());
+
         Index index = mock(Index.class);
         int count = 2;
         long elapseMilliseconds = 100L;
         Callable<?> flusher = mock(Callable.class);
 
-        DataSecurity dataSecurity = new DataSecurity(dir);
+        DataIntegerity dataIntegerity = new DataIntegerity(dir);
         CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(count, elapseMilliseconds, flusher);
-        engine = new KVEngine(10L, 10, Group.NULL, ipage, index, callByCountOrElapse, dataSecurity);
+        engine = new KVEngine<String>(10L, 10, Group.NULL, ipage, index, callByCountOrElapse, dataIntegerity);
         engine.startup();
 
-        engine.put(mock(Md5Key.class), mock(Record.class));
+        engine.put(mock(Md5Key.class), "");
         Thread.sleep(elapseMilliseconds);                   // flush by elapse and reset
-        engine.put(mock(Md5Key.class), mock(Record.class));
+        engine.put(mock(Md5Key.class), "");
 
         verify(flusher, times(1)).call();
     }

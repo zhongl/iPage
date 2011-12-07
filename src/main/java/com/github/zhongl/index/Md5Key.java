@@ -18,7 +18,6 @@ package com.github.zhongl.index;
 
 import com.github.zhongl.accessor.AbstractAccessor;
 import com.github.zhongl.accessor.Accessor;
-import com.github.zhongl.kvengine.Record;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
 
@@ -36,11 +35,6 @@ public class Md5Key {
     public static final Accessor<Md5Key> ACCESSOR = new InnerAccessor();
 
     private final byte[] md5Bytes;
-
-    @Deprecated
-    public static Md5Key valueOf(Record record) {
-        throw new UnsupportedOperationException();
-    }
 
     public static Md5Key generate(byte[] bytes) {
         return new Md5Key(DigestUtils.md5(bytes));

@@ -27,7 +27,7 @@ import java.util.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-public class IPage<T> implements Closeable, Iterable<T>, ValidateOrRecover<T> {
+public class IPage<T> implements Closeable, Iterable<T>, ValidateOrRecover<T, IOException> {
 
     private final File baseDir;
     private final ChunkFactory<T> chunkFactory;
@@ -112,16 +112,11 @@ public class IPage<T> implements Closeable, Iterable<T>, ValidateOrRecover<T> {
     }
 
     @Override
-    public boolean validateOrRecoverBy(Validator<T> validator) throws IOException {
+    public boolean validateOrRecoverBy(Validator<T, IOException> validator) throws IOException {
         Long offset = lastRecentlyUsedChunk().findOffsetOfFirstInvalidRecordBy(validator);
         if (offset == null) return true;
         lastRecentlyUsedChunk().dimidiate(offset).left();
         return false;
-    }
-
-    public void validateAndRecoverBy(Validator<T> validator) throws IOException {
-        long offset = lastRecentlyUsedChunk().findOffsetOfFirstInvalidRecordBy(validator);
-        lastRecentlyUsedChunk().dimidiate(offset).left();
     }
 
     @Override

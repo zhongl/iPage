@@ -80,8 +80,8 @@ public class KVEngineBenchmark extends FileBase {
 
         public OperationFactory(KVEngine engine) {this.engine = engine;}
 
-        protected Record genRecord() {
-            return new Record(Bytes.concat(Ints.toByteArray(count++), new byte[1020]));
+        protected byte[] generateValue() {
+            return Bytes.concat(Ints.toByteArray(count++), new byte[1020]);
         }
     }
 
@@ -96,8 +96,8 @@ public class KVEngineBenchmark extends FileBase {
             return new Callable<Object>() {
                 @Override
                 public Object call() throws Exception {
-                    Record record = genRecord();
-                    return engine.put(Md5Key.valueOf(record), record);
+                    byte[] value = generateValue();
+                    return engine.put(Md5Key.generate(value), value);
                 }
             };
         }
@@ -115,7 +115,7 @@ public class KVEngineBenchmark extends FileBase {
             return new Callable<Object>() {
                 @Override
                 public Object call() throws Exception {
-                    return engine.get(Md5Key.valueOf(genRecord()));
+                    return engine.get(Md5Key.generate(generateValue()));
                 }
             };
         }
@@ -133,7 +133,7 @@ public class KVEngineBenchmark extends FileBase {
             return new Callable<Object>() {
                 @Override
                 public Object call() throws Exception {
-                    return engine.remove(Md5Key.valueOf(genRecord()));
+                    return engine.remove(Md5Key.generate(generateValue()));
                 }
             };
         }

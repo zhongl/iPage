@@ -16,17 +16,16 @@
 
 package com.github.zhongl.integerity;
 
-import java.io.IOException;
-
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface ValidateOrRecover<T> {
+public interface ValidateOrRecover<T, E extends Exception> {
+
     /**
      * Do validate, recovery only if it found invalid T.
      *
      * @param validator
      *
      * @return true if there is no invalid T and recover nothing, or else false.
-     * @throws IOException
+     * @throws E
      */
-    boolean validateOrRecoverBy(Validator<T> validator) throws IOException;
+    boolean validateOrRecoverBy(Validator<T, E> validator) throws E;
 }

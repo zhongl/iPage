@@ -16,6 +16,7 @@
 
 package com.github.zhongl.kvengine;
 
+import com.github.zhongl.accessor.CommonAccessors;
 import com.github.zhongl.index.Md5Key;
 import com.github.zhongl.util.FileBase;
 import org.junit.After;
@@ -29,7 +30,7 @@ import static org.hamcrest.Matchers.is;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class KVEngineDataRecoveryTest extends FileBase {
 
-    private KVEngine engine;
+    private KVEngine<String> engine;
 
     @After
     public void tearDown() throws Exception {
@@ -39,18 +40,18 @@ public class KVEngineDataRecoveryTest extends FileBase {
     @Test
     public void dataIsOkButDotSafeNotExist() throws Exception {
         dir = testDir("dataIsOkButDotSafeNotExist");
-        engine = KVEngine.baseOn(dir).build();
+        engine = KVEngine.<String>baseOn(dir).valueAccessor(CommonAccessors.STRING).build();
         engine.startup();
 
-        Record record = new Record("value".getBytes());
-        Md5Key key = Md5Key.valueOf(record);
-        engine.put(key, record);
+        String value = "value";
+        Md5Key key = Md5Key.generate(value.getBytes());
+        engine.put(key, value);
         engine.shutdown();
 
         boolean delete = new File(dir, ".safe").delete(); // delete .safe file
         assertThat(delete, is(true));
 
-        engine = KVEngine.baseOn(dir).build();
+        engine = KVEngine.<String>baseOn(dir).valueAccessor(CommonAccessors.STRING).build();
 
     }
 }

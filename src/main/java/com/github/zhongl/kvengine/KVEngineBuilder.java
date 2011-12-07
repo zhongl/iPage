@@ -16,7 +16,10 @@
 
 package com.github.zhongl.kvengine;
 
+import com.github.zhongl.accessor.Accessor;
+import com.github.zhongl.index.FileHashTable;
 import com.github.zhongl.index.Index;
+import com.github.zhongl.ipage.Chunk;
 import com.github.zhongl.ipage.IPage;
 
 import javax.annotation.concurrent.NotThreadSafe;
@@ -24,12 +27,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.Callable;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Preconditions.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-class KVEngineBuilder {
+class KVEngineBuilder<V> {
 
     static final long DEFAULT_FLUSH_ELAPSE_MILLISECONDS = 10L;
     static final int DEFAULT_BACKLOG = 10;
@@ -41,39 +43,47 @@ class KVEngineBuilder {
 
     private final File dir;
     private int chunkCapacity = UNSET;
-    private int initBucketSize = UNSET;
+    private int initialBucketSize = UNSET;
     private long flushElapseMilliseconds = UNSET;
     private int backlog = UNSET;
     private int flushCount = UNSET;
     private boolean groupCommit = false;
+    private Accessor<V> valueAccessor;
 
     public KVEngineBuilder(File dir) {
         this.dir = dir;
     }
 
-    public KVEngineBuilder chunkCapacity(int value) {
+    public KVEngineBuilder<V> chunkCapacity(int value) {
         checkState(chunkCapacity == UNSET, "Chunk capacity can only set once.");
-//        Preconditions.checkArgument(value >= Chunk.DEFAULT_CAPACITY,
-//                "Chunk capacity should not less than " + Chunk.DEFAULT_CAPACITY);
+        checkArgument(value >= Chunk.DEFAULT_CAPACITY,
+                "Chunk capacity should not less than " + Chunk.DEFAULT_CAPACITY);
         chunkCapacity = value;
         return this;
     }
 
-    public KVEngineBuilder backlog(int value) {
+    public KVEngineBuilder<V> valueAccessor(Accessor<V> accessor) {
+        checkState(valueAccessor == null, "Value accessor can only set once.");
+        checkNotNull(accessor, "Value accessor should not be null");
+        this.valueAccessor = accessor;
+        return this;
+    }
+
+    public KVEngineBuilder<V> backlog(int value) {
         checkState(backlog == UNSET, "Backlog can only set once.");
         checkArgument(value > 0, "Backlog should not less than 0");
         backlog = value;
         return this;
     }
 
-    public KVEngineBuilder initialBucketSize(int value) {
-        checkState(initBucketSize == UNSET, "Initial bucket buckets can only set once.");
+    public KVEngineBuilder<V> initialBucketSize(int value) {
+        checkState(initialBucketSize == UNSET, "Initial bucket buckets can only set once.");
         checkArgument(value > 0, "Initial bucket buckets should not less than 0");
-        initBucketSize = value;
+        initialBucketSize = value;
         return this;
     }
 
-    public KVEngineBuilder flushByElapseMilliseconds(long value) {
+    public KVEngineBuilder<V> flushByElapseMilliseconds(long value) {
         checkState(flushElapseMilliseconds == UNSET,
                 "Flush elapse milliseconds can only set once.");
         checkArgument(value >= DEFAULT_FLUSH_ELAPSE_MILLISECONDS,
@@ -82,35 +92,34 @@ class KVEngineBuilder {
         return this;
     }
 
-    public KVEngineBuilder flushByCount(int value) {
+    public KVEngineBuilder<V> flushByCount(int value) {
         checkState(flushCount == UNSET, "Flush count can only set once.");
         checkArgument(value > 0, "Flush count should not less than 0");
         flushCount = value;
         return this;
     }
 
-    public KVEngineBuilder groupCommit(boolean b) {
+    public KVEngineBuilder<V> groupCommit(boolean b) {
         groupCommit = b;
         return this;
     }
 
-    public KVEngine build() throws IOException {
-        DataSecurity dataSecurity = null;
+    public KVEngine<V> build() throws IOException {
         boolean exists = dir.exists();
         if (!exists) dir.mkdirs();
-        dataSecurity = new DataSecurity(dir);
 
-        final IPage ipage = newIPage();
+        DataIntegerity dataIntegerity = new DataIntegerity(dir);
+
+        final IPage<Entry<V>> ipage = newIPage();
         final Index index = newIndex();
 
         if (exists) {
             try {
-                dataSecurity.validate();
+                dataIntegerity.validate();
             } catch (UnsafeDataStateException e) {
                 new Recovery(index, ipage).run();
             }
         }
-
 
         CallByCountOrElapse callByCountOrElapse = newCallFlushByCountOrElapse(new Callable<Object>() {
 
@@ -125,7 +134,8 @@ class KVEngineBuilder {
         long pollTimeout = flushElapseMilliseconds / 2; // smaller poll timeout can guarantee accuration of flushing time.
         backlog = (backlog == UNSET) ? DEFAULT_BACKLOG : backlog;
         Group group = groupCommit ? Group.newInstance() : Group.NULL;
-        return new KVEngine(pollTimeout, backlog, group, ipage, index, callByCountOrElapse, dataSecurity);
+
+        return new KVEngine<V>(pollTimeout, backlog, group, ipage, index, callByCountOrElapse, dataIntegerity);
     }
 
     private CallByCountOrElapse newCallFlushByCountOrElapse(Callable<Object> flusher) {
@@ -137,12 +147,15 @@ class KVEngineBuilder {
     }
 
     private Index newIndex() throws IOException {
-//        initBucketSize = (initBucketSize == UNSET) ? FileHashTable.DEFAULT_SIZE : initBucketSize;
-        return Index.baseOn(new File(dir, INDEX_DIR)).initialBucketSize(initBucketSize).build();
+        initialBucketSize = (initialBucketSize == UNSET) ? FileHashTable.DEFAULT_SIZE : initialBucketSize;
+        return Index.baseOn(new File(dir, INDEX_DIR)).initialBucketSize(initialBucketSize).build();
     }
 
-    private IPage newIPage() throws IOException {
-//        chunkCapacity = (chunkCapacity == UNSET) ? Chunk.DEFAULT_CAPACITY : chunkCapacity;
-        return IPage.baseOn(new File(dir, IPAGE_DIR)).chunkCapacity(chunkCapacity).build();
+    private IPage<Entry<V>> newIPage() throws IOException {
+        checkNotNull(valueAccessor, "Value accessor need to set.");
+        chunkCapacity = (chunkCapacity == UNSET) ? Chunk.DEFAULT_CAPACITY : chunkCapacity;
+        return IPage.<Entry<V>>baseOn(new File(dir, IPAGE_DIR))
+                .accessor(new EntryAccessor<V>(valueAccessor))
+                .chunkCapacity(chunkCapacity).build();
     }
 }

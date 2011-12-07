@@ -17,6 +17,6 @@
 package com.github.zhongl.integerity;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface Validator<T> {
-    boolean validate(T value);
+public interface Validator<T, E extends Exception> {
+    boolean validate(T value) throws E;
 }

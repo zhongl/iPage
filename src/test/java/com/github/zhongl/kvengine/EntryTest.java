@@ -16,17 +16,20 @@
 
 package com.github.zhongl.kvengine;
 
+import com.github.zhongl.index.Md5Key;
 import org.junit.Test;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class RecordTest {
+public class EntryTest {
 
     @Test
-    public void itemToString() throws Exception {
-        assertThat(new Record("item".getBytes()).toString(), is("Record{bytes=[105, 116, 101, 109]}"));
+    public void entryToString() throws Exception {
+        String value = "value";
+        Md5Key key = Md5Key.generate(value.getBytes());
+        String expect = "Entry{key=Md5Key{md5Bytes=2063c1608d6e0baf80249c42e2be5804}, value=value}";
+        assertThat(new Entry<String>(key, value).toString(), is(expect));
     }
-
 }

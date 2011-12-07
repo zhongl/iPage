@@ -177,7 +177,7 @@ public class IndexTest extends FileBase {
 
         newIndex();
 
-        Validator<Slot> validator = new Validator<Slot>() {
+        Validator<Slot, IOException> validator = new Validator<Slot, IOException>() {
             @Override
             public boolean validate(Slot value) {
                 return true;

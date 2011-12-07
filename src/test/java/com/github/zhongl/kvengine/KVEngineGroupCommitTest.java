@@ -32,10 +32,8 @@ import java.util.concurrent.Future;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.*;
 
 /**
  * More infomation about group commit is here, https://github.com/zhongl/iPage/issues/2
@@ -43,12 +41,13 @@ import static org.mockito.Mockito.mock;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 public class KVEngineGroupCommitTest {
-    private KVEngine engine;
-    private IPage ipage;
+    private KVEngine<String> engine;
+    private IPage<Entry<String>> ipage;
     private Index index;
     private Callable flusher;
     private Group group;
-    private DataSecurity dataSecurity;
+    private DataIntegerity dataIntegerity;
+    private CallByCountOrElapse callByCountOrElapse;
 
     @After
     public void tearDown() throws Exception {
@@ -62,22 +61,22 @@ public class KVEngineGroupCommitTest {
     @Before
     public void setUp() throws Exception {
         ipage = mock(IPage.class);
+        doReturn(new Entry(mock(Md5Key.class), "")).when(ipage).get(anyLong());
+
         index = mock(Index.class);
         flusher = mock(Callable.class);
         group = Group.newInstance();
-        dataSecurity = mock(DataSecurity.class);
+        dataIntegerity = mock(DataIntegerity.class);
     }
 
     @Test
     public void groupCommitByCount() throws Exception {
-        CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(2, Long.MAX_VALUE, flusher);
-        engine = new KVEngine(10L, 10, group, ipage, index, callByCountOrElapse, dataSecurity);
-        engine.startup();
+        callByCountOrElapse = new CallByCountOrElapse(2, Long.MAX_VALUE, flusher);
+        newEngineAndStartup();
 
-        byte[] bytes = "value".getBytes();
         ExecutorService service = Executors.newFixedThreadPool(2);
-        Future<Record> putFuture = service.submit(new Put(bytes));
-        Future<Record> removeFuture = service.submit(new Remove(bytes));
+        Future<String> putFuture = service.submit(new Put("value"));
+        Future<String> removeFuture = service.submit(new Remove("value"));
 
         putFuture.get();
         removeFuture.get();
@@ -90,14 +89,12 @@ public class KVEngineGroupCommitTest {
         IOException e = new IOException();
         doThrow(e).when(flusher).call();
 
-        CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(2, Long.MAX_VALUE, flusher);
-        engine = new KVEngine(10L, 10, group, ipage, index, callByCountOrElapse, dataSecurity);
-        engine.startup();
+        callByCountOrElapse = new CallByCountOrElapse(2, Long.MAX_VALUE, flusher);
+        newEngineAndStartup();
 
-        byte[] bytes = "value".getBytes();
         ExecutorService service = Executors.newFixedThreadPool(2);
-        Future<Record> putFuture = service.submit(new Put(bytes));
-        Future<Record> removeFuture = service.submit(new Remove(bytes));
+        Future<String> putFuture = service.submit(new Put("value"));
+        Future<String> removeFuture = service.submit(new Remove("value"));
 
         try {
             putFuture.get();
@@ -115,14 +112,18 @@ public class KVEngineGroupCommitTest {
         service.shutdown();
     }
 
+    private void newEngineAndStartup() {
+        engine = new KVEngine<String>(10L, 10, group, ipage, index, callByCountOrElapse, dataIntegerity);
+        engine.startup();
+    }
+
     @Test
     public void groupCommitByElapse() throws Exception {
-        CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(Integer.MAX_VALUE, 10L, flusher);
-        engine = new KVEngine(10L, 10, group, ipage, index, callByCountOrElapse, dataSecurity);
-        engine.startup();
+        callByCountOrElapse = new CallByCountOrElapse(Integer.MAX_VALUE, 10L, flusher);
+        newEngineAndStartup();
 
-        byte[] bytes = "value".getBytes();
-        engine.put(Md5Key.generate(bytes), new Record(bytes));
+        String value = "value";
+        engine.put(Md5Key.generate(value.getBytes()), value);
     }
 
     @Test(expected = IOException.class)
@@ -130,48 +131,45 @@ public class KVEngineGroupCommitTest {
         IOException e = new IOException();
         doThrow(e).when(flusher).call();
 
-        CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(Integer.MAX_VALUE, 10L, flusher);
-        engine = new KVEngine(10L, 10, group, ipage, index, callByCountOrElapse, dataSecurity);
-        engine.startup();
+        callByCountOrElapse = new CallByCountOrElapse(Integer.MAX_VALUE, 10L, flusher);
+        newEngineAndStartup();
 
-        byte[] bytes = "value".getBytes();
-        engine.put(Md5Key.generate(bytes), new Record(bytes));
+        String value = "value";
+        engine.put(Md5Key.generate(value.getBytes()), value);
     }
 
     @Test(expected = IOException.class)
     public void writeFailure() throws Exception {
         doThrow(new IOException()).when(index).put(any(Md5Key.class), anyLong());
 
-        CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(Integer.MAX_VALUE, 10L, flusher);
+        callByCountOrElapse = new CallByCountOrElapse(Integer.MAX_VALUE, 10L, flusher);
+        newEngineAndStartup();
 
-        engine = new KVEngine(10L, 10, group, ipage, index, callByCountOrElapse, dataSecurity);
-        engine.startup();
-
-        byte[] bytes = "value".getBytes();
-        engine.put(Md5Key.generate(bytes), new Record(bytes));
+        String value = "value";
+        engine.put(Md5Key.generate(value.getBytes()), value);
     }
 
-    private class Put implements Callable<Record> {
+    private class Put implements Callable<String> {
 
-        private final byte[] bytes;
+        private final String value;
 
-        public Put(byte[] bytes) {this.bytes = bytes;}
+        public Put(String value) {this.value = value;}
 
         @Override
-        public Record call() throws Exception {
-            return engine.put(Md5Key.generate(bytes), new Record(bytes));
+        public String call() throws Exception {
+            return engine.put(Md5Key.generate(value.getBytes()), value);
         }
     }
 
-    private class Remove implements Callable<Record> {
+    private class Remove implements Callable<String> {
 
-        private final byte[] bytes;
+        private final String value;
 
-        public Remove(byte[] bytes) {this.bytes = bytes;}
+        public Remove(String value) {this.value = value;}
 
         @Override
-        public Record call() throws Exception {
-            return engine.remove(Md5Key.generate(bytes));
+        public String call() throws Exception {
+            return engine.remove(Md5Key.generate(value.getBytes()));
         }
     }
 }

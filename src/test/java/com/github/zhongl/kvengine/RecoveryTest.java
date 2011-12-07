@@ -16,8 +16,17 @@
 
 package com.github.zhongl.kvengine;
 
+import com.github.zhongl.index.Index;
+import com.github.zhongl.integerity.Validator;
+import com.github.zhongl.ipage.IPage;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import java.io.IOException;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class RecoveryTest {
@@ -25,10 +34,10 @@ public class RecoveryTest {
     @Test(expected = IllegalStateException.class)
     @Ignore("TODO")
     public void runFailureBecauseOfIOException() throws Exception {
-//        Index index = mock(Index.class);
-//        IPage iPage = mock(IPage.class);
-//        doThrow(new IOException()).when(index).validateAndRecoverBy(any(Recovery.RecordFinder.class));
-//        new Recovery(index, iPage).run();
+        Index index = mock(Index.class);
+        IPage<String> iPage = mock(IPage.class);
+        doThrow(new IOException()).when(index).validateOrRecoverBy(any(Validator.class));
+        new Recovery(index, iPage).run();
     }
 
 }

@@ -101,9 +101,9 @@ public class ChunkTest extends FileBase {
             chunk.append("" + i);
         }
 
-        Validator<String> validator = new Validator<String>() {
+        Validator<String, IOException> validator = new Validator<String, IOException>() {
             @Override
-            public boolean validate(String value) {
+            public boolean validate(String value) throws IOException {
                 return !value.equals(7 + "");
             }
         };
@@ -117,7 +117,7 @@ public class ChunkTest extends FileBase {
         newChunk();
         String expect = "Chunk{file=target/tmpTestFiles/ChunkTest.chunkToString, " +
                 "capacity=4096, " +
-                "byteBufferAccessor=com.github.zhongl.accessor.CommonAccessors$StringAccessor, " +
+                "accessor=com.github.zhongl.accessor.CommonAccessors$StringAccessor, " +
                 "beginPositionInIPage=0, " +
                 "writePosition=0, " +
                 "erased=false}";

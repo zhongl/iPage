@@ -26,6 +26,8 @@ import com.google.common.primitives.Longs;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.Test;
 
+import java.io.IOException;
+
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
@@ -84,7 +86,7 @@ public class FileHashTableTest extends FileBase {
         file = testFile("validateOrRecoveryIfNoBroken");
 
         fileHashTable = new FileHashTable(file, 1);
-        Validator<Slot> validator = mock(Validator.class);
+        Validator<Slot, IOException> validator = mock(Validator.class);
         assertThat(fileHashTable.validateOrRecoverBy(validator), is(true));// validateAndRecoverBy a empty bucket
 
         fileHashTable.put(Md5Key.generate("key".getBytes()), 7L);
@@ -114,9 +116,9 @@ public class FileHashTableTest extends FileBase {
 
         fileHashTable = new FileHashTable(file, 1);
 
-        Validator<Slot> validator = new Validator<Slot>() {
+        Validator<Slot, IOException> validator = new Validator<Slot, IOException>() {
             @Override
-            public boolean validate(Slot slot) {
+            public boolean validate(Slot slot) throws IOException {
                 return slot.offset() == 4L;
             }
         };

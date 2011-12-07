@@ -32,7 +32,7 @@ import java.util.List;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @NotThreadSafe
-public class Index implements Closeable, ValidateOrRecover<Slot> {
+public class Index implements Closeable, ValidateOrRecover<Slot, IOException> {
 
     private final File baseDir;
     private final int initialBucketSize;
@@ -112,7 +112,7 @@ public class Index implements Closeable, ValidateOrRecover<Slot> {
     }
 
     @Override
-    public boolean validateOrRecoverBy(Validator<Slot> validator) throws IOException {
+    public boolean validateOrRecoverBy(Validator<Slot, IOException> validator) throws IOException {
         for (FileHashTable fileHashTable : fileHashTables) {
             if (fileHashTable.validateOrRecoverBy(validator)) continue;
             return false;
