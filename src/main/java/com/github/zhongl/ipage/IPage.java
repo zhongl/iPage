@@ -73,7 +73,12 @@ public class IPage<T> implements Closeable {
     public T get(long offset) throws IOException {
         if (chunks.isEmpty()) return null;
         releaseChunkIfNecessary();
-        return chunkIn(offset).get(offset);
+        try {
+            return chunkIn(offset).get(offset);
+        } catch (RuntimeException e) {
+            // include IllegalArgumentException ArrayIndexOutOfBoundsException,
+            return null; // invalid offset
+        }
     }
 
     private Chunk<T> chunkIn(long offset) {
@@ -109,8 +114,9 @@ public class IPage<T> implements Closeable {
         chunks.add(toTruncateChunk.dimidiate(offset).right());
     }
 
-    public void recover() throws IOException {
-        lastRecentlyUsedChunk().recover();
+    public void recoverBy(Validator<T> validator) throws IOException {
+        long offset = lastRecentlyUsedChunk().findOffsetOfFirstInvalidRecordBy(validator);
+        lastRecentlyUsedChunk().dimidiate(offset).left();
     }
 
     private class ChunkOffsetRangeList extends AbstractList<Range> {

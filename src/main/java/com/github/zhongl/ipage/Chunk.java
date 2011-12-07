@@ -78,19 +78,9 @@ final class Chunk<T> implements Closeable, Iterable<T> {
         try {
             return getInternal((int) (offset - beginPositionInIPage));
         } catch (RuntimeException e) {
-            /**
-             * include {@link IllegalArgumentException}, {@link java.nio.BufferUnderflowException},
-             */
+            // include IllegalArgumentException java.nio.BufferUnderflowException,
             throw new IllegalArgumentException("Can't get object with invalid offset " + offset);
         }
-    }
-
-    private T getInternal(int offset) throws IOException {
-        ensureMap();
-        ByteBuffer duplicate = mappedByteBuffer.duplicate();// avoid modification of mappedDirectBuffer.
-        duplicate.position(offset);
-        duplicate.limit(writePosition);
-        return byteBufferAccessor.read(duplicate).get();
     }
 
     @Override
@@ -128,6 +118,29 @@ final class Chunk<T> implements Closeable, Iterable<T> {
         deleteFile();
     }
 
+    public Dimidiation dimidiate(long offset) {
+        checkState(!erased, "Chunk has already erased.");
+        return new Dimidiation((offset));
+    }
+
+    public long findOffsetOfFirstInvalidRecordBy(Validator<T> validator) throws IOException {
+        long offset = beginPositionInIPage;
+        while (true) {
+            T object = get(offset);
+            if (!validator.validate(object)) break;
+            offset += byteBufferAccessor.lengthOf(object);
+        }
+        return offset;
+    }
+
+    private T getInternal(int offset) throws IOException {
+        ensureMap();
+        ByteBuffer duplicate = mappedByteBuffer.duplicate();// avoid modification of mappedDirectBuffer.
+        duplicate.position(offset);
+        duplicate.limit(writePosition);
+        return byteBufferAccessor.read(duplicate).get();
+    }
+
     private void deleteFile() {
         File deleted = new File(file.getParentFile(), "-" + file.getName() + "-");
         checkState(file.renameTo(deleted), "Can't delete file %s", file); // void deleted failed
@@ -138,16 +151,6 @@ final class Chunk<T> implements Closeable, Iterable<T> {
         RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
         randomAccessFile.setLength(value);
         randomAccessFile.close();
-    }
-
-    public Dimidiation dimidiate(long offset) {
-        checkState(!erased, "Chunk has already erased.");
-        return new Dimidiation((offset));
-    }
-
-    @Deprecated
-    public void recover() throws IOException {
-        // TODO use dimidate
     }
 
     private boolean releaseBuffer() throws IOException {

@@ -89,6 +89,25 @@ public class ChunkTest extends FileBase {
         assertThat(dimidiation.right().get(offset), is(right));
     }
 
+    @Test
+    public void validate() throws Exception {
+        file = testFile("validate");
+        newChunk();
+
+        for (int i = 0; i < 10; i++) {
+            chunk.append("" + i);
+        }
+
+        Validator<String> validator = new Validator<String>() {
+            @Override
+            public boolean validate(String value) {
+                return !value.equals(7 + "");
+            }
+        };
+
+        assertThat(chunk.findOffsetOfFirstInvalidRecordBy(validator), is(35L));
+    }
+
     @Test(expected = IllegalStateException.class)
     public void appendAfterErase() throws Exception {
         file = testFile("appendAfterErase");

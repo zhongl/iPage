@@ -86,40 +86,6 @@ public class IPageTest extends FileBase {
     }
 
     @Test
-    public void truncateByOffset() throws Exception {
-        dir = testDir("truncateByOffset");
-        newIPage();
-
-        String record = "0123456789ab";
-        for (int i = 0; i < 513; i++) {
-            iPage.append(record);
-        }
-
-        assertExistFile("0");
-        assertExistFile("4096");
-        assertExistFile("8192");
-
-        iPage.truncate(4112L);
-
-        assertNotExistFile("0");
-        assertNotExistFile("4096");
-        assertExistFile("4112");
-        assertExistFile("8192");
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void invalidChunkCapacity() throws Exception {
-        dir = testDir("invalidChunkCapacity");
-        IPage.baseOn(dir).chunkCapacity(4095);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void repeatSetupChunkCapcity() throws Exception {
-        dir = testDir("repeatSetupChunkCapcity");
-        IPage.baseOn(dir).chunkCapacity(4096).chunkCapacity(1);
-    }
-
-    @Test
     public void loadExist() throws Exception {
         dir = testDir("loadExist");
 
@@ -141,6 +107,62 @@ public class IPageTest extends FileBase {
 
         assertThat(iPage.get(0L), is(record));
         assertThat(iPage.get(offset), is(newRecord));
+    }
+
+    @Test
+    public void truncateByOffset() throws Exception {
+        dir = testDir("truncateByOffset");
+        newIPage();
+
+        String record = "0123456789ab";
+        for (int i = 0; i < 513; i++) {
+            iPage.append(record);
+        }
+
+        assertExistFile("0");
+        assertExistFile("4096");
+        assertExistFile("8192");
+
+        iPage.truncate(4112L);
+
+        assertNotExistFile("0");
+        assertNotExistFile("4096");
+        assertExistFile("4112");
+        assertExistFile("8192");
+    }
+
+    @Test
+    public void recovery() throws Exception {
+        dir = testDir("recovery");
+        newIPage();
+
+        for (int i = 0; i < 10; i++) {
+            iPage.append("" + i);
+        }
+        assertThat(iPage.get(35L), is(7 + ""));
+
+        Validator<String> stringValidator = new Validator<String>() {
+            @Override
+            public boolean validate(String value) {
+                return !value.equals(7 + "");
+            }
+        };
+        iPage.recoverBy(stringValidator);
+
+        assertThat(iPage.get(30L), is(6 + ""));
+        assertThat(iPage.get(35L), is(nullValue()));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void invalidChunkCapacity() throws Exception {
+        dir = testDir("invalidChunkCapacity");
+        IPage.baseOn(dir).chunkCapacity(4095);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void repeatSetupChunkCapcity() throws Exception {
+        dir = testDir("repeatSetupChunkCapcity");
+        IPage.baseOn(dir).chunkCapacity(4096).chunkCapacity(1);
     }
 
     @Test(expected = IllegalArgumentException.class)
