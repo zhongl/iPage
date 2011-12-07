@@ -63,8 +63,9 @@ final class Chunk implements Closeable, Iterable<Record> {
         checkOverFlowIfAppend(record.length());
         long iPageOffset = writePosition + beginPositionInIPage;
         ensureMap();
-        mappedByteBuffer.position(writePosition);
-        writePosition += record.writeTo(mappedByteBuffer.duplicate());
+        ByteBuffer duplicate = mappedByteBuffer.duplicate();
+        duplicate.position(writePosition);
+        writePosition += record.writeTo(duplicate);
         return iPageOffset;
     }
 
