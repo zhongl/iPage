@@ -16,6 +16,8 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.accessor.Accessor;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -23,9 +25,9 @@ import java.io.IOException;
 class ChunkFactory<T> {
 
     private final long chunkCapacity;
-    private final ByteBufferAccessor<T> accessor;
+    private final Accessor<T> accessor;
 
-    ChunkFactory(long chunkCapacity, ByteBufferAccessor<T> accessor) {
+    ChunkFactory(long chunkCapacity, Accessor<T> accessor) {
         this.accessor = accessor;
         this.chunkCapacity = chunkCapacity;
     }

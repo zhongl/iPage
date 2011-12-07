@@ -26,13 +26,13 @@ import java.util.Queue;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-public class ChunkIterator<T> extends AbstractIterator<T> {
+class ChunkIterator<T> extends AbstractIterator<T> {
 
     private final Queue<Chunk<T>> chunks;
 
     private Iterator<T> currentChunkIterator;
 
-    public ChunkIterator(Queue<Chunk<T>> chunks) {
+    ChunkIterator(Queue<Chunk<T>> chunks) {
         this.chunks = chunks;
         currentChunkIterator = nextChunkIterator();
     }

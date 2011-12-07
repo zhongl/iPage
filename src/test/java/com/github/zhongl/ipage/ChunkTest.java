@@ -16,6 +16,8 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.accessor.CommonAccessors;
+import com.github.zhongl.integerity.Validator;
 import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 
@@ -92,7 +94,7 @@ public class ChunkTest extends FileBase {
 
     @Test
     public void validate() throws Exception {
-        file = testFile("validate");
+        file = testFile("checkCRC");
         newChunk();
 
         for (int i = 0; i < 10; i++) {
@@ -115,7 +117,7 @@ public class ChunkTest extends FileBase {
         newChunk();
         String expect = "Chunk{file=target/tmpTestFiles/ChunkTest.chunkToString, " +
                 "capacity=4096, " +
-                "byteBufferAccessor=com.github.zhongl.ipage.StringAccessor, " +
+                "byteBufferAccessor=com.github.zhongl.accessor.CommonAccessors$StringAccessor, " +
                 "beginPositionInIPage=0, " +
                 "writePosition=0, " +
                 "erased=false}";
@@ -218,7 +220,7 @@ public class ChunkTest extends FileBase {
 
     @Test
     public void flushAfterClose() throws Exception {
-        file = testFile("flushAfterClose");
+        file = testFile("cleanAfterClose");
         newChunk();
         chunk.close();
         chunk.flush();
@@ -226,7 +228,7 @@ public class ChunkTest extends FileBase {
 
     @Test
     public void closeAfterClose() throws Exception {
-        file = testFile("closeAfterClose");
+        file = testFile("cleanAfterClose");
         newChunk();
         chunk.close();
         chunk.close();
@@ -235,7 +237,6 @@ public class ChunkTest extends FileBase {
     private void newChunk() throws IOException {
         long beginPositionInIPage = 0L;
         int capacity = 4096;
-        ByteBufferAccessor<String> byteBufferAccessor = new StringAccessor();
-        chunk = new Chunk(beginPositionInIPage, file, capacity, byteBufferAccessor);
+        chunk = new Chunk(beginPositionInIPage, file, capacity, CommonAccessors.STRING);
     }
 }

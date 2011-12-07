@@ -16,6 +16,7 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.accessor.CommonAccessors;
 import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 
@@ -31,7 +32,7 @@ public class ChunkIteratorTest extends FileBase {
     public void iterate() throws Exception {
         dir = testDir("iterate");
         // create a iPage with two chunk
-        IPage<String> iPage = IPage.<String>baseOn(dir).byteBufferAccessor(new StringAccessor()).build();
+        IPage<String> iPage = IPage.<String>baseOn(dir).byteBufferAccessor(CommonAccessors.STRING).build();
         String record = "0123456789ab";
         for (int i = 0; i < 257; i++) {
             iPage.append(record);

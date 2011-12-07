@@ -17,6 +17,7 @@
 package com.github.zhongl.kvengine;
 
 import com.github.zhongl.index.Index;
+import com.github.zhongl.index.Md5Key;
 import com.github.zhongl.ipage.IPage;
 import org.junit.After;
 import org.junit.Before;
@@ -121,7 +122,7 @@ public class KVEngineGroupCommitTest {
         engine.startup();
 
         byte[] bytes = "value".getBytes();
-        engine.put(Md5Key.valueOf(bytes), new Record(bytes));
+        engine.put(Md5Key.generate(bytes), new Record(bytes));
     }
 
     @Test(expected = IOException.class)
@@ -134,7 +135,7 @@ public class KVEngineGroupCommitTest {
         engine.startup();
 
         byte[] bytes = "value".getBytes();
-        engine.put(Md5Key.valueOf(bytes), new Record(bytes));
+        engine.put(Md5Key.generate(bytes), new Record(bytes));
     }
 
     @Test(expected = IOException.class)
@@ -147,7 +148,7 @@ public class KVEngineGroupCommitTest {
         engine.startup();
 
         byte[] bytes = "value".getBytes();
-        engine.put(Md5Key.valueOf(bytes), new Record(bytes));
+        engine.put(Md5Key.generate(bytes), new Record(bytes));
     }
 
     private class Put implements Callable<Record> {
@@ -158,7 +159,7 @@ public class KVEngineGroupCommitTest {
 
         @Override
         public Record call() throws Exception {
-            return engine.put(Md5Key.valueOf(bytes), new Record(bytes));
+            return engine.put(Md5Key.generate(bytes), new Record(bytes));
         }
     }
 
@@ -170,7 +171,7 @@ public class KVEngineGroupCommitTest {
 
         @Override
         public Record call() throws Exception {
-            return engine.remove(Md5Key.valueOf(bytes));
+            return engine.remove(Md5Key.generate(bytes));
         }
     }
 }

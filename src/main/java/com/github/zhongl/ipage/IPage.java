@@ -16,6 +16,9 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.integerity.ValidateOrRecover;
+import com.github.zhongl.integerity.Validator;
+
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
 import java.io.File;
@@ -24,10 +27,10 @@ import java.util.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-public class IPage<T> implements Closeable, Iterable<T> {
+public class IPage<T> implements Closeable, Iterable<T>, ValidateOrRecover<T> {
 
     private final File baseDir;
-    private final ChunkFactory chunkFactory;
+    private final ChunkFactory<T> chunkFactory;
     private final List<Chunk<T>> chunks; // TODO use LRU to cache chunks
     private final AbstractList<Range> chunkOffsetRangeList;
 
@@ -35,7 +38,7 @@ public class IPage<T> implements Closeable, Iterable<T> {
         return new IPageBuilder<T>(dir);
     }
 
-    IPage(File baseDir, ChunkFactory chunkFactory, List<Chunk<T>> chunks) {
+    IPage(File baseDir, ChunkFactory<T> chunkFactory, List<Chunk<T>> chunks) {
         this.baseDir = baseDir;
         this.chunkFactory = chunkFactory;
         this.chunks = chunks;
@@ -93,7 +96,9 @@ public class IPage<T> implements Closeable, Iterable<T> {
     /**
      * Remove part before the offset.
      *
-     * @param offset
+     * @param offset of {@link com.github.zhongl.ipage.IPage}
+     *
+     * @throws java.io.IOException
      */
     public void truncate(long offset) throws IOException {
         int index = Range.binarySearch(chunkOffsetRangeList, offset);
@@ -106,7 +111,15 @@ public class IPage<T> implements Closeable, Iterable<T> {
         chunks.add(toTruncateChunk.dimidiate(offset).right());
     }
 
-    public void recoverBy(Validator<T> validator) throws IOException {
+    @Override
+    public boolean validateOrRecoverBy(Validator<T> validator) throws IOException {
+        Long offset = lastRecentlyUsedChunk().findOffsetOfFirstInvalidRecordBy(validator);
+        if (offset == null) return true;
+        lastRecentlyUsedChunk().dimidiate(offset).left();
+        return false;
+    }
+
+    public void validateAndRecoverBy(Validator<T> validator) throws IOException {
         long offset = lastRecentlyUsedChunk().findOffsetOfFirstInvalidRecordBy(validator);
         lastRecentlyUsedChunk().dimidiate(offset).left();
     }
@@ -115,7 +128,7 @@ public class IPage<T> implements Closeable, Iterable<T> {
     public Iterator<T> iterator() {
         LinkedList<Chunk<T>> copy = new LinkedList<Chunk<T>>(chunks);
         Collections.reverse(copy);
-        return new ChunkIterator(copy);
+        return new ChunkIterator<T>(copy);
     }
 
     @Override

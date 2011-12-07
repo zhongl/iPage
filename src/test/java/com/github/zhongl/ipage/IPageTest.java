@@ -16,6 +16,8 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.accessor.CommonAccessors;
+import com.github.zhongl.integerity.Validator;
 import com.github.zhongl.util.FileBase;
 import com.github.zhongl.util.FileContentAsserter;
 import org.junit.After;
@@ -147,7 +149,7 @@ public class IPageTest extends FileBase {
                 return !value.equals(7 + "");
             }
         };
-        iPage.recoverBy(stringValidator);
+        iPage.validateAndRecoverBy(stringValidator);
 
         assertThat(iPage.get(30L), is(6 + ""));
         assertThat(iPage.get(35L), is(nullValue()));
@@ -173,7 +175,7 @@ public class IPageTest extends FileBase {
     }
 
     private void newIPage() throws IOException {
-        iPage = IPage.<String>baseOn(dir).byteBufferAccessor(new StringAccessor()).chunkCapacity(4096).build();
+        iPage = IPage.<String>baseOn(dir).byteBufferAccessor(CommonAccessors.STRING).chunkCapacity(4096).build();
     }
 
     private void assertAppendAndDurableBy(boolean close) throws IOException {

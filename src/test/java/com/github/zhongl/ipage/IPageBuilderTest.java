@@ -16,6 +16,7 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.accessor.CommonAccessors;
 import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 
@@ -25,6 +26,6 @@ public class IPageBuilderTest extends FileBase {
     @Test
     public void defaultChunkCapcity() throws Exception {
         dir = testDir("defaultChunkCapcity");
-        IPage.<String>baseOn(dir).byteBufferAccessor(new StringAccessor()).build();
+        IPage.<String>baseOn(dir).byteBufferAccessor(CommonAccessors.STRING).build();
     }
 }

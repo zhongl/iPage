@@ -17,6 +17,7 @@
 package com.github.zhongl.kvengine;
 
 import com.github.zhongl.benchmarker.*;
+import com.github.zhongl.index.Md5Key;
 import com.github.zhongl.util.FileBase;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;

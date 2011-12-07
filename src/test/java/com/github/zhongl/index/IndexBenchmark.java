@@ -17,7 +17,6 @@
 package com.github.zhongl.index;
 
 import com.github.zhongl.benchmarker.*;
-import com.github.zhongl.kvengine.Md5Key;
 import com.github.zhongl.util.FileBase;
 import com.google.common.primitives.Ints;
 import org.junit.After;
@@ -84,7 +83,7 @@ public class IndexBenchmark extends FileBase {
             return new Callable<Object>() {
                 @Override
                 public Object call() throws Exception {
-                    return index.put(Md5Key.valueOf(genKey()), genOffset());
+                    return index.put(Md5Key.generate(genKey()), genOffset());
                 }
             };
         }
@@ -106,7 +105,7 @@ public class IndexBenchmark extends FileBase {
             return new Callable<Object>() {
                 @Override
                 public Object call() throws Exception {
-                    return index.put(Md5Key.valueOf(genKey()), genOffset());
+                    return index.put(Md5Key.generate(genKey()), genOffset());
                 }
             };
         }
@@ -125,7 +124,7 @@ public class IndexBenchmark extends FileBase {
             return new Callable<Object>() {
                 @Override
                 public Object call() throws Exception {
-                    return index.get(Md5Key.valueOf(genKey()));
+                    return index.get(Md5Key.generate(genKey()));
                 }
             };
         }
@@ -143,7 +142,7 @@ public class IndexBenchmark extends FileBase {
             return new Callable<Object>() {
                 @Override
                 public Object call() throws Exception {
-                    return index.remove(Md5Key.valueOf(genKey()));
+                    return index.remove(Md5Key.generate(genKey()));
                 }
             };
         }

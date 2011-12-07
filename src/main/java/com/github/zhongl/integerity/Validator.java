@@ -14,21 +14,9 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.kvengine;
-
-import org.junit.Ignore;
-import org.junit.Test;
+package com.github.zhongl.integerity;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class RecoveryTest {
-
-    @Test(expected = IllegalStateException.class)
-    @Ignore("TODO")
-    public void runFailureBecauseOfIOException() throws Exception {
-//        Index index = mock(Index.class);
-//        IPage iPage = mock(IPage.class);
-//        doThrow(new IOException()).when(index).validateAndRecoverBy(any(Recovery.RecordFinder.class));
-//        new Recovery(index, iPage).run();
-    }
-
+public interface Validator<T> {
+    boolean validate(T value);
 }

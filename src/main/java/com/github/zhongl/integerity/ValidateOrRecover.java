@@ -14,21 +14,19 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.kvengine;
+package com.github.zhongl.integerity;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import java.io.IOException;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class RecoveryTest {
-
-    @Test(expected = IllegalStateException.class)
-    @Ignore("TODO")
-    public void runFailureBecauseOfIOException() throws Exception {
-//        Index index = mock(Index.class);
-//        IPage iPage = mock(IPage.class);
-//        doThrow(new IOException()).when(index).validateAndRecoverBy(any(Recovery.RecordFinder.class));
-//        new Recovery(index, iPage).run();
-    }
-
+public interface ValidateOrRecover<T> {
+    /**
+     * Do validate, recovery only if it found invalid T.
+     *
+     * @param validator
+     *
+     * @return true if there is no invalid T and recover nothing, or else false.
+     * @throws IOException
+     */
+    boolean validateOrRecoverBy(Validator<T> validator) throws IOException;
 }

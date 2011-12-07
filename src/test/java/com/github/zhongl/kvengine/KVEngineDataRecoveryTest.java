@@ -16,6 +16,7 @@
 
 package com.github.zhongl.kvengine;
 
+import com.github.zhongl.index.Md5Key;
 import com.github.zhongl.util.FileBase;
 import org.junit.After;
 import org.junit.Test;

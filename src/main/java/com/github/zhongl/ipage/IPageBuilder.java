@@ -16,6 +16,7 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.accessor.Accessor;
 import com.github.zhongl.util.FileNumberNameComparator;
 import com.github.zhongl.util.NumberFileNameFilter;
 
@@ -34,7 +35,7 @@ public final class IPageBuilder<T> {
 
     private final File baseDir;
     private int chunkCapacity = UNSET;
-    private ByteBufferAccessor<T> byteBufferAccessor;
+    private Accessor<T> accessor;
 
     IPageBuilder(File dir) {
         if (!dir.exists()) checkState(dir.mkdirs(), "Can not create directory: %s", dir);
@@ -49,16 +50,16 @@ public final class IPageBuilder<T> {
         return this;
     }
 
-    public IPageBuilder<T> byteBufferAccessor(ByteBufferAccessor<T> instance) {
+    public IPageBuilder<T> byteBufferAccessor(Accessor<T> instance) {
         checkNotNull(instance);
-        this.byteBufferAccessor = instance;
+        this.accessor = instance;
         return this;
     }
 
     public IPage<T> build() throws IOException {
         chunkCapacity = (chunkCapacity == UNSET) ? Chunk.DEFAULT_CAPACITY : chunkCapacity;
-        checkNotNull(byteBufferAccessor, "ByteBufferAccessor should not be null.");
-        ChunkFactory<T> chunkFactory = new ChunkFactory<T>(chunkCapacity, byteBufferAccessor);
+        checkNotNull(accessor, "Accessor should not be null.");
+        ChunkFactory<T> chunkFactory = new ChunkFactory<T>(chunkCapacity, accessor);
         List<Chunk<T>> chunks = loadExistChunks(chunkFactory);
         return new IPage<T>(baseDir, chunkFactory, chunks);
     }

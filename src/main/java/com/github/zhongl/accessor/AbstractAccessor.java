@@ -14,9 +14,17 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.accessor;
+
+import java.nio.ByteBuffer;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface Validator<T> {
-    boolean validate(T value);
+public abstract class AbstractAccessor<T> implements Accessor<T> {
+    @Override
+    public final int write(final T object, ByteBuffer buffer) {
+        doWrite(object, buffer);
+        return byteLengthOf(object);
+    }
+
+    protected abstract void doWrite(T object, ByteBuffer buffer);
 }

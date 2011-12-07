@@ -16,21 +16,15 @@
 
 package com.github.zhongl.index;
 
+import com.github.zhongl.integerity.ValidateOrRecover;
+import com.github.zhongl.integerity.Validator;
 import com.github.zhongl.ipage.OverflowException;
-import com.github.zhongl.kvengine.Md5Key;
-import com.github.zhongl.util.FileNumberNameComparator;
-import com.github.zhongl.util.NumberFileNameFilter;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
 
 /**
  * {@link Index}
@@ -38,16 +32,16 @@ import static com.google.common.base.Preconditions.checkState;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @NotThreadSafe
-public class Index implements Closeable {
+public class Index implements Closeable, ValidateOrRecover<Slot> {
 
     private final File baseDir;
     private final int initialBucketSize;
-    private final List<Buckets> bucketsList;
+    private final List<FileHashTable> fileHashTables;
 
-    Index(File baseDir, int initialBucketSize, List<Buckets> bucketsList) {
+    Index(File baseDir, int initialBucketSize, List<FileHashTable> fileHashTables) {
         this.baseDir = baseDir;
         this.initialBucketSize = initialBucketSize;
-        this.bucketsList = bucketsList;
+        this.fileHashTables = fileHashTables;
     }
 
     public Long put(Md5Key key, Long offset) throws IOException {
@@ -59,28 +53,32 @@ public class Index implements Closeable {
         }
     }
 
-    private Buckets grow() throws IOException {
-        int no = bucketsList.isEmpty() ? 0 : lastRecentlyUsedBuckets().no() + 1;
-        int size = bucketsList.isEmpty() ? initialBucketSize : lastRecentlyUsedBuckets().size() * 2;
-        Buckets buckets = new Buckets(new File(baseDir, no + ""), size);
-        bucketsList.add(0, buckets);
-        return buckets;
+    private FileHashTable grow() throws IOException {
+        int no = fileHashTables.isEmpty() ? 0 : serialNumber(lastRecentlyUsedBuckets()) + 1;
+        int size = fileHashTables.isEmpty() ? initialBucketSize : lastRecentlyUsedBuckets().buckets() * 2;
+        FileHashTable fileHashTable = new FileHashTable(new File(baseDir, no + ""), size);
+        fileHashTables.add(0, fileHashTable);
+        return fileHashTable;
     }
 
-    private Buckets lastRecentlyUsedBuckets() throws IOException {
-        if (bucketsList.isEmpty()) return grow();
-        return bucketsList.get(0);
+    private int serialNumber(FileHashTable fileHashTable) {
+        return Integer.parseInt(fileHashTable.file().getName());
+    }
+
+    private FileHashTable lastRecentlyUsedBuckets() throws IOException {
+        if (fileHashTables.isEmpty()) return grow();
+        return fileHashTables.get(0);
     }
 
     public Long get(Md5Key key) throws IOException {
-        if (bucketsList.isEmpty()) return Buckets.NULL_OFFSET;
+        if (fileHashTables.isEmpty()) return FileHashTable.NULL_OFFSET;
         Long offset = lastRecentlyUsedBuckets().get(key);
         if (offset != null) return offset;
         return tryRemoveFromOthersAndMigrate(key, true);
     }
 
     public Long remove(Md5Key key) throws IOException {
-        if (bucketsList.isEmpty()) return Buckets.NULL_OFFSET;
+        if (fileHashTables.isEmpty()) return FileHashTable.NULL_OFFSET;
         Long offset = lastRecentlyUsedBuckets().remove(key);
         if (offset != null) return offset;
         return tryRemoveFromOthersAndMigrate(key, false);
@@ -88,86 +86,43 @@ public class Index implements Closeable {
 
     @Override
     public void close() throws IOException {
-        for (Buckets buckets : bucketsList) {
-            buckets.close();
+        for (FileHashTable fileHashTable : fileHashTables) {
+            fileHashTable.close();
         }
     }
 
     public void flush() throws IOException {
-        for (Buckets buckets : bucketsList) {
-            buckets.flush();
+        for (FileHashTable fileHashTable : fileHashTables) {
+            fileHashTable.flush();
         }
-    }
-
-    @Override
-    public String toString() {
-        final StringBuilder sb = new StringBuilder();
-        sb.append("Index");
-        sb.append("{baseDir=").append(baseDir);
-        sb.append(", initialBucketSize=").append(initialBucketSize);
-        sb.append(", bucketsList=").append(bucketsList);
-        sb.append('}');
-        return sb.toString();
     }
 
     private Long tryRemoveFromOthersAndMigrate(Md5Key key, boolean migrate) throws IOException {
-        for (int i = 1; i < bucketsList.size(); i++) {
-            Buckets buckets = bucketsList.get(i);
-            Long offset = buckets.remove(key);
+        for (int i = 1; i < fileHashTables.size(); i++) {
+            FileHashTable fileHashTable = fileHashTables.get(i);
+            Long offset = fileHashTable.remove(key);
             if (offset != null) {
-                if (migrate) lastRecentlyUsedBuckets().put(key, offset); // migrate index to last recently used buckets
-                buckets.cleanupIfAllKeyRemoved();
+                if (migrate)
+                    lastRecentlyUsedBuckets().put(key, offset); // migrate index to last recently used fileHashTable
+                if (fileHashTable.isEmpty()) fileHashTable.clean();
                 return offset;
             }
         }
-        return Buckets.NULL_OFFSET;
+        return FileHashTable.NULL_OFFSET;
     }
 
-//    public void recoverBy(RecordFinder recordFinder) throws IOException {
-//        for (Buckets buckets : bucketsList) {
-//            boolean recovered = buckets.validateAndRecoverBy(recordFinder);
-//            if (recovered)
-//                break; // crash can cause only one buckets broken, so break loop if it has already recovered one
-//        }
-//    }
-
-    public static Builder baseOn(File dir) {
-        return new Builder(dir);
+    @Override
+    public boolean validateOrRecoverBy(Validator<Slot> validator) throws IOException {
+        for (FileHashTable fileHashTable : fileHashTables) {
+            if (fileHashTable.validateOrRecoverBy(validator)) continue;
+            return false;
+        }
+        return true;
     }
 
-    public static final class Builder {
-
-        private static final int UNSET = -1;
-        private final File baseDir;
-        private int initialBucketSize = UNSET;
-
-        public Builder(File dir) {
-            if (!dir.exists()) checkState(dir.mkdirs(), "Can not create directory: %s", dir);
-            checkArgument(dir.isDirectory(), "%s should be a directory.", dir);
-            baseDir = dir;
-        }
-
-        public Builder initialBucketSize(int value) {
-            checkState(initialBucketSize == UNSET, "Initial bucket size can only set once.");
-            initialBucketSize = value;
-            return this;
-        }
-
-        public Index build() throws IOException {
-            initialBucketSize = (initialBucketSize == UNSET) ? Buckets.DEFAULT_SIZE : initialBucketSize;
-            List<Buckets> bucketsList = loadExistBucketsList();
-            return new Index(baseDir, initialBucketSize, bucketsList);
-        }
-
-        private List<Buckets> loadExistBucketsList() throws IOException {
-            File[] files = baseDir.listFiles(new NumberFileNameFilter());
-            Arrays.sort(files, new FileNumberNameComparator());
-            ArrayList<Buckets> bucketsList = new ArrayList<Buckets>(files.length);
-            for (File file : files) {
-                bucketsList.add(0, new Buckets(file, initialBucketSize));
-            }
-            return bucketsList;
-        }
+    public static IndexBuilder baseOn(File dir) {
+        return new IndexBuilder(dir);
     }
+
 }
 

@@ -67,8 +67,8 @@ class KVEngineBuilder {
     }
 
     public KVEngineBuilder initialBucketSize(int value) {
-        checkState(initBucketSize == UNSET, "Initial bucket size can only set once.");
-        checkArgument(value > 0, "Initial bucket size should not less than 0");
+        checkState(initBucketSize == UNSET, "Initial bucket buckets can only set once.");
+        checkArgument(value > 0, "Initial bucket buckets should not less than 0");
         initBucketSize = value;
         return this;
     }
@@ -137,7 +137,7 @@ class KVEngineBuilder {
     }
 
     private Index newIndex() throws IOException {
-//        initBucketSize = (initBucketSize == UNSET) ? Buckets.DEFAULT_SIZE : initBucketSize;
+//        initBucketSize = (initBucketSize == UNSET) ? FileHashTable.DEFAULT_SIZE : initBucketSize;
         return Index.baseOn(new File(dir, INDEX_DIR)).initialBucketSize(initBucketSize).build();
     }
 

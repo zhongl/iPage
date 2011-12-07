@@ -14,21 +14,29 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.kvengine;
+package com.github.zhongl.index;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
-/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class RecoveryTest {
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
 
-    @Test(expected = IllegalStateException.class)
-    @Ignore("TODO")
-    public void runFailureBecauseOfIOException() throws Exception {
-//        Index index = mock(Index.class);
-//        IPage iPage = mock(IPage.class);
-//        doThrow(new IOException()).when(index).validateAndRecoverBy(any(Recovery.RecordFinder.class));
-//        new Recovery(index, iPage).run();
+/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+public class Md5KeyTest {
+
+    @Test(expected = IllegalArgumentException.class)
+    public void invalidInitialBytesLessThan16() throws Exception {
+        new Md5Key(new byte[15]);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void invalidInitialBytesGreaterThan16() throws Exception {
+        new Md5Key(new byte[17]);
+    }
+
+    @Test
+    public void md5KeyToString() throws Exception {
+        String expect = "Md5Key{md5Bytes=1bc29b36f623ba82aaf6724fd3b16718}";
+        assertThat(Md5Key.generate("md5".getBytes()).toString(), is(expect));
+    }
 }

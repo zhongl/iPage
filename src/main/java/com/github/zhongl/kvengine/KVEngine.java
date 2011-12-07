@@ -17,6 +17,7 @@
 package com.github.zhongl.kvengine;
 
 import com.github.zhongl.index.Index;
+import com.github.zhongl.index.Md5Key;
 import com.github.zhongl.ipage.IPage;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.FutureCallback;

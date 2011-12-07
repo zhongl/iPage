@@ -14,20 +14,25 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.kvengine;
+package com.github.zhongl.util;
 
-import org.junit.Test;
+import java.nio.ByteBuffer;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class Md5KeyTest {
+public class ByteBuffers {
+    private ByteBuffers() {}
 
-    @Test(expected = IllegalArgumentException.class)
-    public void invalidInitialBytesLessThan16() throws Exception {
-        new Md5Key(new byte[15]);
+    public static ByteBuffer slice(ByteBuffer buffer, int offset) {
+        ByteBuffer duplicate = buffer.duplicate();
+        duplicate.position(offset);
+        duplicate.limit(buffer.limit());
+        return duplicate.slice();
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void invalidInitialBytesGreaterThan16() throws Exception {
-        new Md5Key(new byte[17]);
+    public static ByteBuffer slice(ByteBuffer buffer, int offset, int length) {
+        ByteBuffer duplicate = buffer.duplicate();
+        duplicate.position(offset);
+        duplicate.limit(offset + length);
+        return duplicate.slice();
     }
 }

@@ -16,13 +16,18 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.kvengine.Md5Key;
+import com.github.zhongl.integerity.Validator;
 import com.github.zhongl.util.FileBase;
+import com.google.common.io.Files;
+import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.After;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
@@ -47,35 +52,37 @@ public class IndexTest extends FileBase {
     @Test
     public void grow() throws Exception {
         dir = testDir("grow");
-        index = Index.baseOn(dir).initialBucketSize(1).build();
+        newIndex();
 
         for (int i = 0; i < 163; i++) {
-            index.put(Md5Key.valueOf(Ints.toByteArray(i)), 7L);
+            index.put(Md5Key.generate(Ints.toByteArray(i)), 7L);
         }
 
         assertExistFile("0");
         assertNotExistFile("1");
 
-        index.put(Md5Key.valueOf(Ints.toByteArray(163)), 7L);
+        index.put(Md5Key.generate(Ints.toByteArray(163)), 7L);
 
         assertExistFile("0");
         assertExistFile("1");
     }
 
+    private void newIndex() throws IOException {index = Index.baseOn(dir).initialBucketSize(1).build();}
+
     @Test
     public void autoremoveMigratedBuckets() throws Exception {
         dir = testDir("autoremoveMigratedBuckets");
-        index = Index.baseOn(dir).initialBucketSize(1).build();
+        newIndex();
 
         for (int i = 0; i < 164; i++) {
-            index.put(Md5Key.valueOf(Ints.toByteArray(i)), 7L);
+            index.put(Md5Key.generate(Ints.toByteArray(i)), 7L);
         }
 
         assertExistFile("0");
         assertExistFile("1");
 
         for (int i = 0; i < 164; i++) {
-            index.get(Md5Key.valueOf(Ints.toByteArray(i)));
+            index.get(Md5Key.generate(Ints.toByteArray(i)));
         }
 
         assertNotExistFile("0");
@@ -85,38 +92,38 @@ public class IndexTest extends FileBase {
     @Test
     public void removeFromExtendedIndex() throws Exception {
         dir = testDir("removeFromExtendedIndex");
-        index = Index.baseOn(dir).initialBucketSize(1).build();
+        newIndex();
         for (int i = 0; i < 164; i++) {
-            index.put(Md5Key.valueOf(Ints.toByteArray(i)), 7L);
+            index.put(Md5Key.generate(Ints.toByteArray(i)), 7L);
         }
-        assertThat(index.remove(Md5Key.valueOf(Ints.toByteArray(163))), is(7L)); // remove from index file 1
-        assertThat(index.remove(Md5Key.valueOf(Ints.toByteArray(162))), is(7L)); // remove from index file 0
-        assertThat(index.remove(Md5Key.valueOf(Ints.toByteArray(164))), is(nullValue())); // remove from index file 0
+        assertThat(index.remove(Md5Key.generate(Ints.toByteArray(163))), is(7L)); // remove from index file 1
+        assertThat(index.remove(Md5Key.generate(Ints.toByteArray(162))), is(7L)); // remove from index file 0
+        assertThat(index.remove(Md5Key.generate(Ints.toByteArray(164))), is(nullValue())); // remove from index file 0
     }
 
     @Test
     public void removeNonExistKey() throws Exception {
         dir = testDir("removeNonExistKey");
         index = Index.baseOn(dir).build();
-        assertThat(index.remove(Md5Key.valueOf(Ints.toByteArray(0))), is(nullValue())); // remove from empty index
-        index.put(Md5Key.valueOf("key".getBytes()), 7L);
-        assertThat(index.remove(Md5Key.valueOf(Ints.toByteArray(1))), is(nullValue())); // remove from non-empty index
+        assertThat(index.remove(Md5Key.generate(Ints.toByteArray(0))), is(nullValue())); // remove from empty index
+        index.put(Md5Key.generate("key".getBytes()), 7L);
+        assertThat(index.remove(Md5Key.generate(Ints.toByteArray(1))), is(nullValue())); // remove from non-empty index
     }
 
     @Test
     public void getNonExsitKey() throws Exception {
         dir = testDir("getNonExsitKey");
         index = Index.baseOn(dir).build();
-        assertThat(index.get(Md5Key.valueOf(Ints.toByteArray(0))), is(nullValue()));
+        assertThat(index.get(Md5Key.generate(Ints.toByteArray(0))), is(nullValue()));
     }
 
     @Test
     public void loadExist() throws Exception {
         dir = testDir("loadExist");
-        index = Index.baseOn(dir).initialBucketSize(1).build();
+        newIndex();
 
         for (int i = 0; i < 164; i++) {
-            index.put(Md5Key.valueOf(Ints.toByteArray(i)), 7L);
+            index.put(Md5Key.generate(Ints.toByteArray(i)), 7L);
         }
 
         index.close();
@@ -124,10 +131,61 @@ public class IndexTest extends FileBase {
         assertThat(new File(dir, "0").length(), is(4096L));
         assertThat(new File(dir, "1").length(), is(8192L));
 
-        index = Index.baseOn(dir).initialBucketSize(1).build();
+        newIndex();
 
-        assertThat(index.get(Md5Key.valueOf(Ints.toByteArray(0))), is(7L));     // migrate
-        assertThat(index.get(Md5Key.valueOf(Ints.toByteArray(162))), is(7L));   // migrate
-        assertThat(index.get(Md5Key.valueOf(Ints.toByteArray(163))), is(7L));
+        assertThat(index.get(Md5Key.generate(Ints.toByteArray(0))), is(7L));     // migrate
+        assertThat(index.get(Md5Key.generate(Ints.toByteArray(162))), is(7L));   // migrate
+        assertThat(index.get(Md5Key.generate(Ints.toByteArray(163))), is(7L));
     }
+
+    @Test
+    public void validateOrRecoveryIfNoBroken() throws Exception {
+        dir = testDir("validateOrRecoveryIfNoBroken");
+        newIndex();
+
+        for (int i = 0; i < 164; i++) {
+            index.put(Md5Key.generate(Ints.toByteArray(i)), 7L);
+        }
+
+        index.flush();
+        index.close();
+
+        newIndex();
+
+        assertThat(index.validateOrRecoverBy(null), is(true));
+    }
+
+    @Test
+    public void validateOrRecoveryIfHasBroken() throws Exception {
+        dir = testDir("validateOrRecoveryIfHasBroken");
+
+        byte[] md5Bytes0 = DigestUtils.md5("value0");
+        byte[] md5Bytes1 = DigestUtils.md5("value1");
+        byte[] bucketCRC = Longs.toByteArray(0);
+        byte[] brokenBucketContent = Bytes.concat(
+                new byte[] {1},
+                md5Bytes0,
+                Longs.toByteArray(4L),
+                new byte[] {1},
+                md5Bytes1,
+                Longs.toByteArray(7L),
+                new byte[4038],
+                bucketCRC
+        );
+        dir.mkdirs();
+        Files.write(brokenBucketContent, new File(dir, 0 + "")); // mock broken fileHashTable file.
+
+        newIndex();
+
+        Validator<Slot> validator = new Validator<Slot>() {
+            @Override
+            public boolean validate(Slot value) {
+                return true;
+            }
+        };
+
+        assertThat(index.validateOrRecoverBy(validator), is(false));
+    }
+
+
 }

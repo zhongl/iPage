@@ -17,6 +17,7 @@
 package com.github.zhongl.kvengine;
 
 import com.github.zhongl.index.Index;
+import com.github.zhongl.index.Md5Key;
 import com.github.zhongl.ipage.IPage;
 import com.github.zhongl.util.FileBase;
 import org.junit.After;
@@ -61,7 +62,7 @@ public class KVEngineTest extends FileBase {
         dir = testDir("getAndRemoveNonExistKey");
         engine = KVEngine.baseOn(dir).build();
         engine.startup();
-        Md5Key key = Md5Key.valueOf("non-exist".getBytes());
+        Md5Key key = Md5Key.generate("non-exist".getBytes());
         assertThat(engine.get(key), is(nullValue()));
         assertThat(engine.remove(key), is(nullValue()));
     }
