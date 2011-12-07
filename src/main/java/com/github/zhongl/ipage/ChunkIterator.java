@@ -42,7 +42,7 @@ class ChunkIterator<T> extends AbstractIterator<T> {
         if (currentChunkIterator.hasNext()) return currentChunkIterator.next();
         // poll next one for iterate
         currentChunkIterator = nextChunkIterator();
-        if (currentChunkIterator == null) return endOfData(); // no more iterator
+        if (currentChunkIterator == null) return endOfData(); // no more valueIterator
         return currentChunkIterator.next();
     }
 

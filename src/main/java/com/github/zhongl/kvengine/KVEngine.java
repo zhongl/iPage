@@ -20,11 +20,14 @@ import com.github.zhongl.index.Index;
 import com.github.zhongl.index.Md5Key;
 import com.github.zhongl.ipage.IPage;
 import com.google.common.base.Throwables;
+import com.google.common.collect.AbstractIterator;
 import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -121,6 +124,26 @@ public class KVEngine<T> extends Engine {
             group.rollback(t);
             t.printStackTrace();  // TODO log
         }
+    }
+
+    public Iterator<T> valueIterator() {
+        final Iterator<Entry<T>> iterator = ipage.iterator();
+        return new AbstractIterator<T>() {
+            @Override
+            protected T computeNext() {
+                try {
+                    Entry<T> entry = iterator.next();
+                    Md5Key key = entry.key();
+                    Long offset = index.get(key);
+                    if (offset != null) return entry.value(); // check if deleted
+                } catch (NoSuchElementException e) {
+                    return endOfData();
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
+                }
+                return computeNext(); // skip and get next one.
+            }
+        };
     }
 
     public abstract class Operation extends Task<T> {

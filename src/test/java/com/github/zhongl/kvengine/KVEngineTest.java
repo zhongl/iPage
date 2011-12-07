@@ -24,6 +24,7 @@ import com.github.zhongl.util.FileBase;
 import org.junit.After;
 import org.junit.Test;
 
+import java.util.Iterator;
 import java.util.concurrent.Callable;
 
 import static org.hamcrest.Matchers.is;
@@ -120,4 +121,27 @@ public class KVEngineTest extends FileBase {
         verify(flusher, times(1)).call();
     }
 
+    @Test
+    public void iterator() throws Exception {
+        dir = testDir("valueIterator");
+
+        engine = KVEngine.<String>baseOn(dir).valueAccessor(CommonAccessors.STRING).build();
+        engine.startup();
+
+        String value0 = "value0";
+        engine.put(Md5Key.generate(value0.getBytes()), value0);
+        String value1 = "value1";
+        engine.put(Md5Key.generate(value1.getBytes()), value1);
+        String value2 = "value2";
+        engine.put(Md5Key.generate(value2.getBytes()), value2);
+
+        engine.remove(Md5Key.generate(value1.getBytes()));
+
+        Iterator<String> iterator = engine.valueIterator();
+
+        assertThat(iterator.next(), is(value0));
+        assertThat(iterator.next(), is(value2));
+        assertThat(iterator.hasNext(), is(false));
+
+    }
 }
