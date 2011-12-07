@@ -14,8 +14,12 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.index;
 
+import com.github.zhongl.kvengine.Md5Key;
+import com.github.zhongl.ipage.OverflowException;
+import com.github.zhongl.kvengine.Record;
+import com.github.zhongl.ipage.UnsafeDataStateException;
 import com.github.zhongl.util.DirectByteBufferCleaner;
 import com.google.common.io.Files;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -33,8 +37,8 @@ import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 
 /**
  * {@link Buckets} is a file-based hash map for mapping
- * {@link Md5Key} and offset of {@link Record} in
- * {@link IPage}.
+ * {@link com.github.zhongl.kvengine.Md5Key} and offset of {@link com.github.zhongl.kvengine.Record} in
+ * {@link com.github.zhongl.ipage.IPage}.
  * <p/>
  * It is a implemente of separate chain hash table, more infomation you can find in "Data Structures & Algorithms In Java".
  *
@@ -154,8 +158,8 @@ final class Buckets implements Closeable {
     /**
      * {@link Buckets.Bucket} has 163
      * {@link Buckets.Bucket.Slot} for storing tuple of
-     * {@link Md5Key} and offset of {@link Record} in
-     * {@link IPage}.
+     * {@link Md5Key} and offset of {@link com.github.zhongl.kvengine.Record} in
+     * {@link com.github.zhongl.ipage.IPage}.
      * <p/>
      * Every slot has a head byte to indicate it is empty, occupied or released.
      */

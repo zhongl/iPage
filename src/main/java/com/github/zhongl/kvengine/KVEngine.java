@@ -14,8 +14,10 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.kvengine;
 
+import com.github.zhongl.index.Index;
+import com.github.zhongl.ipage.IPage;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.FutureCallback;
 

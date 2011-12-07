@@ -80,7 +80,7 @@ final class Chunk<T> implements Closeable, Iterable<T> {
             /**
              * include {@link IllegalArgumentException}, {@link java.nio.BufferUnderflowException},
              */
-            throw new IllegalArgumentException("Can't get record with invalid offset " + offset);
+            throw new IllegalArgumentException("Can't get object with invalid offset " + offset);
         }
     }
 
@@ -194,11 +194,11 @@ final class Chunk<T> implements Closeable, Iterable<T> {
 
         public Chunk<T> right() throws IOException {
             long length = endPositionInIPage() - offset;
-            File remains = new File(file.getParentFile(), offset + "");
+            File rightPiece = new File(file.getParentFile(), offset + "");
             InputSupplier<InputStream> source = ByteStreams.slice(Files.newInputStreamSupplier(file), offset, length);
-            Files.copy(source, remains);
+            Files.copy(source, rightPiece);
             erase();
-            return new Chunk(offset, remains, length, byteBufferAccessor);
+            return new Chunk<T>(offset, rightPiece, length, byteBufferAccessor);
         }
     }
 }

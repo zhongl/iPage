@@ -14,9 +14,10 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.index;
 
 import com.github.zhongl.benchmarker.*;
+import com.github.zhongl.kvengine.Md5Key;
 import com.github.zhongl.util.FileBase;
 import com.google.common.primitives.Ints;
 import org.junit.After;

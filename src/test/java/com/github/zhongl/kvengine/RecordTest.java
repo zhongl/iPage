@@ -14,25 +14,19 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.kvengine;
 
 import org.junit.Test;
 
-import java.io.IOException;
-
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class RecoveryTest {
+public class RecordTest {
 
-    @Test(expected = IllegalStateException.class)
-    public void runFailureBecauseOfIOException() throws Exception {
-        Index index = mock(Index.class);
-        IPage iPage = mock(IPage.class);
-        doThrow(new IOException()).when(index).recoverBy(any(Recovery.RecordFinder.class));
-        new Recovery(index, iPage).run();
+    @Test
+    public void itemToString() throws Exception {
+        assertThat(new Record("item".getBytes()).toString(), is("Record{bytes=[105, 116, 101, 109]}"));
     }
 
 }

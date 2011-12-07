@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.kvengine;
 
 import com.google.common.util.concurrent.FutureCallback;
 
@@ -23,7 +23,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 /**
- * {@link com.github.zhongl.ipage.Group}
+ * {@link Group}
  *
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */

@@ -16,7 +16,9 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.kvengine.Record;
 import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileContentAsserter;
 import org.junit.After;
 import org.junit.Test;
 
@@ -43,7 +45,7 @@ public class IPageTest extends FileBase {
     public void createAndAppendAndClose() throws Exception {
         dir = testDir("createAndAppendAndClose");
         assertThat(dir.exists(), is(false));
-        iPage = IPage.baseOn(dir).build();
+        iPage = IPage.baseOn(dir).accessor(new StringAccessor()).build();
         assertAppendAndDurableBy(CLOSE);
     }
 

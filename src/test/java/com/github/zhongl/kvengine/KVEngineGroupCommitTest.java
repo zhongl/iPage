@@ -14,8 +14,10 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.kvengine;
 
+import com.github.zhongl.index.Index;
+import com.github.zhongl.ipage.IPage;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

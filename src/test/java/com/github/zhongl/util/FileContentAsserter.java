@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.util;
 
 import com.google.common.io.Files;
 
@@ -26,7 +26,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-class FileContentAsserter {
+public class FileContentAsserter {
 
     private final byte[] content;
 

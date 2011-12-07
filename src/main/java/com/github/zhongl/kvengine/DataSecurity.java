@@ -14,7 +14,9 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.kvengine;
+
+import com.github.zhongl.ipage.UnsafeDataStateException;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;

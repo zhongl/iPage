@@ -14,8 +14,11 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.index;
 
+import com.github.zhongl.kvengine.Md5Key;
+import com.github.zhongl.ipage.OverflowException;
+import com.github.zhongl.kvengine.Record;
 import com.github.zhongl.util.FileBase;
 import com.google.common.io.Files;
 import com.google.common.primitives.Bytes;
@@ -28,8 +31,6 @@ import static com.github.zhongl.ipage.Recovery.RecordFinder;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
@@ -83,13 +84,13 @@ public class BucketsTest extends FileBase {
         file = testFile("validateAndRecoverBy");
 
         buckets = new Buckets(file, 1);
-        RecordFinder recordFinder = mock(RecordFinder.class);
+        RecordFinder recordFinder = Mockito.mock(RecordFinder.class);
         assertThat(buckets.validateAndRecoverBy(recordFinder), is(false));// validateAndRecoverBy a empty bucket
 
         buckets.put(Md5Key.valueOf("key".getBytes()), 7L);
         buckets.close();
         buckets = new Buckets(file, 1);
-        doReturn(new Record("key".getBytes())).when(recordFinder).getRecordIn(anyLong());
+        Mockito.doReturn(new Record("key".getBytes())).when(recordFinder).getRecordIn(Matchers.anyLong());
         assertThat(buckets.validateAndRecoverBy(recordFinder), is(false)); // validateAndRecoverBy a exist bucket
     }
 
@@ -113,9 +114,9 @@ public class BucketsTest extends FileBase {
 
         buckets = new Buckets(file, 1);
 
-        RecordFinder recordFinder = mock(RecordFinder.class);
-        doReturn(new Record("value0".getBytes())).when(recordFinder).getRecordIn(4L);
-        doReturn(new Record("broken".getBytes())).when(recordFinder).getRecordIn(7L); // broken index
+        RecordFinder recordFinder = Mockito.mock(RecordFinder.class);
+        Mockito.doReturn(new Record("value0".getBytes())).when(recordFinder).getRecordIn(4L);
+        Mockito.doReturn(new Record("broken".getBytes())).when(recordFinder).getRecordIn(7L); // broken index
         assertThat(buckets.validateAndRecoverBy(recordFinder), is(true));
     }
 

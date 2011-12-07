@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.kvengine;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.concurrent.Callable;

@@ -16,6 +16,7 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.kvengine.Record;
 import com.github.zhongl.util.FileBase;
 import com.google.common.primitives.Ints;
 import org.junit.Test;

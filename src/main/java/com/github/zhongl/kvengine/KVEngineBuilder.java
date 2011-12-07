@@ -14,7 +14,15 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.kvengine;
+
+import com.github.zhongl.index.Buckets;
+import com.github.zhongl.index.Index;
+import com.github.zhongl.ipage.Chunk;
+import com.github.zhongl.ipage.IPage;
+import com.github.zhongl.ipage.Recovery;
+import com.github.zhongl.ipage.UnsafeDataStateException;
+import com.google.common.base.Preconditions;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
@@ -50,7 +58,7 @@ class KVEngineBuilder {
 
     public KVEngineBuilder chunkCapacity(int value) {
         checkState(chunkCapacity == UNSET, "Chunk capacity can only set once.");
-        checkArgument(value >= Chunk.DEFAULT_CAPACITY,
+        Preconditions.checkArgument(value >= Chunk.DEFAULT_CAPACITY,
                 "Chunk capacity should not less than " + Chunk.DEFAULT_CAPACITY);
         chunkCapacity = value;
         return this;

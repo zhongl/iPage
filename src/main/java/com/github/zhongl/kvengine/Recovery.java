@@ -14,7 +14,11 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.kvengine;
+
+import com.github.zhongl.index.Index;
+import com.github.zhongl.ipage.IPage;
+import com.github.zhongl.kvengine.Record;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
