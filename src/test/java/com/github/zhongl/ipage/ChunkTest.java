@@ -21,6 +21,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
@@ -106,6 +107,33 @@ public class ChunkTest extends FileBase {
         };
 
         assertThat(chunk.findOffsetOfFirstInvalidRecordBy(validator), is(35L));
+    }
+
+    @Test
+    public void chunkToString() throws Exception {
+        file = testFile("chunkToString");
+        newChunk();
+        String expect = "Chunk{file=target/tmpTestFiles/ChunkTest.chunkToString, " +
+                "capacity=4096, " +
+                "byteBufferAccessor=com.github.zhongl.ipage.StringAccessor, " +
+                "beginPositionInIPage=0, " +
+                "writePosition=0, " +
+                "erased=false}";
+        assertThat(chunk.toString(), is(expect));
+    }
+
+    @Test(expected = NoSuchElementException.class)
+    public void iterateAfterErase() throws Exception {
+        file = testFile("iterateAfterErase");
+        newChunk();
+        for (int i = 0; i < 10; i++) {
+            chunk.append("" + i);
+        }
+        Iterator<String> iterator = chunk.iterator();
+        iterator.next();
+
+        chunk.erase();
+        iterator.next();
     }
 
     @Test(expected = IllegalStateException.class)

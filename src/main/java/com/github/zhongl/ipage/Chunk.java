@@ -133,6 +133,20 @@ final class Chunk<T> implements Closeable, Iterable<T> {
         return offset;
     }
 
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder();
+        sb.append("Chunk");
+        sb.append("{file=").append(file);
+        sb.append(", capacity=").append(capacity);
+        sb.append(", byteBufferAccessor=").append(byteBufferAccessor.getClass().getName());
+        sb.append(", beginPositionInIPage=").append(beginPositionInIPage);
+        sb.append(", writePosition=").append(writePosition);
+        sb.append(", erased=").append(erased);
+        sb.append('}');
+        return sb.toString();
+    }
+
     private T getInternal(int offset) throws IOException {
         ensureMap();
         ByteBuffer duplicate = mappedByteBuffer.duplicate();// avoid modification of mappedDirectBuffer.

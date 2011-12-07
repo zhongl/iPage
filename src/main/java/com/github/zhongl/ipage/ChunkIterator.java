@@ -16,47 +16,29 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.kvengine.Record;
-import com.github.zhongl.util.FileNumberNameComparator;
-import com.github.zhongl.util.NumberFileNameFilter;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.io.Closeables;
 
 import javax.annotation.concurrent.NotThreadSafe;
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
-
-import static com.google.common.base.Preconditions.checkArgument;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.Queue;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-public class ChunkIterator extends AbstractIterator<Record> {
+public class ChunkIterator<T> extends AbstractIterator<T> {
 
-    private final Queue<Chunk> chunks = new LinkedList<Chunk>();
+    private final Queue<Chunk<T>> chunks;
 
-    private Iterator<Record> currentChunkIterator;
-    private ByteBufferAccessor accessor;
+    private Iterator<T> currentChunkIterator;
 
-    public ChunkIterator(File baseDir) throws IOException {
-        checkArgument(baseDir.isDirectory(), "%s is not exist directory", baseDir);
-        loadExistChunksFrom(baseDir);
-    }
-
-    private void loadExistChunksFrom(File baseDir) throws IOException {
-        File[] files = baseDir.listFiles(new NumberFileNameFilter());
-        Arrays.sort(files, new FileNumberNameComparator());
-
-        for (File file : files) {
-            Chunk chunk = new Chunk(Long.parseLong(file.getName()), file, file.length(), accessor);
-            chunks.offer(chunk);
-        }
-
+    public ChunkIterator(Queue<Chunk<T>> chunks) {
+        this.chunks = chunks;
         currentChunkIterator = nextChunkIterator();
     }
 
     @Override
-    protected Record computeNext() {
+    protected T computeNext() {
         if (currentChunkIterator.hasNext()) return currentChunkIterator.next();
         // poll next one for iterate
         currentChunkIterator = nextChunkIterator();
@@ -64,15 +46,15 @@ public class ChunkIterator extends AbstractIterator<Record> {
         return currentChunkIterator.next();
     }
 
-    private Iterator<Record> nextChunkIterator() {
+    private Iterator<T> nextChunkIterator() {
         Chunk currentChunk = chunks.poll();
         if (currentChunk == null) return null;
-        return new RecordIterator(currentChunk);
+        return new RecordIterator<T>(currentChunk);
     }
 
-    private static class RecordIterator extends AbstractIterator<Record> {
+    private static class RecordIterator<T> extends AbstractIterator<T> {
         private final Chunk chunk;
-        private final Iterator<Record> iterator;
+        private final Iterator<T> iterator;
 
         public RecordIterator(Chunk chunk) {
             this.chunk = chunk;
@@ -80,7 +62,7 @@ public class ChunkIterator extends AbstractIterator<Record> {
         }
 
         @Override
-        protected Record computeNext() {
+        protected T computeNext() {
             try {
                 return iterator.next();
             } catch (NoSuchElementException e) {

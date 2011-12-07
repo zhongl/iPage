@@ -25,6 +25,6 @@ public class IPageBuilderTest extends FileBase {
     @Test
     public void defaultChunkCapcity() throws Exception {
         dir = testDir("defaultChunkCapcity");
-        IPage.<String>baseOn(dir).accessor(new StringAccessor()).build();
+        IPage.<String>baseOn(dir).byteBufferAccessor(new StringAccessor()).build();
     }
 }

@@ -20,12 +20,11 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.util.AbstractList;
-import java.util.List;
+import java.util.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-public class IPage<T> implements Closeable {
+public class IPage<T> implements Closeable, Iterable<T> {
 
     private final File baseDir;
     private final ChunkFactory chunkFactory;
@@ -91,13 +90,6 @@ public class IPage<T> implements Closeable {
         releaseChunkIfNecessary();
     }
 
-    @Override
-    public void close() throws IOException {
-        for (Chunk<T> chunk : chunks) {
-            chunk.close();
-        }
-    }
-
     /**
      * Remove part before the offset.
      *
@@ -117,6 +109,20 @@ public class IPage<T> implements Closeable {
     public void recoverBy(Validator<T> validator) throws IOException {
         long offset = lastRecentlyUsedChunk().findOffsetOfFirstInvalidRecordBy(validator);
         lastRecentlyUsedChunk().dimidiate(offset).left();
+    }
+
+    @Override
+    public Iterator<T> iterator() {
+        LinkedList<Chunk<T>> copy = new LinkedList<Chunk<T>>(chunks);
+        Collections.reverse(copy);
+        return new ChunkIterator(copy);
+    }
+
+    @Override
+    public void close() throws IOException {
+        for (Chunk<T> chunk : chunks) {
+            chunk.close();
+        }
     }
 
     private class ChunkOffsetRangeList extends AbstractList<Range> {

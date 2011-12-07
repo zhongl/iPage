@@ -49,9 +49,9 @@ public final class IPageBuilder<T> {
         return this;
     }
 
-    public IPageBuilder<T> accessor(ByteBufferAccessor<T> accessor) {
-        checkNotNull(accessor);
-        this.byteBufferAccessor = accessor;
+    public IPageBuilder<T> byteBufferAccessor(ByteBufferAccessor<T> instance) {
+        checkNotNull(instance);
+        this.byteBufferAccessor = instance;
         return this;
     }
 
