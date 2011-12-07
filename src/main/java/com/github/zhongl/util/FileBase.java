@@ -60,7 +60,6 @@ public abstract class FileBase {
 
     protected void assertExistFile(String name) {assertThat(new File(dir, name).exists(), is(true));}
 
-
     protected File testFile(String name) {
         return new File(BASE_ROOT, Joiner.on('.').join(getClass().getSimpleName(), name));
     }
