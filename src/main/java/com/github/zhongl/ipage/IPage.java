@@ -114,7 +114,7 @@ public class IPage implements Closeable {
             chunk.erase();
         }
         toRmoved.clear();
-        chunks.add(toTruncateChunk.truncate(offset));
+        chunks.add(toTruncateChunk.dimidiate(offset).right());
     }
 
     public void recover() throws IOException {

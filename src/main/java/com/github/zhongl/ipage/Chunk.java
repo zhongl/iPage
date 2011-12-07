@@ -87,10 +87,10 @@ final class Chunk<T> implements Closeable, Iterable<T> {
     private T getInternal(int offset) throws IOException {
         checkState(!erased, "Chunk has already erased.");
         ensureMap();
-        ByteBuffer duplicate = mappedByteBuffer.duplicate();
+        ByteBuffer duplicate = mappedByteBuffer.duplicate();// avoid modification of mappedDirectBuffer.
         duplicate.position(offset);
         duplicate.limit(writePosition);
-        return byteBufferAccessor.read(duplicate).get(); // buffer to avoid modification of mappedDirectBuffer .
+        return byteBufferAccessor.read(duplicate).get();
     }
 
     @Override
@@ -134,11 +134,6 @@ final class Chunk<T> implements Closeable, Iterable<T> {
     public Dimidiation dimidiate(long offset) {
         checkState(!erased, "Chunk has already erased.");
         return new Dimidiation((int) (offset - beginPositionInIPage));
-    }
-
-    @Deprecated // TODO use dimidiate
-    public Chunk truncate(long offset) throws IOException {
-        return null;
     }
 
     @Deprecated
