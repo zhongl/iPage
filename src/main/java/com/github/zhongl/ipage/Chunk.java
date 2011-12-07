@@ -35,41 +35,45 @@ import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
  * {@link com.github.zhongl.ipage.Chunk} File structure :
  * <ul>
  * <p/>
- * <li>{@link com.github.zhongl.ipage.Chunk} = {@link Record}* </li>
- * <li>{@link Record} = length:4bytes bytes</li>
+ * <li>{@link com.github.zhongl.ipage.Chunk} = {@link T}* </li>
+ * <li>{@link T} = length:4bytes bytes</li>
  * </ul>
  *
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @NotThreadSafe
-final class Chunk implements Closeable, Iterable<Record> {
+final class Chunk<T> implements Closeable, Iterable<T> {
 
     static final int DEFAULT_CAPACITY = 4096; // 4k
     private final File file;
     private final long capacity;
+    private final ByteBufferAccessor<T> byteBufferAccessor;
     private final long beginPositionInIPage;
 
     private volatile MappedByteBuffer mappedByteBuffer;
     private volatile int writePosition = 0;
+    private volatile boolean erased;
 
-    Chunk(long beginPositionInIPage, File file, long capacity) throws IOException {
+    Chunk(long beginPositionInIPage, File file, long capacity, ByteBufferAccessor<T> byteBufferAccessor) throws IOException {
         this.beginPositionInIPage = beginPositionInIPage;
         this.file = file;
         this.capacity = capacity;
+        this.byteBufferAccessor = byteBufferAccessor;
         this.writePosition = (int) file.length();
     }
 
-    public long append(Record record) throws IOException {
-        checkOverFlowIfAppend(record.length());
+    public long append(T record) throws IOException {
+        checkState(!erased, "Chunk has already erased.");
+        checkOverFlowIfAppend(record);
         long iPageOffset = writePosition + beginPositionInIPage;
         ensureMap();
         ByteBuffer duplicate = mappedByteBuffer.duplicate();
         duplicate.position(writePosition);
-        writePosition += record.writeTo(duplicate);
+        writePosition += byteBufferAccessor.write(record).to(duplicate);
         return iPageOffset;
     }
 
-    public Record get(long offset) throws IOException {
+    public T get(long offset) throws IOException {
         try {
             return getInternal((int) (offset - beginPositionInIPage));
         } catch (RuntimeException e) {
@@ -80,17 +84,18 @@ final class Chunk implements Closeable, Iterable<Record> {
         }
     }
 
-    private Record getInternal(int offset) throws IOException {
+    private T getInternal(int offset) throws IOException {
+        checkState(!erased, "Chunk has already erased.");
         ensureMap();
         ByteBuffer duplicate = mappedByteBuffer.duplicate();
         duplicate.position(offset);
         duplicate.limit(writePosition);
-        return Record.readFrom(duplicate); // buffer to avoid modification of mappedDirectBuffer .
+        return byteBufferAccessor.read(duplicate).get(); // buffer to avoid modification of mappedDirectBuffer .
     }
 
     @Override
     public void close() throws IOException {
-        if (mappedByteBuffer != null) {
+        if (!erased && mappedByteBuffer != null) {
             flush();
             DirectByteBufferCleaner.clean(mappedByteBuffer);
             mappedByteBuffer = null;
@@ -99,51 +104,50 @@ final class Chunk implements Closeable, Iterable<Record> {
     }
 
     public long endPositionInIPage() {
-        return beginPositionInIPage + writePosition - 1;
+        checkState(!erased, "Chunk has already erased.");
+        return beginPositionInIPage + writePosition;
     }
 
     public long beginPositionInIPage() {
+        checkState(!erased, "Chunk has already erased.");
         return beginPositionInIPage;
     }
 
-    @Override
-    public String toString() {
-        final StringBuilder sb = new StringBuilder();
-        sb.append("Chunk");
-        sb.append("{file=").append(file);
-        sb.append(", capacity=").append(capacity);
-        sb.append(", beginPositionInIPage=").append(beginPositionInIPage);
-        sb.append(", writePosition=").append(writePosition);
-        sb.append('}');
-        return sb.toString();
-    }
-
     public void flush() throws IOException {
-        if (mappedByteBuffer == null) return;
+        if (erased || mappedByteBuffer == null) return;
         mappedByteBuffer.force();
     }
 
     @Override
-    public Iterator<Record> iterator() {
+    public Iterator<T> iterator() {
+        checkState(!erased, "Chunk has already erased.");
         return new RecordIterator(writePosition);
     }
 
     public void erase() throws IOException {
+        if (erased) return;
         close();
         checkState(file.delete(), "Can't delete file %s ", file);
+        erased = true;
     }
 
+    public Dimidiation dimidiate(long offset) {
+        checkState(!erased, "Chunk has already erased.");
+        return new Dimidiation((int) (offset - beginPositionInIPage));
+    }
+
+    @Deprecated // TODO use dimidiate
     public Chunk truncate(long offset) throws IOException {
-        long length = endPositionInIPage() - offset;
-        File remains = new File(file.getParentFile(), offset + "");
-        InputSupplier<InputStream> source = ByteStreams.slice(Files.newInputStreamSupplier(file), offset, length);
-        Files.copy(source, remains);
-        erase();
-        return new Chunk(offset, remains, length);
+        return null;
     }
 
-    private void checkOverFlowIfAppend(int length) {
-        int appendedPosition = writePosition + length + Record.LENGTH_BYTES;
+    @Deprecated
+    public void recover() throws IOException {
+        // TODO use dimidate
+    }
+
+    private void checkOverFlowIfAppend(T record) {
+        int appendedPosition = writePosition + byteBufferAccessor.lengthOf(record);
         if (appendedPosition > capacity) throw new OverflowException();
     }
 
@@ -158,20 +162,7 @@ final class Chunk implements Closeable, Iterable<Record> {
         randomAccessFile.close();
     }
 
-    public void recover() throws IOException {
-        ensureMap();
-        int offset = 0;
-        while (offset < writePosition) {
-            try {
-                Record record = getInternal(offset);
-                offset += Record.LENGTH_BYTES + record.length();
-            } catch (RuntimeException e) { // read a broken record
-                writePosition = offset;
-            }
-        }
-    }
-
-    private class RecordIterator extends AbstractIterator<Record> {
+    private class RecordIterator extends AbstractIterator<T> {
         private int offset;
         private final int limit;
 
@@ -180,17 +171,39 @@ final class Chunk implements Closeable, Iterable<Record> {
         }
 
         @Override
-        protected Record computeNext() {
+        protected T computeNext() {
             try {
                 if (offset >= limit) return endOfData();
-                Record record = getInternal(offset);
-                offset += Record.LENGTH_BYTES + record.length();
+                T record = getInternal(offset);
+                offset += byteBufferAccessor.lengthOf(record);
                 return record;
             } catch (IOException e) {
                 throw new RuntimeException(e);
             } catch (RuntimeException e) { // read the appending chunk may cause the exception.
                 return endOfData();
             }
+        }
+    }
+
+    public class Dimidiation {
+        private final int offset;
+
+        public Dimidiation(int offset) {
+            this.offset = offset;
+        }
+
+        public Chunk<T> left() throws IOException {
+            writePosition = offset;
+            return Chunk.this;
+        }
+
+        public Chunk<T> right() throws IOException {
+            long length = endPositionInIPage() - offset;
+            File remains = new File(file.getParentFile(), offset + "");
+            InputSupplier<InputStream> source = ByteStreams.slice(Files.newInputStreamSupplier(file), offset, length);
+            Files.copy(source, remains);
+            erase();
+            return new Chunk(offset, remains, length, byteBufferAccessor);
         }
     }
 }

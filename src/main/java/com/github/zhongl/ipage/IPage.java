@@ -39,6 +39,7 @@ public class IPage implements Closeable {
     private final int chunkCapcity;
     private final List<Chunk> chunks; // TODO use LRU to cache chunks
     private final AbstractList<Range> chunkOffsetRangeList;
+    private ByteBufferAccessor accessor;
 
     public static Builder baseOn(File dir) {
         return new Builder(dir);
@@ -72,7 +73,7 @@ public class IPage implements Closeable {
 
     private Chunk grow() throws IOException {
         long beginPositionInIPage = chunks.isEmpty() ? 0L : lastRecentlyUsedChunk().endPositionInIPage() + 1;
-        Chunk chunk = new Chunk(beginPositionInIPage, new File(baseDir, beginPositionInIPage + ""), chunkCapcity);
+        Chunk chunk = new Chunk(beginPositionInIPage, new File(baseDir, beginPositionInIPage + ""), chunkCapcity, accessor);
         chunks.add(0, chunk);
         return chunk;
     }
@@ -80,7 +81,7 @@ public class IPage implements Closeable {
     public Record get(long offset) throws IOException {
         if (chunks.isEmpty()) return null;
         releaseChunkIfNecessary();
-        return chunkIn(offset).get(offset);
+        return (Record) chunkIn(offset).get(offset);
     }
 
     private Chunk chunkIn(long offset) {
@@ -138,6 +139,7 @@ public class IPage implements Closeable {
 
         private final File baseDir;
         private int chunkCapacity = UNSET;
+        private ByteBufferAccessor accessor;
 
         public Builder(File dir) {
             if (!dir.exists()) checkState(dir.mkdirs(), "Can not create directory: %s", dir);
@@ -164,7 +166,7 @@ public class IPage implements Closeable {
 
             ArrayList<Chunk> chunks = new ArrayList<Chunk>(files.length);
             for (File file : files) {
-                Chunk chunk = new Chunk(Long.parseLong(file.getName()), file, chunkCapacity);
+                Chunk chunk = new Chunk(Long.parseLong(file.getName()), file, chunkCapacity, accessor);
                 chunks.add(0, chunk); // reverse order to make sure the appending chunk at first.
             }
             return chunks;

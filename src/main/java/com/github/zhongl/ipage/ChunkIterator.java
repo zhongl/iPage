@@ -35,6 +35,7 @@ public class ChunkIterator extends AbstractIterator<Record> {
     private final Queue<Chunk> chunks = new LinkedList<Chunk>();
 
     private Iterator<Record> currentChunkIterator;
+    private ByteBufferAccessor accessor;
 
     public ChunkIterator(File baseDir) throws IOException {
         checkArgument(baseDir.isDirectory(), "%s is not exist directory", baseDir);
@@ -46,7 +47,7 @@ public class ChunkIterator extends AbstractIterator<Record> {
         Arrays.sort(files, new FileNumberNameComparator());
 
         for (File file : files) {
-            Chunk chunk = new Chunk(Long.parseLong(file.getName()), file, file.length());
+            Chunk chunk = new Chunk(Long.parseLong(file.getName()), file, file.length(), accessor);
             chunks.offer(chunk);
         }
 
