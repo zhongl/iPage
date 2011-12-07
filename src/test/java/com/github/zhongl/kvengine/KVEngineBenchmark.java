@@ -16,6 +16,7 @@
 
 package com.github.zhongl.kvengine;
 
+import com.github.zhongl.accessor.CommonAccessors;
 import com.github.zhongl.benchmarker.*;
 import com.github.zhongl.index.Md5Key;
 import com.github.zhongl.util.FileBase;
@@ -31,7 +32,7 @@ import java.util.concurrent.Callable;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class KVEngineBenchmark extends FileBase {
 
-    private KVEngine engine;
+    private KVEngine<byte[]> engine;
 
     @After
     public void tearDown() throws Exception {
@@ -44,11 +45,12 @@ public class KVEngineBenchmark extends FileBase {
     public void setUp() throws Exception {
         super.setUp();
         dir = testDir("benchmark");
-        engine = KVEngine.baseOn(dir)
+        engine = KVEngine.<byte[]>baseOn(dir)
                 .initialBucketSize(100)
                 .flushByCount(5)
                 .flushByElapseMilliseconds(10L)
                 .chunkCapacity(1024 * 1024 * 32)
+                .valueAccessor(CommonAccessors.BYTES)
                 .groupCommit(true)
                 .build();
         engine.startup();

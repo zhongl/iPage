@@ -20,10 +20,33 @@ import java.nio.ByteBuffer;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class CommonAccessors {
+    public static final Accessor<byte[]> BYTES = new BytesAccessor();
     public static final Accessor<Long> LONG = new LongAccessor();
     public static final Accessor<String> STRING = new StringAccessor();
 
     private CommonAccessors() {}
+
+    private static class BytesAccessor extends AbstractAccessor<byte[]> {
+
+        @Override
+        protected void doWrite(byte[] bytes, ByteBuffer buffer) {
+            buffer.putInt(bytes.length);
+            buffer.put(bytes);
+        }
+
+        @Override
+        public int byteLengthOf(byte[] bytes) {
+            return 4 + bytes.length;
+        }
+
+        @Override
+        public byte[] read(ByteBuffer buffer) {
+            int length = buffer.getInt();
+            byte[] bytes = new byte[length];
+            buffer.get(bytes);
+            return bytes;
+        }
+    }
 
     private static class LongAccessor extends AbstractAccessor<Long> {
 
