@@ -78,9 +78,8 @@ public class IPage<T> implements Closeable, Iterable<T>, ValidateOrRecover<T, IO
         releaseChunkIfNecessary();
         try {
             return chunkIn(offset).get(offset);
-        } catch (RuntimeException e) {
-            // include IllegalArgumentException ArrayIndexOutOfBoundsException,
-            return null; // invalid offset
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return null;
         }
     }
 
@@ -94,30 +93,9 @@ public class IPage<T> implements Closeable, Iterable<T>, ValidateOrRecover<T, IO
         releaseChunkIfNecessary();
     }
 
-    /**
-     * Remove part before the offset.
-     *
-     * @param offset of {@link com.github.zhongl.ipage.IPage}
-     *
-     * @throws java.io.IOException
-     */
-    public void truncate(long offset) throws IOException {
-        int index = Range.binarySearch(chunkOffsetRangeList, offset);
-        Chunk<T> toTruncateChunk = chunks.get(index);
-        List<Chunk<T>> toRmoved = chunks.subList(index + 1, chunks.size());
-        for (Chunk<T> chunk : toRmoved) {
-            chunk.erase();
-        }
-        toRmoved.clear();
-        chunks.add(toTruncateChunk.dimidiate(offset).right());
-    }
-
     @Override
     public boolean validateOrRecoverBy(Validator<T, IOException> validator) throws IOException {
-        Long offset = lastRecentlyUsedChunk().findOffsetOfFirstInvalidRecordBy(validator);
-        if (offset == null) return true;
-        lastRecentlyUsedChunk().dimidiate(offset).left();
-        return false;
+        return lastRecentlyUsedChunk().validateOrRecoverBy(validator);
     }
 
     @Override

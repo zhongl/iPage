@@ -67,31 +67,6 @@ public class ChunkTest extends FileBase {
 
     }
 
-    @Test
-    public void dimidiateAndGetLeft() throws Exception {
-        file = testFile("dimidiateAndGetRight");
-        newChunk();
-
-        String left = "left";
-        String right = "right";
-        chunk.append(left);
-        long offset = chunk.append(right);
-        Chunk<String>.Dimidiation dimidiation = chunk.dimidiate(offset);
-        assertThat(dimidiation.left().get(0L), is(left));
-    }
-
-    @Test
-    public void dimidiateAndGetRight() throws Exception {
-        file = testFile("dimidiateAndGetRight");
-        newChunk();
-
-        String left = "left";
-        String right = "right";
-        chunk.append(left);
-        long offset = chunk.append(right);
-        Chunk<String>.Dimidiation dimidiation = chunk.dimidiate(offset);
-        assertThat(dimidiation.right().get(offset), is(right));
-    }
 
     @Test
     public void validate() throws Exception {
@@ -109,7 +84,7 @@ public class ChunkTest extends FileBase {
             }
         };
 
-        assertThat(chunk.findOffsetOfFirstInvalidRecordBy(validator), is(35L));
+        assertThat(chunk.validateOrRecoverBy(validator), is(false));
     }
 
     @Test(expected = NoSuchElementException.class)
@@ -140,14 +115,6 @@ public class ChunkTest extends FileBase {
         newChunk();
         chunk.erase();
         chunk.get(0L);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void dimidiateAfterErase() throws Exception {
-        file = testFile("dimidiateAfterErase");
-        newChunk();
-        chunk.erase();
-        chunk.dimidiate(0L);
     }
 
     @Test(expected = IllegalStateException.class)

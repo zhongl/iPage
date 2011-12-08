@@ -17,6 +17,7 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.accessor.Accessor;
+import com.github.zhongl.integerity.ValidateOrRecover;
 import com.github.zhongl.integerity.Validator;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.io.ByteStreams;
@@ -39,7 +40,7 @@ import static com.google.common.base.Preconditions.checkState;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @NotThreadSafe
-public class Chunk<T> extends MappedFile implements Iterable<T>, Closeable {
+public class Chunk<T> extends MappedFile implements Iterable<T>, Closeable, ValidateOrRecover<T, IOException> {
 
     public static final int DEFAULT_CAPACITY = 4096; // 4k
     private final Accessor<T> accessor;
@@ -102,19 +103,23 @@ public class Chunk<T> extends MappedFile implements Iterable<T>, Closeable {
         deleteFile();
     }
 
-    public Dimidiation dimidiate(long offset) {
-        checkState(!erased, "Chunk %s has already erased", file);
-        return new Dimidiation((offset));
+    @Override
+    public void close() throws IOException {
+        if (flush() && releaseBuffer()) setLength(writePosition);
     }
 
-    public Long findOffsetOfFirstInvalidRecordBy(Validator<T, IOException> validator) throws IOException {
-        long offset = beginPositionInIPage;
+    @Override
+    public boolean validateOrRecoverBy(Validator<T, IOException> validator) throws IOException {
+        int offset = 0;
         while (offset < writePosition) {
-            T object = get(offset);
-            if (!validator.validate(object)) return offset;
+            T object = getInternal(offset);
+            if (!validator.validate(object)) {
+                writePosition = offset;
+                return false;
+            }
             offset += accessor.byteLengthOf(object);
         }
-        return null;
+        return true;
     }
 
     private T getInternal(int offset) throws IOException {
@@ -125,11 +130,6 @@ public class Chunk<T> extends MappedFile implements Iterable<T>, Closeable {
     private void checkOverFlowIfAppend(T record) {
         int appendedPosition = writePosition + accessor.byteLengthOf(record);
         if (appendedPosition > capacity) throw new OverflowException();
-    }
-
-    @Override
-    public void close() throws IOException {
-        if (flush() && releaseBuffer()) setLength(writePosition);
     }
 
     @Deprecated

@@ -112,28 +112,6 @@ public class IPageTest extends FileBase {
     }
 
     @Test
-    public void truncateByOffset() throws Exception {
-        dir = testDir("truncateByOffset");
-        newIPage();
-
-        String record = "0123456789ab";
-        for (int i = 0; i < 513; i++) {
-            iPage.append(record);
-        }
-
-        assertExistFile("0");
-        assertExistFile("4096");
-        assertExistFile("8192");
-
-        iPage.truncate(4112L);
-
-        assertNotExistFile("0");
-        assertNotExistFile("4096");
-        assertExistFile("4112");
-        assertExistFile("8192");
-    }
-
-    @Test
     public void recovery() throws Exception {
         dir = testDir("recovery");
         newIPage();
