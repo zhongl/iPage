@@ -70,8 +70,6 @@ public class Chunk<T> extends MappedFile implements Iterable<T>, Closeable {
             return getInternal((int) (offset - beginPositionInIPage));
         } catch (RuntimeException e) {
             return null;
-            // include IllegalArgumentException java.nio.BufferUnderflowException,
-//            throw new IllegalArgumentException("Can't get object with invalid offset " + offset);
         }
     }
 

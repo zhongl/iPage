@@ -18,6 +18,7 @@ package com.github.zhongl.ipage;
 
 import com.github.zhongl.integerity.ValidateOrRecover;
 import com.github.zhongl.integerity.Validator;
+import com.google.common.collect.AbstractIterator;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
@@ -123,6 +124,14 @@ public class IPage<T> implements Closeable, Iterable<T>, ValidateOrRecover<T, IO
     public Iterator<T> iterator() {
         LinkedList<Chunk<T>> copy = new LinkedList<Chunk<T>>(chunks);
         Collections.reverse(copy);
+
+        new AbstractIterator<Chunk<T>>() {
+
+            @Override
+            protected Chunk<T> computeNext() {
+                return null;  // TODO computeNext
+            }
+        };
         return new ChunkIterator<T>(copy);
     }
 
@@ -131,10 +140,6 @@ public class IPage<T> implements Closeable, Iterable<T>, ValidateOrRecover<T, IO
         for (Chunk<T> chunk : chunks) {
             chunk.close();
         }
-    }
-
-    public long beginPosition() {
-        return chunks.get(chunks.size() - 1).beginPositionInIPage();
     }
 
     private class ChunkOffsetRangeList extends AbstractList<Range> {
