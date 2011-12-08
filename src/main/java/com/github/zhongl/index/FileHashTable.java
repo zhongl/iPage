@@ -115,10 +115,7 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
     }
 
     private void calculateOccupiedSlotOf(Bucket bucket) {
-        Slot[] slots = bucket.slots();
-        for (Slot slot : slots) {
-            if (slot.state() == Slot.State.OCCUPIED) occupiedSlots++;
-        }
+        occupiedSlots += bucket.occupiedSlots();
     }
 
     public void flush() {

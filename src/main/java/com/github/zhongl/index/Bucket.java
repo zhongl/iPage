@@ -20,6 +20,7 @@ import com.github.zhongl.accessor.CommonAccessors;
 import com.github.zhongl.integerity.ValidateOrRecover;
 import com.github.zhongl.integerity.Validator;
 import com.github.zhongl.ipage.OverflowException;
+import com.google.common.base.Preconditions;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -38,30 +39,27 @@ import static com.github.zhongl.util.ByteBuffers.slice;
 class Bucket implements ValidateOrRecover<Slot, IOException> {
 
     public static final int LENGTH = Integer.getInteger("com.github.zhongl.ipage.bucket.length", 4096); // default 4K
-    private final Slot[] slots;
     private final ByteBuffer buffer;
 
     public Bucket(ByteBuffer buffer) {
         this.buffer = buffer;
-        slots = createSlots(buffer.duplicate());
     }
 
-    private Slot[] createSlots(ByteBuffer buffer) {
-        Slot[] slots = new Slot[LENGTH / Slot.LENGTH];
-        for (int i = 0; i < slots.length; i++) {
-            slots[i] = new Slot(slice(buffer, i * Slot.LENGTH, Slot.LENGTH));
-        }
-        return slots;
+    private int amountOfSlots() {return LENGTH / Slot.LENGTH;}
+
+    private Slot slots(int index) {
+        Preconditions.checkArgument(index >= 0 && index < amountOfSlots());
+        return new Slot(slice(buffer, index * Slot.LENGTH, Slot.LENGTH));
     }
 
     public Long put(Md5Key key, Long offset) {
         int firstReleased = -1;
-        for (int i = 0; i < slots.length; i++) {
-            switch (slots[i].state()) {
+        for (int i = 0; i < amountOfSlots(); i++) {
+            switch (slots(i).state()) {
                 case EMPTY:
-                    return slots[i].add(key, offset);
+                    return slots(i).add(key, offset);
                 case OCCUPIED:
-                    if (slots[i].key().equals(key)) return slots[i].replace(key, offset);
+                    if (slots(i).key().equals(key)) return slots(i).replace(key, offset);
                     break;
                 case RELEASED:
                     if (firstReleased < 0) firstReleased = i;
@@ -70,19 +68,22 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
             // continue to check rest slots whether contain the key.
         }
         if (firstReleased < 0) throw new OverflowException();
-        return slots[firstReleased].add(key, offset);
+        return slots(firstReleased).add(key, offset);
     }
 
     public Long get(Md5Key key) {
-        for (Slot slot : slots) {
+        for (int i = 0; i < amountOfSlots(); i++) {
+            Slot slot = slots(i);
             if (slot.state() == Slot.State.EMPTY) return FileHashTable.NULL_OFFSET; // because rest slots are all empty
             if (slot.state() == Slot.State.OCCUPIED && slot.key().equals(key)) return slot.offset();
         }
+
         return FileHashTable.NULL_OFFSET;
     }
 
     public Long remove(Md5Key key) {
-        for (Slot slot : slots) {
+        for (int i = 0; i < amountOfSlots(); i++) {
+            Slot slot = slots(i);
             if (slot.state() == Slot.State.EMPTY) return FileHashTable.NULL_OFFSET; // because rest slots are all empty
             if (slot.state() == Slot.State.OCCUPIED && slot.key().equals(key)) {
                 return slot.release();
@@ -95,18 +96,15 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
         CommonAccessors.LONG.write(calculateCRC(), slice(buffer, LENGTH - 8));
     }
 
-    public Slot[] slots() {
-        return slots;
-    }
-
     public boolean checkCRC() {
-        if (slots[0].state() == Slot.State.EMPTY) return true;
+        if (slots(0).state() == Slot.State.EMPTY) return true;
         return readCRC() == calculateCRC();
     }
 
     @Override
     public boolean validateOrRecoverBy(Validator<Slot, IOException> validator) throws IOException {
-        for (Slot slot : slots) {
+        for (int i = 0; i < amountOfSlots(); i++) {
+            Slot slot = slots(i);
             if (validator.validate(slot)) continue;
             slot.release();
             return false;
@@ -114,8 +112,17 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
         return true;
     }
 
+    public int occupiedSlots() {
+        int occupiedSlots = 0;
+        for (int i = 0; i < amountOfSlots(); i++) {
+            Slot slot = slots(i);
+            if (slot.state() == Slot.State.OCCUPIED) occupiedSlots++;
+        }
+        return occupiedSlots;
+    }
+
     private long calculateCRC() {
-        byte[] allSlotBytes = new byte[Slot.LENGTH * slots.length];
+        byte[] allSlotBytes = new byte[Slot.LENGTH * amountOfSlots()];
         buffer.position(0);
         buffer.get(allSlotBytes);
         CRC32 crc32 = new CRC32();
