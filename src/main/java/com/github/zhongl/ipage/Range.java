@@ -17,7 +17,7 @@
 package com.github.zhongl.ipage;
 
 import javax.annotation.concurrent.ThreadSafe;
-import java.util.AbstractList;
+import java.util.List;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @ThreadSafe
@@ -27,7 +27,7 @@ class Range {
     private final long end;
 
     /** @see java.util.Collections#binarySearch(java.util.List, Object, java.util.Comparator) */
-    public static int binarySearch(AbstractList<Range> list, long offset) {
+    public static int binarySearch(List<Range> list, long offset) {
         int low = 0;
         int high = list.size() - 1;
 
@@ -52,8 +52,8 @@ class Range {
     }
 
     public int compareTo(long value) {
-        if (value < begin) return -1;
-        if (value > end) return 1;
+        if (value < begin) return 1;
+        if (value > end) return -1;
         return 0;
     }
 }

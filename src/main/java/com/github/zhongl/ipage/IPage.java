@@ -24,7 +24,10 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.AbstractList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
@@ -32,14 +35,14 @@ public class IPage<T> implements Closeable, Iterable<T>, ValidateOrRecover<T, IO
 
     private final File baseDir;
     private final IPageBuilder.ChunkFactory<T> chunkFactory;
-    private final List<Chunk<T>> chunks; // TODO use LRU to cache chunks
+    private final LinkedList<Chunk<T>> chunks; // TODO use LRU to cache chunks
     private final AbstractList<Range> chunkOffsetRangeList;
 
     public static <T> IPageBuilder<T> baseOn(File dir) {
         return new IPageBuilder<T>(dir);
     }
 
-    IPage(File baseDir, IPageBuilder.ChunkFactory<T> chunkFactory, List<Chunk<T>> chunks) {
+    IPage(File baseDir, IPageBuilder.ChunkFactory<T> chunkFactory, LinkedList<Chunk<T>> chunks) {
         this.baseDir = baseDir;
         this.chunkFactory = chunkFactory;
         this.chunks = chunks;
@@ -62,14 +65,14 @@ public class IPage<T> implements Closeable, Iterable<T>, ValidateOrRecover<T, IO
 
     private Chunk<T> lastRecentlyUsedChunk() throws IOException {
         if (chunks.isEmpty()) return grow();
-        return chunks.get(0);
+        return chunks.getLast();
     }
 
     private Chunk<T> grow() throws IOException {
         long beginPositionInIPage = chunks.isEmpty() ? 0L : lastRecentlyUsedChunk().endPositionInIPage() + 1;
         File file = new File(baseDir, beginPositionInIPage + "");
         Chunk<T> chunk = chunkFactory.create(beginPositionInIPage, file);
-        chunks.add(0, chunk);
+        chunks.addLast(chunk);
         return chunk;
     }
 
@@ -78,7 +81,7 @@ public class IPage<T> implements Closeable, Iterable<T>, ValidateOrRecover<T, IO
         releaseChunkIfNecessary();
         try {
             return chunkIn(offset).get(offset);
-        } catch (ArrayIndexOutOfBoundsException e) {
+        } catch (IndexOutOfBoundsException e) {
             return null;
         }
     }

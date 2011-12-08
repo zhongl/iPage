@@ -22,9 +22,8 @@ import com.github.zhongl.util.NumberFileNameFilter;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
+import java.util.LinkedList;
 
 import static com.google.common.base.Preconditions.*;
 
@@ -60,18 +59,18 @@ public final class IPageBuilder<T> {
         chunkCapacity = (chunkCapacity == UNSET) ? Chunk.DEFAULT_CAPACITY : chunkCapacity;
         checkNotNull(accessor, "EntryAccessor should not be null.");
         ChunkFactory<T> chunkFactory = new ChunkFactory<T>(chunkCapacity, accessor);
-        List<Chunk<T>> chunks = loadExistChunks(chunkFactory);
+        LinkedList<Chunk<T>> chunks = loadExistChunks(chunkFactory);
         return new IPage<T>(baseDir, chunkFactory, chunks);
     }
 
-    private List<Chunk<T>> loadExistChunks(ChunkFactory<T> chunkFactory) throws IOException {
+    private LinkedList<Chunk<T>> loadExistChunks(ChunkFactory<T> chunkFactory) throws IOException {
         File[] files = baseDir.listFiles(new NumberFileNameFilter());
         Arrays.sort(files, new FileNumberNameComparator());
 
-        ArrayList<Chunk<T>> chunks = new ArrayList<Chunk<T>>(files.length);
+        LinkedList<Chunk<T>> chunks = new LinkedList<Chunk<T>>();
         for (File file : files) {
             long beginPositionInIPage = Long.parseLong(file.getName());
-            chunks.add(0, chunkFactory.create(beginPositionInIPage, file)); // reverse order to make sure the appending chunk at first.
+            chunks.addLast(chunkFactory.create(beginPositionInIPage, file)); // make sure the appending chunk at last.
         }
         return chunks;
     }
