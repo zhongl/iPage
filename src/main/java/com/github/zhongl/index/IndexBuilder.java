@@ -42,7 +42,7 @@ public final class IndexBuilder {
     }
 
     public IndexBuilder initialBucketSize(int value) {
-        checkState(initialBucketSize == UNSET, "Initial bucket buckets can only set once.");
+        checkState(initialBucketSize == UNSET, "Initial bucket amountOfBuckets can only set once.");
         initialBucketSize = value;
         return this;
     }

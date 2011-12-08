@@ -77,8 +77,8 @@ class KVEngineBuilder<V> {
     }
 
     public KVEngineBuilder<V> initialBucketSize(int value) {
-        checkState(initialBucketSize == UNSET, "Initial bucket buckets can only set once.");
-        checkArgument(value > 0, "Initial bucket buckets should not less than 0");
+        checkState(initialBucketSize == UNSET, "Initial bucket amountOfBuckets can only set once.");
+        checkArgument(value > 0, "Initial bucket amountOfBuckets should not less than 0");
         initialBucketSize = value;
         return this;
     }

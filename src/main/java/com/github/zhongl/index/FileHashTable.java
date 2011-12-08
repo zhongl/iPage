@@ -46,22 +46,23 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
     public static final int DEFAULT_SIZE = 256;
 
     private final MappedByteBuffer mappedByteBuffer;
-    private final Bucket[] buckets;
+    private final int amountOfBuckets;
     private final File file;
+
     private volatile int occupiedSlots;
     private volatile boolean cleaned;
     private volatile boolean closed;
 
     public FileHashTable(File file, int buckets) throws IOException {
         this.file = file;
-        buckets = buckets > 0 ? buckets : DEFAULT_SIZE;
-        mappedByteBuffer = Files.map(file, READ_WRITE, buckets * Bucket.LENGTH);
-        this.buckets = createBuckets(buckets);
+        amountOfBuckets = buckets > 0 ? buckets : DEFAULT_SIZE;
+        mappedByteBuffer = Files.map(file, READ_WRITE, amountOfBuckets * Bucket.LENGTH);
+        calculateOccupiedSlots();
     }
 
-    public int buckets() {
+    public int amountOfBuckets() {
         checkState(!cleaned && !closed, "FileHashTable %s has already cleaned or closed.", file);
-        return buckets.length;
+        return amountOfBuckets;
     }
 
     public int size() {
@@ -71,7 +72,7 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
 
     public Long put(Md5Key key, Long offset) {
         checkState(!cleaned && !closed, "FileHashTable %s has already cleaned or closed.", file);
-        Bucket bucket = buckets[hashAndMod(key)];
+        Bucket bucket = buckets(hashAndMod(key));
         Long preoffset = bucket.put(key, offset);
         bucket.updateCRC();
         if (preoffset == null) occupiedSlots++; // add a new key
@@ -80,12 +81,12 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
 
     public Long get(Md5Key key) {
         checkState(!cleaned && !closed, "FileHashTable %s has already cleaned or closed.", file);
-        return buckets[hashAndMod(key)].get(key);
+        return buckets(hashAndMod(key)).get(key);
     }
 
     public Long remove(Md5Key key) {
         checkState(!cleaned && !closed, "FileHashTable %s has already cleaned or closed.", file);
-        Bucket bucket = buckets[hashAndMod(key)];
+        Bucket bucket = buckets(hashAndMod(key));
         Long preoffset = bucket.remove(key);
         if (preoffset != null) { // remove an exist key
             bucket.updateCRC();
@@ -102,20 +103,17 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
     }
 
     private int hashAndMod(Md5Key key) {
-        return Math.abs(key.hashCode()) % buckets.length;
+        return Math.abs(key.hashCode()) % amountOfBuckets;
     }
 
-    private Bucket[] createBuckets(int size) {
-        Bucket[] buckets = new Bucket[size];
-        for (int i = 0; i < buckets.length; i++) {
-            buckets[i] = new Bucket(slice(mappedByteBuffer, i * Bucket.LENGTH, Bucket.LENGTH));
-            calculateOccupiedSlotOf(buckets[i]);
+    private void calculateOccupiedSlots() {
+        for (int i = 0; i < amountOfBuckets; i++) {
+            occupiedSlots += buckets(i).occupiedSlots();
         }
-        return buckets;
     }
 
-    private void calculateOccupiedSlotOf(Bucket bucket) {
-        occupiedSlots += bucket.occupiedSlots();
+    private Bucket buckets(int i) {
+        return new Bucket(slice(mappedByteBuffer, i * Bucket.LENGTH, Bucket.LENGTH));
     }
 
     public void flush() {
@@ -141,7 +139,8 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
     @Override
     public boolean validateOrRecoverBy(Validator<Slot, IOException> validator) throws IOException {
         checkState(!cleaned && !closed, "FileHashTable %s has already cleaned or closed.", file);
-        for (Bucket bucket : buckets) {
+        for (int i = 0; i < amountOfBuckets; i++) {
+            Bucket bucket = buckets(i);
             if (bucket.checkCRC()) continue;
 
             bucket.validateOrRecoverBy(validator);
@@ -154,7 +153,7 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
     public String toString() {
         final StringBuilder sb = new StringBuilder();
         sb.append("FileHashTable");
-        sb.append("{buckets=").append(buckets.length);
+        sb.append("{amountOfBuckets=").append(amountOfBuckets);
         sb.append(", file=").append(file);
         sb.append(", occupiedSlots=").append(occupiedSlots);
         sb.append(", cleaned=").append(cleaned);

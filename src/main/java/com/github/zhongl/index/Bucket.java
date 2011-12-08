@@ -20,13 +20,13 @@ import com.github.zhongl.accessor.CommonAccessors;
 import com.github.zhongl.integerity.ValidateOrRecover;
 import com.github.zhongl.integerity.Validator;
 import com.github.zhongl.ipage.OverflowException;
-import com.google.common.base.Preconditions;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.zip.CRC32;
 
 import static com.github.zhongl.util.ByteBuffers.slice;
+import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * {@link Bucket} has 163
@@ -43,13 +43,6 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
 
     public Bucket(ByteBuffer buffer) {
         this.buffer = buffer;
-    }
-
-    private int amountOfSlots() {return LENGTH / Slot.LENGTH;}
-
-    private Slot slots(int index) {
-        Preconditions.checkArgument(index >= 0 && index < amountOfSlots());
-        return new Slot(slice(buffer, index * Slot.LENGTH, Slot.LENGTH));
     }
 
     public Long put(Md5Key key, Long offset) {
@@ -119,6 +112,13 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
             if (slot.state() == Slot.State.OCCUPIED) occupiedSlots++;
         }
         return occupiedSlots;
+    }
+
+    private int amountOfSlots() {return LENGTH / Slot.LENGTH;}
+
+    private Slot slots(int index) {
+        checkArgument(index >= 0 && index < amountOfSlots());
+        return new Slot(slice(buffer, index * Slot.LENGTH, Slot.LENGTH));
     }
 
     private long calculateCRC() {

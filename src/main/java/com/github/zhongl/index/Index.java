@@ -55,7 +55,7 @@ public class Index implements Closeable, ValidateOrRecover<Slot, IOException> {
 
     private FileHashTable grow() throws IOException {
         int no = fileHashTables.isEmpty() ? 0 : serialNumber(lastRecentlyUsedBuckets()) + 1;
-        int size = fileHashTables.isEmpty() ? initialBucketSize : lastRecentlyUsedBuckets().buckets() * 2;
+        int size = fileHashTables.isEmpty() ? initialBucketSize : lastRecentlyUsedBuckets().amountOfBuckets() * 2;
         FileHashTable fileHashTable = new FileHashTable(new File(baseDir, no + ""), size);
         fileHashTables.add(0, fileHashTable);
         return fileHashTable;

@@ -49,7 +49,7 @@ public class FileHashTableTest extends FileBase {
     @Test
     public void useDefaultSizeIfInvalidBucketSizeWereSet() throws Exception {
         file = testFile("invalidBucketSize");
-        assertThat(new FileHashTable(file, -1).buckets(), is(256));
+        assertThat(new FileHashTable(file, -1).amountOfBuckets(), is(256));
     }
 
     @Test
@@ -245,7 +245,7 @@ public class FileHashTableTest extends FileBase {
 
         fileHashTable = new FileHashTable(file, 1);
         fileHashTable.close();
-        fileHashTable.buckets();
+        fileHashTable.amountOfBuckets();
     }
 
     @Test(expected = IllegalStateException.class)
@@ -344,7 +344,7 @@ public class FileHashTableTest extends FileBase {
 
         fileHashTable = new FileHashTable(file, 1);
         fileHashTable.clean();
-        fileHashTable.buckets();
+        fileHashTable.amountOfBuckets();
     }
 
     @Test(expected = IllegalStateException.class)
@@ -404,7 +404,7 @@ public class FileHashTableTest extends FileBase {
     @Test
     public void fileHashTableToString() throws Exception {
         file = testFile("fileHashTableToString");
-        String expect = "FileHashTable{buckets=1, " +
+        String expect = "FileHashTable{amountOfBuckets=1, " +
                 "file=target/tmpTestFiles/FileHashTableTest.fileHashTableToString, " +
                 "occupiedSlots=0, " +
                 "cleaned=false, " +
