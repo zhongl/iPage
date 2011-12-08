@@ -113,12 +113,8 @@ class KVEngineBuilder<V> {
         final IPage<Entry<V>> ipage = newIPage();
         final Index index = newIndex();
 
-        if (exists) {
-            try {
-                dataIntegerity.validate();
-            } catch (UnsafeDataStateException e) {
-                new Recovery(index, ipage).run();
-            }
+        if (exists && dataIntegerity.validate()) {
+            new Recovery(index, ipage).run();
         }
 
         CallByCountOrElapse callByCountOrElapse = newCallFlushByCountOrElapse(new Callable<Object>() {

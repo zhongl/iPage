@@ -19,18 +19,21 @@ package com.github.zhongl.kvengine;
 import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
+
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class DataIntegerityTest extends FileBase {
 
     private DataIntegerity dataIntegerity;
 
 
-    @Test(expected = UnsafeDataStateException.class)
+    @Test
     public void unsafeDataState() throws Exception {
         dir = testDir("unsafeDataState");
         dir.mkdirs();
         dataIntegerity = new DataIntegerity(dir);
-        dataIntegerity.validate();
+        assertThat(dataIntegerity.validate(), is(false));
     }
 
     @Test
@@ -39,7 +42,7 @@ public class DataIntegerityTest extends FileBase {
         dir.mkdirs();
         dataIntegerity = new DataIntegerity(dir);
         dataIntegerity.safeClose();
-        dataIntegerity.validate();
+        assertThat(dataIntegerity.validate(), is(true));
     }
 
     @Test(expected = IllegalArgumentException.class)

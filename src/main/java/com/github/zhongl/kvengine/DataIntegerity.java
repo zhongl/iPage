@@ -40,10 +40,11 @@ class DataIntegerity {
      * If it exists then delete it, or else throw a {@link IllegalStateException} to indicate the data files in the dir
      * should be recovered.
      */
-    public void validate() throws UnsafeDataStateException {
+    public boolean validate() {
         File file = new File(dir, SAFE);
-        if (!file.exists()) throw new UnsafeDataStateException();
+        if (!file.exists()) return false;
         checkState(file.delete(), "Can't not remove " + SAFE);
+        return true;
     }
 
     public void safeClose() throws IOException {
