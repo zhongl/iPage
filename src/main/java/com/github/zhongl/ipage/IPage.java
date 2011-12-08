@@ -30,7 +30,7 @@ import java.util.*;
 public class IPage<T> implements Closeable, Iterable<T>, ValidateOrRecover<T, IOException> {
 
     private final File baseDir;
-    private final ChunkFactory<T> chunkFactory;
+    private final IPageBuilder.ChunkFactory<T> chunkFactory;
     private final List<Chunk<T>> chunks; // TODO use LRU to cache chunks
     private final AbstractList<Range> chunkOffsetRangeList;
 
@@ -38,7 +38,7 @@ public class IPage<T> implements Closeable, Iterable<T>, ValidateOrRecover<T, IO
         return new IPageBuilder<T>(dir);
     }
 
-    IPage(File baseDir, ChunkFactory<T> chunkFactory, List<Chunk<T>> chunks) {
+    IPage(File baseDir, IPageBuilder.ChunkFactory<T> chunkFactory, List<Chunk<T>> chunks) {
         this.baseDir = baseDir;
         this.chunkFactory = chunkFactory;
         this.chunks = chunks;

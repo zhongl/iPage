@@ -76,4 +76,19 @@ public final class IPageBuilder<T> {
         return chunks;
     }
 
+    /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+    static class ChunkFactory<T> {
+
+        private final long chunkCapacity;
+        private final Accessor<T> accessor;
+
+        ChunkFactory(long chunkCapacity, Accessor<T> accessor) {
+            this.accessor = accessor;
+            this.chunkCapacity = chunkCapacity;
+        }
+
+        public Chunk<T> create(long beginPositionInIPage, File file) throws IOException {
+            return new Chunk<T>(beginPositionInIPage, file, chunkCapacity, accessor);
+        }
+    }
 }
