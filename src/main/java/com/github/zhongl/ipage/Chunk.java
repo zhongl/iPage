@@ -28,7 +28,6 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.util.Iterator;
 
 import static com.github.zhongl.util.ByteBuffers.slice;
@@ -61,9 +60,7 @@ public final class Chunk<T> extends MappedFile implements Iterable<T>, Closeable
         checkOverFlowIfAppend(record);
         long iPageOffset = writePosition + beginPositionInIPage;
         ensureMap();
-        ByteBuffer duplicate = mappedByteBuffer.duplicate();
-        duplicate.position(writePosition);
-        writePosition += accessor.write(record, duplicate);
+        writePosition += accessor.write(record, slice(mappedByteBuffer, writePosition));
         return iPageOffset;
     }
 
