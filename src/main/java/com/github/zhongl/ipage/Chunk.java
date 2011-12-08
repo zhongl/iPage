@@ -31,6 +31,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 
+import static com.github.zhongl.util.ByteBuffers.slice;
 import static com.google.common.base.Preconditions.checkState;
 
 /**
@@ -135,10 +136,7 @@ public final class Chunk<T> extends MappedFile implements Iterable<T>, Closeable
 
     private T getInternal(int offset) throws IOException {
         ensureMap();
-        ByteBuffer duplicate = mappedByteBuffer.duplicate();// avoid modification of mappedDirectBuffer.
-        duplicate.position(offset);
-        duplicate.limit(writePosition);
-        return accessor.read(duplicate);
+        return accessor.read(slice(mappedByteBuffer, offset, writePosition - offset));
     }
 
     private void checkOverFlowIfAppend(T record) {
