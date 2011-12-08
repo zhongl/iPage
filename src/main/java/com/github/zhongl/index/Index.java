@@ -97,6 +97,10 @@ public class Index implements Closeable, ValidateOrRecover<Slot, IOException> {
         }
     }
 
+    public boolean contains(Md5Key key) throws IOException {
+        return get(key) != null;
+    }
+
     private Long tryRemoveFromOthersAndMigrate(Md5Key key, boolean migrate) throws IOException {
         for (int i = 1; i < fileHashTables.size(); i++) {
             FileHashTable fileHashTable = fileHashTables.get(i);
@@ -126,6 +130,5 @@ public class Index implements Closeable, ValidateOrRecover<Slot, IOException> {
     public static IndexBuilder baseOn(File dir) {
         return new IndexBuilder(dir);
     }
-
 }
 

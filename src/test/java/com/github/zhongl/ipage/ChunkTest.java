@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
@@ -111,19 +112,6 @@ public class ChunkTest extends FileBase {
         assertThat(chunk.findOffsetOfFirstInvalidRecordBy(validator), is(35L));
     }
 
-    @Test
-    public void chunkToString() throws Exception {
-        file = testFile("chunkToString");
-        newChunk();
-        String expect = "Chunk{file=target/tmpTestFiles/ChunkTest.chunkToString, " +
-                "capacity=4096, " +
-                "accessor=com.github.zhongl.accessor.CommonAccessors$StringAccessor, " +
-                "beginPositionInIPage=0, " +
-                "writePosition=0, " +
-                "erased=false}";
-        assertThat(chunk.toString(), is(expect));
-    }
-
     @Test(expected = NoSuchElementException.class)
     public void iterateAfterErase() throws Exception {
         file = testFile("iterateAfterErase");
@@ -186,12 +174,12 @@ public class ChunkTest extends FileBase {
         chunk.endPositionInIPage();
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void getByInvalidOffset() throws Exception {
         file = testFile("getByInvalidOffset");
         newChunk();
         chunk.append("record");
-        chunk.get(1L);
+        assertThat(chunk.get(1L), is(nullValue()));
     }
 
     @Test

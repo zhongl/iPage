@@ -39,7 +39,7 @@ import static com.google.common.base.Preconditions.checkState;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @NotThreadSafe
-public final class Chunk<T> extends MappedFile implements Iterable<T>, Closeable {
+public class Chunk<T> extends MappedFile implements Iterable<T>, Closeable {
 
     public static final int DEFAULT_CAPACITY = 4096; // 4k
     private final Accessor<T> accessor;
@@ -60,7 +60,7 @@ public final class Chunk<T> extends MappedFile implements Iterable<T>, Closeable
         checkOverFlowIfAppend(record);
         long iPageOffset = writePosition + beginPositionInIPage;
         ensureMap();
-        writePosition += accessor.write(record, slice(mappedByteBuffer, writePosition));
+        writePosition += accessor.write(record, slice(mappedByteBuffer, writePosition));  // TODO use a better name to instead "slice"
         return iPageOffset;
     }
 
@@ -69,14 +69,15 @@ public final class Chunk<T> extends MappedFile implements Iterable<T>, Closeable
         try {
             return getInternal((int) (offset - beginPositionInIPage));
         } catch (RuntimeException e) {
+            return null;
             // include IllegalArgumentException java.nio.BufferUnderflowException,
-            throw new IllegalArgumentException("Can't get object with invalid offset " + offset);
+//            throw new IllegalArgumentException("Can't get object with invalid offset " + offset);
         }
     }
 
     @Override
     public boolean flush() throws IOException {
-        return !erased && super.flush();    // TODO flush
+        return !erased && super.flush();
     }
 
     public long endPositionInIPage() {
@@ -90,6 +91,7 @@ public final class Chunk<T> extends MappedFile implements Iterable<T>, Closeable
     }
 
     @Override
+    @Deprecated
     public Iterator<T> iterator() {
         checkState(!erased, "Chunk %s has already erased", file);
         return new RecordIterator(writePosition);
@@ -117,20 +119,6 @@ public final class Chunk<T> extends MappedFile implements Iterable<T>, Closeable
         return null;
     }
 
-    @Override
-    public String toString() {
-        final StringBuilder sb = new StringBuilder();
-        sb.append("Chunk");
-        sb.append("{file=").append(file);
-        sb.append(", capacity=").append(capacity);
-        sb.append(", accessor=").append(accessor.getClass().getName());
-        sb.append(", beginPositionInIPage=").append(beginPositionInIPage);
-        sb.append(", writePosition=").append(writePosition);
-        sb.append(", erased=").append(erased);
-        sb.append('}');
-        return sb.toString();
-    }
-
     private T getInternal(int offset) throws IOException {
         ensureMap();
         return accessor.read(slice(mappedByteBuffer, offset, writePosition - offset));
@@ -146,6 +134,7 @@ public final class Chunk<T> extends MappedFile implements Iterable<T>, Closeable
         if (flush() && releaseBuffer()) setLength(writePosition);
     }
 
+    @Deprecated
     private class RecordIterator extends AbstractIterator<T> {
         private int offset;
         private final int limit;

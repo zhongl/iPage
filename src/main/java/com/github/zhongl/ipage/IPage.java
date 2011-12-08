@@ -133,6 +133,10 @@ public class IPage<T> implements Closeable, Iterable<T>, ValidateOrRecover<T, IO
         }
     }
 
+    public long beginPosition() {
+        return chunks.get(chunks.size() - 1).beginPositionInIPage();
+    }
+
     private class ChunkOffsetRangeList extends AbstractList<Range> {
         @Override
         public Range get(int index) {
