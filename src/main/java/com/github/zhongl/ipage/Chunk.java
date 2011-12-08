@@ -20,15 +20,11 @@ import com.github.zhongl.accessor.Accessor;
 import com.github.zhongl.integerity.ValidateOrRecover;
 import com.github.zhongl.integerity.Validator;
 import com.google.common.collect.AbstractIterator;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.Files;
-import com.google.common.io.InputSupplier;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Iterator;
 
 import static com.github.zhongl.util.ByteBuffers.slice;
@@ -158,25 +154,4 @@ public class Chunk<T> extends MappedFile implements Iterable<T>, Closeable, Vali
         }
     }
 
-    public class Dimidiation {
-        private final long offset;
-
-        public Dimidiation(long offset) {
-            this.offset = offset;
-        }
-
-        public Chunk<T> left() throws IOException {
-            writePosition = (int) (offset - beginPositionInIPage());
-            return Chunk.this;
-        }
-
-        public Chunk<T> right() throws IOException {
-            long length = endPositionInIPage() - offset + 1;
-            File rightPiece = new File(file.getParentFile(), offset + "");
-            InputSupplier<InputStream> source = ByteStreams.slice(Files.newInputStreamSupplier(file), offset, length);
-            Files.copy(source, rightPiece);
-            erase();
-            return new Chunk<T>(offset, rightPiece, length, accessor);
-        }
-    }
 }
