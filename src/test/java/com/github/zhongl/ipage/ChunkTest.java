@@ -22,8 +22,6 @@ import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
@@ -52,19 +50,19 @@ public class ChunkTest extends FileBase {
     }
 
     @Test
-    public void iterate() throws Exception {
-        file = testFile("iterate");
+    public void nextCursor() throws Exception {
+        file = testFile("nextCursor");
         newChunk();
 
         for (int i = 0; i < 10; i++) {
             chunk.append("" + i);
         }
 
-        Iterator<String> iterator = chunk.iterator();
-        for (int i = 0; iterator.hasNext(); i++) {
-            assertThat(iterator.next(), is(i + ""));
+        Cursor<String> cursor = new Cursor<String>(chunk.beginPositionInIPage(), null);
+        for (int i = 0; i < 10; i++) {
+            cursor = chunk.next(cursor);
+            assertThat(cursor.lastValue, is(i + ""));
         }
-
     }
 
 
@@ -87,20 +85,6 @@ public class ChunkTest extends FileBase {
         assertThat(chunk.validateOrRecoverBy(validator), is(false));
     }
 
-    @Test(expected = NoSuchElementException.class)
-    public void iterateAfterErase() throws Exception {
-        file = testFile("iterateAfterErase");
-        newChunk();
-        for (int i = 0; i < 10; i++) {
-            chunk.append("" + i);
-        }
-        Iterator<String> iterator = chunk.iterator();
-        iterator.next();
-
-        chunk.erase();
-        iterator.next();
-    }
-
     @Test(expected = IllegalStateException.class)
     public void appendAfterErase() throws Exception {
         file = testFile("appendAfterErase");
@@ -118,11 +102,11 @@ public class ChunkTest extends FileBase {
     }
 
     @Test(expected = IllegalStateException.class)
-    public void iteratorAfterErase() throws Exception {
-        file = testFile("iteratorAfterErase");
+    public void nextAfterErase() throws Exception {
+        file = testFile("nextAfterErase");
         newChunk();
         chunk.erase();
-        chunk.iterator();
+        chunk.next(null);
     }
 
     @Test(expected = IllegalStateException.class)

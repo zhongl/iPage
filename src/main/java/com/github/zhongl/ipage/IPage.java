@@ -18,20 +18,17 @@ package com.github.zhongl.ipage;
 
 import com.github.zhongl.integerity.ValidateOrRecover;
 import com.github.zhongl.integerity.Validator;
-import com.google.common.collect.AbstractIterator;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.AbstractList;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.LinkedList;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-public class IPage<T> implements Closeable, Iterable<T>, ValidateOrRecover<T, IOException> {
+public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
 
     private final File baseDir;
     private final IPageBuilder.ChunkFactory<T> chunkFactory;
@@ -71,9 +68,15 @@ public class IPage<T> implements Closeable, Iterable<T>, ValidateOrRecover<T, IO
     private Chunk<T> grow() throws IOException {
         long beginPositionInIPage = chunks.isEmpty() ? 0L : lastRecentlyUsedChunk().endPositionInIPage() + 1;
         File file = new File(baseDir, beginPositionInIPage + "");
+        convertLastRecentlyUsedChunkToReadOnly();
         Chunk<T> chunk = chunkFactory.create(beginPositionInIPage, file);
         chunks.addLast(chunk);
         return chunk;
+    }
+
+    private void convertLastRecentlyUsedChunkToReadOnly() throws IOException {
+        if (chunks.isEmpty()) return;
+        chunks.addLast(chunks.removeLast().asReadOnly());
     }
 
     public T get(long offset) throws IOException {
@@ -83,6 +86,16 @@ public class IPage<T> implements Closeable, Iterable<T>, ValidateOrRecover<T, IO
             return chunkIn(offset).get(offset);
         } catch (IndexOutOfBoundsException e) {
             return null;
+        }
+    }
+
+    public Cursor<T> next(Cursor<T> cursor) throws IOException {
+        try {
+            if (cursor.offset < chunks.getFirst().beginPositionInIPage())
+                cursor = new Cursor<T>(chunks.getFirst().beginPositionInIPage(), null);
+            return chunkIn(cursor.offset).next(cursor);
+        } catch (IndexOutOfBoundsException e) {
+            return cursor.end();
         }
     }
 
@@ -99,21 +112,6 @@ public class IPage<T> implements Closeable, Iterable<T>, ValidateOrRecover<T, IO
     @Override
     public boolean validateOrRecoverBy(Validator<T, IOException> validator) throws IOException {
         return lastRecentlyUsedChunk().validateOrRecoverBy(validator);
-    }
-
-    @Override
-    public Iterator<T> iterator() {
-        LinkedList<Chunk<T>> copy = new LinkedList<Chunk<T>>(chunks);
-        Collections.reverse(copy);
-
-        new AbstractIterator<Chunk<T>>() {
-
-            @Override
-            protected Chunk<T> computeNext() {
-                return null;  // TODO computeNext
-            }
-        };
-        return new ChunkIterator<T>(copy);
     }
 
     @Override

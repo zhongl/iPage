@@ -65,7 +65,7 @@ public class IPageTest extends FileBase {
         newIPage();
         assertThat(iPage.get(0L), is(nullValue()));
 
-        String record = "value";
+        String record = "lastValue";
         long offset = iPage.append(record);
 
         assertThat(iPage.get(offset), is(record));
@@ -131,6 +131,24 @@ public class IPageTest extends FileBase {
 
         assertThat(iPage.get(30L), is(6 + ""));
         assertThat(iPage.get(35L), is(nullValue()));
+    }
+
+    @Test
+    public void nextCursor() throws Exception {
+        dir = testDir("nextCursor");
+        newIPage();
+
+        String record = "0123456789ab";
+        for (int i = 0; i < 257; i++) {
+            iPage.append(record);
+        }
+
+        Cursor<String> cursor = new Cursor<String>(-1L, null);
+        for (int i = 0; i < 257; i++) {
+            cursor = iPage.next(cursor);
+            assertThat(cursor.lastValue, is(record));
+        }
+
     }
 
     @Test(expected = IllegalArgumentException.class)

@@ -18,6 +18,7 @@ package com.github.zhongl.kvengine;
 
 import com.github.zhongl.index.Index;
 import com.github.zhongl.index.Md5Key;
+import com.github.zhongl.ipage.Cursor;
 import com.github.zhongl.ipage.IPage;
 import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
@@ -27,7 +28,6 @@ import javax.annotation.concurrent.ThreadSafe;
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -127,21 +127,21 @@ public class KVEngine<T> extends Engine {
     }
 
     public Iterator<T> valueIterator() {
-        final Iterator<Entry<T>> iterator = ipage.iterator();
         return new AbstractIterator<T>() {
+            private Cursor<Entry<T>> cursor = new Cursor<Entry<T>>(-1L, null);
+
             @Override
             protected T computeNext() {
                 try {
-                    Entry<T> entry = iterator.next();
-                    Md5Key key = entry.key();
-                    Long offset = index.get(key);
-                    if (offset != null) return entry.value(); // check if deleted
-                } catch (NoSuchElementException e) {
-                    return endOfData();
-                } catch (IOException e) {
+                    cursor = ipage.next(cursor);
+                    if (cursor.lastValue == null) return endOfData();
+                    Entry<T> entry = cursor.lastValue;
+                    if (index.contains(entry.key()))
+                        return entry.value();
+                    return computeNext(); // skip and get nextCursor one.
+                } catch (Exception e) {
                     throw new IllegalStateException(e);
                 }
-                return computeNext(); // skip and get next one.
             }
         };
     }
@@ -172,7 +172,7 @@ public class KVEngine<T> extends Engine {
             group.register(callback);
             tryCallByCount();
             if (offset == null) return null;
-            // TODO remove the old value
+            // TODO remove the old lastValue
             return ipage.get(offset).value();
         }
     }
