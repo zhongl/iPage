@@ -104,7 +104,10 @@ public class Index implements Closeable, ValidateOrRecover<Slot, IOException> {
             if (offset != null) {
                 if (migrate)
                     lastRecentlyUsedBuckets().put(key, offset); // migrate index to last recently used fileHashTable
-                if (fileHashTable.isEmpty()) fileHashTable.clean();
+                if (fileHashTable.isEmpty()) {
+                    fileHashTable.clean();
+                    fileHashTables.remove(i);
+                }
                 return offset;
             }
         }
