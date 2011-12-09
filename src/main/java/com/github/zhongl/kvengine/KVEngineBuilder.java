@@ -31,7 +31,7 @@ import static com.google.common.base.Preconditions.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-class KVEngineBuilder<V> {
+public class KVEngineBuilder<V> {
 
     static final long DEFAULT_FLUSH_ELAPSE_MILLISECONDS = 10L;
     static final int DEFAULT_BACKLOG = 10;
@@ -50,7 +50,7 @@ class KVEngineBuilder<V> {
     private boolean groupCommit = false;
     private Accessor<V> valueAccessor;
 
-    public KVEngineBuilder(File dir) {
+    KVEngineBuilder(File dir) {
         this.dir = dir;
     }
 
@@ -110,18 +110,18 @@ class KVEngineBuilder<V> {
 
         DataIntegerity dataIntegerity = new DataIntegerity(dir);
 
-        final IPage<Entry<V>> ipage = newIPage();
+        final IPage<Entry<V>> iPage = newIPage();
         final Index index = newIndex();
 
         if (exists && dataIntegerity.validate()) {
-            new Recovery(index, ipage).run();
+            new Recovery(index, iPage).run();
         }
 
         CallByCountOrElapse callByCountOrElapse = newCallFlushByCountOrElapse(new Callable<Object>() {
 
             @Override
             public Object call() throws Exception {
-                ipage.flush();
+                iPage.flush();
                 index.flush();
                 return null;
             }
@@ -131,7 +131,7 @@ class KVEngineBuilder<V> {
         backlog = (backlog == UNSET) ? DEFAULT_BACKLOG : backlog;
         Group group = groupCommit ? Group.newInstance() : Group.NULL;
 
-        return new KVEngine<V>(pollTimeout, backlog, group, ipage, index, callByCountOrElapse, dataIntegerity);
+        return new KVEngine<V>(pollTimeout, backlog, group, iPage, index, callByCountOrElapse, dataIntegerity);
     }
 
     private CallByCountOrElapse newCallFlushByCountOrElapse(Callable<Object> flusher) {

@@ -30,6 +30,7 @@ import java.io.RandomAccessFile;
 import java.nio.BufferOverflowException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
 
 import static com.github.zhongl.util.ByteBuffers.slice;
 import static com.google.common.base.Preconditions.checkState;
@@ -136,6 +137,16 @@ public class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> {
         T value = get(offset);
         offset += accessor.byteLengthOf(value);
         return Cursor.cursor(offset, value);
+    }
+
+
+    int copyTo(WritableByteChannel channel, long begin, long end) throws IOException {
+        if (erased) return 0;
+        ensureMap();
+        int offset = (int) (begin - beginPositionInIPage);
+        int length = (int) (end - begin);
+        if (length > writePosition) length -= writePosition;
+        return channel.write(slice(mappedByteBuffer, offset, length));
     }
 
     private T getInternal(int offset) throws IOException {
