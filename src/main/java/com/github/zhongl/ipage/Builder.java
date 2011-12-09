@@ -17,13 +17,9 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.accessor.Accessor;
-import com.github.zhongl.util.FileNumberNameComparator;
-import com.github.zhongl.util.NumberFileNameFilter;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.LinkedList;
 
 import static com.google.common.base.Preconditions.*;
 
@@ -59,21 +55,9 @@ public final class Builder<T> {
         chunkCapacity = (chunkCapacity == UNSET) ? Chunk.DEFAULT_CAPACITY : chunkCapacity;
         checkNotNull(accessor, "EntryAccessor should not be null.");
         ChunkFactory<T> chunkFactory = new ChunkFactory<T>(chunkCapacity, accessor);
-        LinkedList<Chunk<T>> chunks = loadExistChunks(chunkFactory);
-        return new IPage<T>(baseDir, chunkFactory, chunks);
+        return new IPage<T>(new ChunkList<T>(baseDir, chunkFactory));
     }
 
-    private LinkedList<Chunk<T>> loadExistChunks(ChunkFactory<T> chunkFactory) throws IOException {
-        File[] files = baseDir.listFiles(new NumberFileNameFilter());
-        Arrays.sort(files, new FileNumberNameComparator());
-
-        LinkedList<Chunk<T>> chunks = new LinkedList<Chunk<T>>();
-        for (File file : files) {
-            long beginPositionInIPage = Long.parseLong(file.getName());
-            chunks.addLast(chunkFactory.create(beginPositionInIPage, file)); // make sure the appending chunk at last.
-        }
-        return chunks;
-    }
 
     /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
     static class ChunkFactory<T> {

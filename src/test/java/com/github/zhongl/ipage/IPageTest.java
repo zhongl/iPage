@@ -151,25 +151,6 @@ public class IPageTest extends FileBase {
 
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void invalidChunkCapacity() throws Exception {
-        dir = testDir("invalidChunkCapacity");
-        IPage.baseOn(dir).chunkCapacity(4095);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void repeatSetupChunkCapcity() throws Exception {
-        dir = testDir("repeatSetupChunkCapcity");
-        IPage.baseOn(dir).chunkCapacity(4096).chunkCapacity(1);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void invalidDir() throws Exception {
-        dir = testDir("invalidDir");
-        dir.createNewFile();
-        IPage.baseOn(dir);
-    }
-
     private void newIPage() throws IOException {
         iPage = IPage.<String>baseOn(dir).accessor(CommonAccessors.STRING).chunkCapacity(4096).build();
     }
