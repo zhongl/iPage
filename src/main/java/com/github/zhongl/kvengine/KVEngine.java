@@ -37,7 +37,7 @@ public class KVEngine<T> extends Engine {
 
     static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
 
-    private final IPage<Entry<T>> ipage;
+    private final IPage<Entry<T>> iPage;
     private final Index index;
     private final CallByCountOrElapse callByCountOrElapse;
     private final DataIntegerity dataIntegerity;
@@ -46,14 +46,14 @@ public class KVEngine<T> extends Engine {
     public KVEngine(long pollTimeout,
                     int backlog,
                     Group group,
-                    IPage<Entry<T>> ipage,
+                    IPage<Entry<T>> iPage,
                     Index index,
                     CallByCountOrElapse callByCountOrElapse,
                     DataIntegerity dataIntegerity
     ) {
         super(pollTimeout, DEFAULT_TIME_UNIT, backlog);
         this.group = group;
-        this.ipage = ipage;
+        this.iPage = iPage;
         this.index = index;
         this.callByCountOrElapse = callByCountOrElapse;
         this.dataIntegerity = dataIntegerity;
@@ -64,7 +64,7 @@ public class KVEngine<T> extends Engine {
         super.shutdown();
         try {
             index.close();
-            ipage.close();
+            iPage.close();
             dataIntegerity.safeClose();
         } catch (IOException e) {
             e.printStackTrace();  // TODO log e
@@ -126,20 +126,20 @@ public class KVEngine<T> extends Engine {
         }
     }
 
+
     public Iterator<T> valueIterator() {
         return new AbstractIterator<T>() {
-            private Cursor<Entry<T>> cursor = new Cursor<Entry<T>>(-1L, null);
+            private Cursor<Entry<T>> cursor = Cursor.begin(-1L);
 
             @Override
             protected T computeNext() {
                 try {
-                    // TODO use submit next callback
-                    cursor = ipage.next(cursor);
-                    if (cursor.lastValue == null) return endOfData();
-                    Entry<T> entry = cursor.lastValue;
-                    if (index.contains(entry.key()))
-                        return entry.value();
-                    return computeNext(); // skip and get nextCursor one.
+                    Sync<Cursor<Entry<T>>> callback = new Sync<Cursor<Entry<T>>>();
+                    submit(new Next(cursor, callback));
+                    cursor = callback.get();
+                    if (cursor.isEnd()) return endOfData();
+                    if (cursor.lastValue() == null) return computeNext();
+                    return cursor.lastValue().value();
                 } catch (Exception e) {
                     throw new IllegalStateException(e);
                 }
@@ -169,12 +169,12 @@ public class KVEngine<T> extends Engine {
 
         @Override
         protected T execute() throws IOException {
-            Long offset = index.put(key, ipage.append(new Entry<T>(key, value)));
+            Long offset = index.put(key, iPage.append(new Entry<T>(key, value)));
             group.register(callback);
             tryCallByCount();
             if (offset == null) return null;
             // TODO remove the old lastValue
-            return ipage.get(offset).value();
+            return iPage.get(offset).value();
         }
     }
 
@@ -188,7 +188,7 @@ public class KVEngine<T> extends Engine {
         protected T execute() throws Throwable {
             Long offset = index.get(key);
             if (offset == null) return null;
-            return ipage.get(offset).value();
+            return iPage.get(offset).value();
         }
     }
 
@@ -205,10 +205,30 @@ public class KVEngine<T> extends Engine {
             tryCallByCount();
             // TODO use a slide window to async truncate iPage.
             if (offset == null) return null;
-            return ipage.get(offset).value();
+            return iPage.get(offset).value();
         }
 
     }
+
+    private class Next extends Engine.Task<Cursor<Entry<T>>> {
+
+        private final Cursor<Entry<T>> cursor;
+
+        public Next(Cursor<Entry<T>> cursor, FutureCallback<Cursor<Entry<T>>> callback) {
+            super(callback);
+            this.cursor = cursor;
+        }
+
+        @Override
+        protected Cursor<Entry<T>> execute() throws Throwable {
+            Cursor<Entry<T>> next = iPage.next(cursor);
+            if (next.isEnd()) return next; // EOF
+            if (index.contains(next.lastValue().key()))
+                return next;
+            return Cursor.cursor(next.offset(), null); // value was deleted
+        }
+    }
+
 
     private static class Sync<T> implements FutureCallback<T> {
 

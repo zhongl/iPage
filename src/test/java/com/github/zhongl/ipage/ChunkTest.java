@@ -58,10 +58,10 @@ public class ChunkTest extends FileBase {
             chunk.append("" + i);
         }
 
-        Cursor<String> cursor = new Cursor<String>(chunk.beginPositionInIPage(), null);
+        Cursor<String> cursor = Cursor.begin(chunk.beginPositionInIPage());
         for (int i = 0; i < 10; i++) {
             cursor = chunk.next(cursor);
-            assertThat(cursor.lastValue, is(i + ""));
+            assertThat(cursor.lastValue(), is(i + ""));
         }
     }
 

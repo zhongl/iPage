@@ -118,11 +118,11 @@ public class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> {
 
     @Override
     public boolean validateOrRecoverBy(Validator<T, IOException> validator) throws IOException {
-        Cursor<T> cursor = new Cursor<T>(beginPositionInIPage, null);
-        while (cursor.offset < endPositionInIPage()) {
-            long lastOffset = cursor.offset;
+        Cursor<T> cursor = Cursor.begin(beginPositionInIPage);
+        while (cursor.offset() < endPositionInIPage()) {
+            long lastOffset = cursor.offset();
             cursor = next(cursor);
-            if (validator.validate(cursor.lastValue)) continue;
+            if (validator.validate(cursor.lastValue())) continue;
             writePosition = (int) (lastOffset - beginPositionInIPage);
             return false;
         }
@@ -131,11 +131,11 @@ public class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> {
 
     public Cursor<T> next(Cursor<T> cursor) throws IOException {
         checkState(!erased, "Chunk %s has already erased", file);
-        if (cursor.offset >= endPositionInIPage()) return cursor.end();
-        long offset = cursor.offset < beginPositionInIPage ? beginPositionInIPage : cursor.offset;
+        if (cursor.offset() >= endPositionInIPage()) return cursor.end();
+        long offset = cursor.offset() < beginPositionInIPage ? beginPositionInIPage : cursor.offset();
         T value = get(offset);
         offset += accessor.byteLengthOf(value);
-        return new Cursor<T>(offset, value);
+        return Cursor.cursor(offset, value);
     }
 
     private T getInternal(int offset) throws IOException {

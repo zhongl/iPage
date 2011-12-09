@@ -92,9 +92,9 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
 
     public Cursor<T> next(Cursor<T> cursor) throws IOException {
         try {
-            if (cursor.offset < chunks.getFirst().beginPositionInIPage())
-                cursor = new Cursor<T>(chunks.getFirst().beginPositionInIPage(), null);
-            return chunkIn(cursor.offset).next(cursor);
+            long beginPosition = chunks.getFirst().beginPositionInIPage();
+            if (cursor.offset() < beginPosition) cursor = Cursor.begin(beginPosition);
+            return chunkIn(cursor.offset()).next(cursor);
         } catch (IndexOutOfBoundsException e) {
             return cursor.end();
         }
