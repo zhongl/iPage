@@ -22,7 +22,7 @@ import java.io.IOException;
 public class GarbageCollector<T> {
     private volatile long lastSurvivorOffset = -1L;
 
-    public long collect(long survivorOffset, ChunkList<String> chunkList) throws IOException {
+    public long collect(long survivorOffset, ChunkList<T> chunkList) throws IOException {
         if (lastSurvivorOffset == survivorOffset) return 0L;
 
         long beginPosition = chunkList.first().beginPositionInIPage();

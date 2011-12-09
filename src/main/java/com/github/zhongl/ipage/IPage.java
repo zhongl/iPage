@@ -73,6 +73,10 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
             return cursor.end();
         }
     }
+    
+    public long garbageCollect(long survivorOffset) throws IOException {
+        return garbageCollector.collect(survivorOffset, chunkList);
+    }
 
     public void flush() throws IOException {
         chunkList.last().flush();
