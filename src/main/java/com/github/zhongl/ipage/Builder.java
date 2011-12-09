@@ -28,7 +28,7 @@ import java.util.LinkedList;
 import static com.google.common.base.Preconditions.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public final class IPageBuilder<T> {
+final class Builder<T> {
 
     private static final int UNSET = -1;
 
@@ -36,20 +36,20 @@ public final class IPageBuilder<T> {
     private int chunkCapacity = UNSET;
     private Accessor<T> accessor;
 
-    IPageBuilder(File dir) {
+    Builder(File dir) {
         if (!dir.exists()) checkState(dir.mkdirs(), "Can not create directory: %s", dir);
         checkArgument(dir.isDirectory(), "%s should be a directory.", dir);
         baseDir = dir;
     }
 
-    public IPageBuilder<T> chunkCapacity(int value) {
+    public Builder<T> chunkCapacity(int value) {
         checkState(chunkCapacity == UNSET, "Chunk capacity can only set once.");
         checkArgument(value >= Chunk.DEFAULT_CAPACITY, "Chunk capacity should not less than %s", Chunk.DEFAULT_CAPACITY);
         chunkCapacity = value;
         return this;
     }
 
-    public IPageBuilder<T> accessor(Accessor<T> instance) {
+    public Builder<T> accessor(Accessor<T> instance) {
         checkNotNull(instance);
         this.accessor = instance;
         return this;

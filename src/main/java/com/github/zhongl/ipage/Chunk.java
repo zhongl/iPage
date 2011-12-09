@@ -159,10 +159,9 @@ public class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> {
     }
 
     private void ensureMap() throws IOException {
-        if (mappedByteBuffer == null) {
-            FileChannel.MapMode mode = readOnly ? READ_ONLY : READ_WRITE;
-            mappedByteBuffer = Files.map(file, mode, capacity);
-        }
+        if (mappedByteBuffer != null) return;
+        FileChannel.MapMode mode = readOnly ? READ_ONLY : READ_WRITE;
+        mappedByteBuffer = Files.map(file, mode, capacity);
     }
 
     private void deleteFile() throws IOException {

@@ -31,15 +31,15 @@ import java.util.LinkedList;
 public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
 
     private final File baseDir;
-    private final IPageBuilder.ChunkFactory<T> chunkFactory;
+    private final Builder.ChunkFactory<T> chunkFactory;
     private final LinkedList<Chunk<T>> chunks; // TODO use LRU to cache chunks
     private final AbstractList<Range> chunkOffsetRangeList;
 
-    public static <T> IPageBuilder<T> baseOn(File dir) {
-        return new IPageBuilder<T>(dir);
+    public static <T> Builder<T> baseOn(File dir) {
+        return new Builder<T>(dir);
     }
 
-    IPage(File baseDir, IPageBuilder.ChunkFactory<T> chunkFactory, LinkedList<Chunk<T>> chunks) {
+    IPage(File baseDir, Builder.ChunkFactory<T> chunkFactory, LinkedList<Chunk<T>> chunks) {
         this.baseDir = baseDir;
         this.chunkFactory = chunkFactory;
         this.chunks = chunks;
@@ -116,9 +116,7 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
 
     @Override
     public void close() throws IOException {
-        for (Chunk<T> chunk : chunks) {
-            chunk.close();
-        }
+        for (Chunk<T> chunk : chunks) chunk.close();
     }
 
     private class ChunkOffsetRangeList extends AbstractList<Range> {
@@ -129,8 +127,6 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
         }
 
         @Override
-        public int size() {
-            return chunks.size();
-        }
+        public int size() { return chunks.size(); }
     }
 }

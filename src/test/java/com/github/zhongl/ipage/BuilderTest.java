@@ -21,7 +21,7 @@ import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class IPageBuilderTest extends FileBase {
+public class BuilderTest extends FileBase {
 
     @Test
     public void defaultChunkCapcity() throws Exception {
