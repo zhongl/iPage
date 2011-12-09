@@ -17,7 +17,6 @@
 package com.github.zhongl.index;
 
 import com.github.zhongl.integerity.Validator;
-import com.github.zhongl.ipage.OverflowException;
 import com.github.zhongl.util.FileBase;
 import com.google.common.io.Files;
 import com.google.common.primitives.Bytes;
@@ -27,6 +26,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.nio.BufferOverflowException;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
@@ -171,7 +171,7 @@ public class FileHashTableTest extends FileBase {
         fileHashTable.get(Md5Key.generate(Ints.toByteArray(1))); // trigger exception
     }
 
-    @Test(expected = OverflowException.class)
+    @Test(expected = BufferOverflowException.class)
     public void noSlotForNewItemIndex() throws Exception {
         file = testFile("noSlotForNewItemIndex");
         fillFullBuckets();
@@ -208,7 +208,6 @@ public class FileHashTableTest extends FileBase {
 
         fileHashTable = new FileHashTable(file, 1);
         fileHashTable.close();
-        ;
         fileHashTable.put(null, null);
     }
 

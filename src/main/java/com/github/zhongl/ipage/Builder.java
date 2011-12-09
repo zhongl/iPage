@@ -28,7 +28,7 @@ import java.util.LinkedList;
 import static com.google.common.base.Preconditions.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-final class Builder<T> {
+public final class Builder<T> {
 
     private static final int UNSET = -1;
 

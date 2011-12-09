@@ -19,9 +19,9 @@ package com.github.zhongl.index;
 import com.github.zhongl.accessor.CommonAccessors;
 import com.github.zhongl.integerity.ValidateOrRecover;
 import com.github.zhongl.integerity.Validator;
-import com.github.zhongl.ipage.OverflowException;
 
 import java.io.IOException;
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.zip.CRC32;
 
@@ -60,7 +60,7 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
             }
             // continue to check rest slots whether contain the key.
         }
-        if (firstReleased < 0) throw new OverflowException();
+        if (firstReleased < 0) throw new BufferOverflowException();
         return slots(firstReleased).add(key, offset);
     }
 

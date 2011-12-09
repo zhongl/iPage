@@ -18,12 +18,12 @@ package com.github.zhongl.index;
 
 import com.github.zhongl.integerity.ValidateOrRecover;
 import com.github.zhongl.integerity.Validator;
-import com.github.zhongl.ipage.OverflowException;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.nio.BufferOverflowException;
 import java.util.List;
 
 /**
@@ -47,7 +47,7 @@ public class Index implements Closeable, ValidateOrRecover<Slot, IOException> {
     public Long put(Md5Key key, Long offset) throws IOException {
         try {
             return lastRecentlyUsedBuckets().put(key, offset);
-        } catch (OverflowException e) {
+        } catch (BufferOverflowException e) {
             grow();
             return put(key, offset);
         }

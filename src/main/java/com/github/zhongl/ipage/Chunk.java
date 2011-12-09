@@ -27,6 +27,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.BufferOverflowException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 
@@ -67,7 +68,7 @@ public class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> {
         this.writePosition = (int) file.length();
     }
 
-    public long append(T record) throws IOException {
+    public long append(T record) throws IOException, BufferOverflowException {
         if (readOnly) throw new UnsupportedOperationException("Readonly chunk.");
         checkState(!erased, "Chunk %s has already erased", file);
         checkOverFlowIfAppend(record);
@@ -146,9 +147,9 @@ public class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> {
         }
     }
 
-    private void checkOverFlowIfAppend(T record) {
+    private void checkOverFlowIfAppend(T record) throws BufferOverflowException {
         int appendedPosition = writePosition + accessor.byteLengthOf(record);
-        if (appendedPosition > capacity) throw new OverflowException();
+        if (appendedPosition > capacity) throw new BufferOverflowException();
     }
 
     private boolean releaseBuffer() {

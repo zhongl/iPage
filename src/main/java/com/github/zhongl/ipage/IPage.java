@@ -23,6 +23,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.nio.BufferOverflowException;
 import java.util.AbstractList;
 import java.util.LinkedList;
 
@@ -50,7 +51,7 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
         try {
             releaseChunkIfNecessary();
             return lastRecentlyUsedChunk().append(record);
-        } catch (OverflowException e) {
+        } catch (BufferOverflowException e) {
             grow();
             return append(record);
         }
