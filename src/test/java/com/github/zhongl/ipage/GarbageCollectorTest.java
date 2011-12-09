@@ -16,35 +16,39 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.accessor.CommonAccessors;
-import com.github.zhongl.util.FileBase;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class GarbageCollectorTest extends FileBase {
-
-    Builder.ChunkFactory<String> chunkFactory = new Builder.ChunkFactory<String>(4096L, CommonAccessors.STRING);
+public class GarbageCollectorTest {
 
     @Test
-    @Ignore
     public void collect() throws Exception {
-        dir = testDir("collect");
-        dir.mkdirs();
         GarbageCollector<String> collector = new GarbageCollector<String>();
-        ChunkList<String> chunkList = new ChunkList<String>(dir, chunkFactory);
-        Chunk<String> chunk = chunkList.last();
-        for (int i = 0; i < 10; i++) {
-            chunk.append("0123456789ab");
-        }
-        assertExistFile("0");
+        Chunk chunk = mock(Chunk.class);
+        doReturn(0L).when(chunk).beginPositionInIPage();
+        ChunkList<String> chunkList = mock(ChunkList.class);
+        doReturn(chunk).when(chunkList).first();
 
-        assertThat(collector.collect(64L, chunkList), is(64L));
+        collector.collect(64L, chunkList);
 
-        assertNotExistFile("0");
-        assertExistFile("64");
+        verify(chunkList).garbageCollect(0L, 64L);
+
+        collector.collect(128L, chunkList);
+
+        verify(chunkList).garbageCollect(64L, 128L);
+
+        collector.collect(16L, chunkList);
+
+        verify(chunkList).garbageCollect(0L, 16L);
+
+        reset(chunkList);
+        long collect = collector.collect(16L, chunkList);
+        assertThat(collect, is(0L));
+
+        verify(chunkList, never()).garbageCollect(anyLong(), anyLong());
     }
 }

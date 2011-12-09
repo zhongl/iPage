@@ -51,14 +51,6 @@ class Range {
         this.end = end;
     }
 
-    public long begin() {
-        return begin;
-    }
-
-    public long end() {
-        return end;
-    }
-
     public int compareTo(long value) {
         if (value < begin) return 1;
         if (value > end) return -1;

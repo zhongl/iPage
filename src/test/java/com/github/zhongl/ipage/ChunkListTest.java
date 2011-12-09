@@ -108,5 +108,29 @@ public class ChunkListTest extends FileBase {
         assertThat(new File(dir, "4096").length(), is(4096L));
     }
 
+    @Test
+    public void garbageCollectInOneChunk() throws Exception {
+        dir = testDir("garbageCollectInOneChunk");
+        dir.mkdirs();
+        chunkFactory = new ChunkFactory<String>(8192L, CommonAccessors.STRING);
+        newChunkList();
+
+        ChunkBase.fullFill(chunkList.last());
+        ChunkBase.fullFill(chunkList.last());
+        chunkList.grow();
+        ChunkBase.fullFill(chunkList.last());
+        ChunkBase.fullFill(chunkList.last());
+
+        assertExistFile("0");
+        assertExistFile("8192");
+
+        long collected = chunkList.garbageCollect(0L, 4096 + 16L);
+        assertThat(collected, is(4096 + 16L));
+
+        assertNotExistFile("0");
+        assertThat(new File(dir, "4112").length(), is(4096 - 16L));
+        assertThat(new File(dir, "8192").length(), is(8192L));
+    }
+
     private void newChunkList() throws IOException {chunkList = new ChunkList<String>(dir, chunkFactory);}
 }
