@@ -20,17 +20,18 @@ import com.github.zhongl.accessor.Accessor;
 import com.github.zhongl.integerity.ValidateOrRecover;
 import com.github.zhongl.integerity.Validator;
 import com.github.zhongl.util.DirectByteBufferCleaner;
+import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
+import com.google.common.io.InputSupplier;
 
 import javax.annotation.concurrent.NotThreadSafe;
-import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.nio.BufferOverflowException;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.channels.WritableByteChannel;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import static com.github.zhongl.util.ByteBuffers.slice;
 import static com.google.common.base.Preconditions.checkState;
@@ -51,19 +52,21 @@ public class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> {
     private final long beginPositionInIPage;
     private final File file;
     private final long capacity;
+    private final int minimizeCollectLength;
 
     private volatile int writePosition = 0;
     private volatile boolean erased;
     private volatile MappedByteBuffer mappedByteBuffer;
 
-    public Chunk(long beginPositionInIPage, File file, long capacity, Accessor<T> accessor) throws IOException {
-        this(beginPositionInIPage, file, capacity, accessor, false);
+    public Chunk(File file, long capacity, long beginPositionInIPage, int minimizeCollectLength, Accessor<T> accessor) throws IOException {
+        this(file, capacity, beginPositionInIPage, minimizeCollectLength, accessor, false);
     }
 
-    private Chunk(long beginPositionInIPage, File file, long capacity, Accessor<T> accessor, boolean readOnly) throws IOException {
+    private Chunk(File file, long capacity, long beginPositionInIPage, int minimizeCollectLength, Accessor<T> accessor, boolean readOnly) throws IOException {
         this.file = file;
         this.capacity = capacity;
         this.beginPositionInIPage = beginPositionInIPage;
+        this.minimizeCollectLength = minimizeCollectLength;
         this.accessor = accessor;
         this.readOnly = readOnly;
         this.writePosition = (int) file.length();
@@ -114,7 +117,7 @@ public class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> {
 
     public Chunk<T> asReadOnly() throws IOException {
         close();
-        return new Chunk<T>(beginPositionInIPage, file, writePosition, accessor, true);
+        return new Chunk<T>(file, writePosition, beginPositionInIPage, minimizeCollectLength, accessor, true);
     }
 
     @Override
@@ -140,13 +143,52 @@ public class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> {
     }
 
 
-    int copyTo(WritableByteChannel channel, long begin, long end) throws IOException {
-        if (erased) return 0;
-        ensureMap();
-        int offset = (int) (begin - beginPositionInIPage);
-        int length = (int) (end - begin);
-        if (length > writePosition) length -= writePosition;
-        return channel.write(slice(mappedByteBuffer, offset, length));
+    /**
+     * There are three split cases:
+     * <p/>
+     * <pre>
+     * Case 1: split to three pieces and keep left and right.
+     *         begin                 end
+     *    |@@@@@@|--------------------|@@@@@@@@|
+     *
+     * Case 2: split to two pieces and keep right
+     *  begin                   end
+     *    |----------------------|@@@@@@@@@@@@@|
+     *
+     * Case 3: too small interval to split
+     *  begin end
+     *    |@@@@|@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+     *
+     * </pre>
+     */
+    public List<Chunk<T>> splitBy(long begin, long end) throws IOException {
+        T value = get(begin);
+        long minimizeInterval = Math.max(accessor.byteLengthOf(value), minimizeCollectLength);
+        if (end - begin <= minimizeInterval) return Collections.emptyList();             // Case 3
+        if (begin == beginPositionInIPage()) return Arrays.asList(rightAndErase(end));  // Case 2
+        Chunk<T> right = right(end); // TODO make sure do right first
+        Chunk<T> left = left(begin);
+        return Arrays.asList(left, right);                                              // Case 1
+    }
+
+    private Chunk<T> left(long offset) throws IOException {
+        close();
+        setLength(offset - beginPositionInIPage());
+        return new Chunk(file, file.length(), beginPositionInIPage(), minimizeCollectLength, accessor, true);
+    }
+
+    private Chunk<T> rightAndErase(long offset) throws IOException {
+        Chunk chunk = right(offset);
+        erase();
+        return chunk;
+    }
+
+    private Chunk<T> right(long offset) throws IOException {
+        File newFile = new File(file.getParentFile(), Long.toString(offset));
+        long length = endPositionInIPage() - offset + 1;
+        InputSupplier<InputStream> from = ByteStreams.slice(Files.newInputStreamSupplier(file), offset, length);
+        Files.copy(from, newFile);
+        return new Chunk(newFile, newFile.length(), offset, minimizeCollectLength, accessor, true);
     }
 
     private T getInternal(int offset) throws IOException {
@@ -188,5 +230,4 @@ public class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> {
         randomAccessFile.setLength(value);
         randomAccessFile.close();
     }
-
 }

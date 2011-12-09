@@ -16,16 +16,34 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.accessor.CommonAccessors;
+import com.github.zhongl.util.FileBase;
+import org.junit.Ignore;
 import org.junit.Test;
 
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
+
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class GarbageCollectorTest {
+public class GarbageCollectorTest extends FileBase {
+
+    Builder.ChunkFactory<String> chunkFactory = new Builder.ChunkFactory<String>(4096L, CommonAccessors.STRING);
 
     @Test
+    @Ignore
     public void collect() throws Exception {
+        dir = testDir("collect");
         GarbageCollector<String> collector = new GarbageCollector<String>();
-        ChunkList<String> chunkList = null;
-        Cursor<String> survivor = null;
-        long length = collector.collect(survivor, chunkList);
+        ChunkList<String> chunkList = new ChunkList<String>(dir, chunkFactory);
+        Chunk<String> chunk = chunkList.last();
+        for (int i = 0; i < 10; i++) {
+            chunk.append("0123456789ab");
+        }
+        assertExistFile("0");
+
+        assertThat(collector.collect(64L, chunkList), is(64L));
+
+        assertNotExistFile("0");
+        assertExistFile("64");
     }
 }

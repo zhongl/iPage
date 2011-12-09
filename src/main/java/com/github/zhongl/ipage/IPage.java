@@ -89,8 +89,4 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
         chunkList.close();
     }
 
-    public long garbageCollect(Cursor<T> survivor) {
-        return garbageCollector.collect(survivor, chunkList);
-    }
-
 }

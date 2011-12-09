@@ -21,7 +21,9 @@ import com.github.zhongl.integerity.Validator;
 import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
@@ -65,7 +67,6 @@ public class ChunkTest extends FileBase {
         }
     }
 
-
     @Test
     public void validate() throws Exception {
         file = testFile("checkCRC");
@@ -84,6 +85,64 @@ public class ChunkTest extends FileBase {
 
         assertThat(chunk.validateOrRecoverBy(validator), is(false));
     }
+
+    @Test
+    public void splitCase1() throws Exception {
+        dir = testDir("splitCase1");
+        dir.mkdirs();
+        file = new File(dir, "0");
+        newChunk();
+
+        for (int i = 0; i < 256; i++) {
+            chunk.append("0123456789ab");
+        }
+
+        List<Chunk<String>> chunks = chunk.splitBy(16L, 64L);
+        assertThat(chunks.size(), is(2));
+        assertThat(new File(dir, "0").length(), is(16L));
+        assertThat(new File(dir, "64").length(), is(4032L));
+
+        for (Chunk<String> c : chunks) {
+            c.close();
+        }
+    }
+
+    @Test
+    public void splitCase2() throws Exception {
+        dir = testDir("splitCase2");
+        dir.mkdirs();
+        file = new File(dir, "0");
+        newChunk();
+
+        for (int i = 0; i < 256; i++) {
+            chunk.append("0123456789ab");
+        }
+
+        List<Chunk<String>> chunks = chunk.splitBy(0L, 64L);
+        assertThat(chunks.size(), is(1));
+        assertNotExistFile("0");
+        assertThat(new File(dir, "64").length(), is(4032L));
+
+        for (Chunk<String> c : chunks) {
+            c.close();
+        }
+    }
+
+    @Test
+    public void splitCase3() throws Exception {
+        dir = testDir("splitCase3");
+        dir.mkdirs();
+        file = new File(dir, "0");
+        newChunk();
+
+        for (int i = 0; i < 256; i++) {
+            chunk.append("0123456789ab");
+        }
+
+        List<Chunk<String>> chunks = chunk.splitBy(16L, 32L);
+        assertThat(chunks.size(), is(0));
+    }
+
 
     @Test(expected = IllegalStateException.class)
     public void appendAfterErase() throws Exception {
@@ -176,6 +235,7 @@ public class ChunkTest extends FileBase {
     private void newChunk() throws IOException {
         long beginPositionInIPage = 0L;
         int capacity = 4096;
-        chunk = new Chunk(beginPositionInIPage, file, capacity, CommonAccessors.STRING);
+        int minimizeCollectLength = 16;
+        chunk = new Chunk(file, capacity, beginPositionInIPage, minimizeCollectLength, CommonAccessors.STRING);
     }
 }

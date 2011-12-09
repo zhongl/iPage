@@ -16,14 +16,25 @@
 
 package com.github.zhongl.ipage;
 
+import java.io.IOException;
+
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class GarbageCollector<T> {
-    private final Cursor<T> lastSurvivor = Cursor.begin(-1L);
+    private volatile long lastSurvivorOffset = -1L;
 
+    public long collect(long survivorOffset, ChunkList<String> chunkList) throws IOException {
+        if (lastSurvivorOffset == survivorOffset) return 0L;
 
-    public long collect(Cursor<T> survivor, ChunkList<T> chunkList) {
+        long beginPosition = chunkList.first().beginPositionInIPage();
 
-        // TODO collect
-        return 0L;
+        boolean firstCollection = lastSurvivorOffset < beginPosition;
+        boolean recollectFromStart = lastSurvivorOffset > survivorOffset;
+
+        if (firstCollection || recollectFromStart) lastSurvivorOffset = beginPosition;
+
+        long collectedLength = chunkList.garbageCollect(lastSurvivorOffset, survivorOffset);
+        lastSurvivorOffset = survivorOffset;
+        return collectedLength;
     }
+
 }

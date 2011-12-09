@@ -64,6 +64,7 @@ public final class Builder<T> {
 
         private final long chunkCapacity;
         private final Accessor<T> accessor;
+        private int minimizeCollectLength = 4096; // TODO
 
         ChunkFactory(long chunkCapacity, Accessor<T> accessor) {
             this.accessor = accessor;
@@ -71,7 +72,7 @@ public final class Builder<T> {
         }
 
         public Chunk<T> create(long beginPositionInIPage, File file) throws IOException {
-            return new Chunk<T>(beginPositionInIPage, file, chunkCapacity, accessor);
+            return new Chunk<T>(file, chunkCapacity, beginPositionInIPage, minimizeCollectLength, accessor);
         }
     }
 }

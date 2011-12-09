@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.AbstractList;
 import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.List;
 
 import static com.github.zhongl.ipage.Builder.ChunkFactory;
 
@@ -58,9 +59,10 @@ class ChunkList<T> {
 
     public Chunk<T> chunkIn(long offset) throws IOException {
         if (chunks.isEmpty()) grow();
-        int index = Range.binarySearch(chunkOffsetRangeList, offset);
-        return chunks.get(index);
+        return chunks.get(indexOfChunkIn(offset));
     }
+
+    private int indexOfChunkIn(long offset) {return Range.binarySearch(chunkOffsetRangeList, offset);}
 
     public Chunk<T> first() throws IOException {
         if (chunks.isEmpty()) return grow();
@@ -84,6 +86,27 @@ class ChunkList<T> {
             long beginPositionInIPage = Long.parseLong(file.getName());
             chunks.addLast(chunkFactory.create(beginPositionInIPage, file)); // make sure the appending chunk at last.
         }
+    }
+
+    public long garbageCollect(long begin, long end) throws IOException {
+        int indexOfBeginChunk = indexOfChunkIn(begin);
+        int indexOfEndChunk = indexOfChunkIn(end);
+        if (indexOfBeginChunk == indexOfEndChunk) { // collect in one chunk
+            return collect(indexOfBeginChunk, begin, end);
+        } else {
+
+        }
+        return end - begin;
+    }
+
+    private long collect(int indexOfChunk, long begin, long end) throws IOException {
+        Chunk<T> splittingChunk = chunks.remove(indexOfChunk);
+        List<Chunk<T>> pieces = splittingChunk.splitBy(begin, end);
+        if (pieces.isEmpty()) return 0L; // too small interval to split
+        for (int i = 0; i < pieces.size(); i++) {
+            chunks.add(indexOfChunk + i, pieces.get(i));
+        }
+        return end - begin;
     }
 
     private class ChunkOffsetRangeList extends AbstractList<Range> {
