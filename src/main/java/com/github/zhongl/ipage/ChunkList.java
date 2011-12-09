@@ -101,7 +101,11 @@ class ChunkList<T> {
     private long collectBetween(int indexOfBeginChunk, int indexOfEndChunk, long begin, long end) throws IOException {
         Chunk<T> left = chunks.remove(indexOfBeginChunk);
         left = left.left(begin);
-        if (left != null) chunks.add(indexOfBeginChunk, left);
+
+        if (left != null)
+            chunks.add(indexOfBeginChunk, left);
+        else
+            indexOfEndChunk--; // decrease index because no add
 
         Chunk<T> right = chunks.remove(indexOfEndChunk);
         right = right.rightAndErase(end);

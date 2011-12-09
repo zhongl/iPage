@@ -25,6 +25,12 @@ import java.io.IOException;
 public class ChunkBase extends FileBase {
     protected Chunk<String> chunk;
 
+    static void fullFill(Chunk<String> chunk) throws IOException {
+        for (int i = 0; i < 256; i++) {
+            chunk.append("0123456789ab");
+        }
+    }
+
     @Override
     public void tearDown() throws Exception {
         chunk.close();

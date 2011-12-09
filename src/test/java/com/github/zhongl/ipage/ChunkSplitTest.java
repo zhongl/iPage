@@ -35,7 +35,7 @@ public class ChunkSplitTest extends ChunkBase {
         file = new File(dir, "0");
         newChunk();
 
-        fullFillChunk();
+        fullFill(chunk);
 
         List<Chunk<String>> chunks = chunk.splitBy(16L, 64L);
         assertThat(chunks.size(), is(2));
@@ -52,7 +52,7 @@ public class ChunkSplitTest extends ChunkBase {
         file = new File(dir, "0");
         newChunk();
 
-        fullFillChunk();
+        fullFill(chunk);
 
         List<Chunk<String>> chunks = chunk.splitBy(0L, 64L);
         assertThat(chunks.size(), is(1));
@@ -69,7 +69,7 @@ public class ChunkSplitTest extends ChunkBase {
         file = new File(dir, "0");
         newChunk();
 
-        fullFillChunk();
+        fullFill(chunk);
 
         List<Chunk<String>> chunks = chunk.splitBy(16L, 32L);
         assertThat(chunks.size(), is(0));
@@ -82,7 +82,7 @@ public class ChunkSplitTest extends ChunkBase {
         file = new File(dir, "0");
         newChunk();
 
-        fullFillChunk();
+        fullFill(chunk);
 
 
         Chunk<String> left = chunk.left(16L);
@@ -98,7 +98,7 @@ public class ChunkSplitTest extends ChunkBase {
         file = new File(dir, "0");
         newChunk();
 
-        fullFillChunk();
+        fullFill(chunk);
 
         assertThat(chunk.left(0L), is(nullValue()));
 
@@ -112,7 +112,7 @@ public class ChunkSplitTest extends ChunkBase {
         file = new File(dir, "0");
         newChunk();
 
-        fullFillChunk();
+        fullFill(chunk);
 
         Chunk<String> right = chunk.rightAndErase(64L);
         assertThat(right, is(notNullValue()));
@@ -127,17 +127,11 @@ public class ChunkSplitTest extends ChunkBase {
         file = new File(dir, "0");
         newChunk();
 
-        fullFillChunk();
+        fullFill(chunk);
 
         Chunk<String> right = chunk.rightAndErase(0L);
         assertThat(right, is(chunk));
         assertThat(new File(dir, "0").length(), is(4096L));
-    }
-
-    private void fullFillChunk() throws IOException {
-        for (int i = 0; i < 256; i++) {
-            chunk.append("0123456789ab");
-        }
     }
 
     private void close(List<Chunk<String>> chunks) throws IOException {

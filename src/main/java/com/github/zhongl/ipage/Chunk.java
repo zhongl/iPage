@@ -46,6 +46,8 @@ import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 @NotThreadSafe
 public class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> {
 
+    // TODO refactor for memory release
+
     public static final int DEFAULT_CAPACITY = 4096; // 4k
     private final Accessor<T> accessor;
     private final boolean readOnly;
@@ -225,6 +227,7 @@ public class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> {
     private Chunk<T> right(long offset) throws IOException {
         File newFile = new File(file.getParentFile(), Long.toString(offset));
         long length = endPositionInIPage() - offset + 1;
+        offset -= beginPositionInIPage();
         InputSupplier<InputStream> from = ByteStreams.slice(Files.newInputStreamSupplier(file), offset, length);
         Files.copy(from, newFile);
         return new Chunk(newFile, newFile.length(), offset, minimizeCollectLength, accessor, true);

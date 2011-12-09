@@ -33,6 +33,7 @@ public class GarbageCollectorTest extends FileBase {
     @Ignore
     public void collect() throws Exception {
         dir = testDir("collect");
+        dir.mkdirs();
         GarbageCollector<String> collector = new GarbageCollector<String>();
         ChunkList<String> chunkList = new ChunkList<String>(dir, chunkFactory);
         Chunk<String> chunk = chunkList.last();

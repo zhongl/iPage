@@ -16,6 +16,7 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.accessor.CommonAccessors;
 import com.github.zhongl.util.FileBase;
 import org.junit.Before;
 import org.junit.Test;
@@ -62,6 +63,49 @@ public class ChunkListTest extends FileBase {
         doReturn(chunk).when(chunkFactory).create(Matchers.anyLong(), Matchers.any(File.class));
         newChunkList();
         assertThat(chunkList.chunkIn(0L), is(chunk));
+    }
+
+    @Test
+    public void garbageCollectBetweenTwo() throws Exception {
+        dir = testDir("garbageCollectBetweenTwo");
+        dir.mkdirs();
+        chunkFactory = new ChunkFactory<String>(4096L, CommonAccessors.STRING);
+        newChunkList();
+
+        ChunkBase.fullFill(chunkList.last());
+        chunkList.grow();
+        ChunkBase.fullFill(chunkList.last());
+
+        assertExistFile("0");
+        assertExistFile("4096");
+
+        long collected = chunkList.garbageCollect(16L, 4096 + 32L);
+        assertThat(collected, is(4096 + 16L));
+
+        assertThat(new File(dir, "0").length(), is(16L));
+        assertNotExistFile("4096");
+        assertThat(new File(dir, "4128").length(), is(4096 - 32L));
+    }
+
+    @Test
+    public void garbageCollectLeft() throws Exception {
+        dir = testDir("garbageCollectLeft");
+        dir.mkdirs();
+        chunkFactory = new ChunkFactory<String>(4096L, CommonAccessors.STRING);
+        newChunkList();
+
+        ChunkBase.fullFill(chunkList.last());
+        chunkList.grow();
+        ChunkBase.fullFill(chunkList.last());
+
+        assertExistFile("0");
+        assertExistFile("4096");
+
+        long collected = chunkList.garbageCollect(0L, 4096L);
+        assertThat(collected, is(4096L));
+
+        assertNotExistFile("0");
+        assertThat(new File(dir, "4096").length(), is(4096L));
     }
 
     private void newChunkList() throws IOException {chunkList = new ChunkList<String>(dir, chunkFactory);}

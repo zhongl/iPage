@@ -29,6 +29,6 @@ public class IPageGarbageCollectTest {
     public void garbageCollect() throws Exception {
         Validator<String, IOException> validator = null;
         Cursor<String> survivor = Cursor.cursor(7L, "value");
-//        iPage.garbageCollect(survivor);
+//        iPage.garbageCollectBetweenTwo(survivor);
     }
 }
