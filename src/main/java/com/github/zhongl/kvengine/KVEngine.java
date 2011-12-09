@@ -31,7 +31,9 @@ import java.util.Iterator;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+/**
+ * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
+ */
 @ThreadSafe
 public class KVEngine<T> extends Engine {
 
@@ -147,6 +149,25 @@ public class KVEngine<T> extends Engine {
         };
     }
 
+    public long garbageCollect() throws IOException, InterruptedException {
+        long collectedLength = 0L;
+        long survivorOffset = 0L;
+        Cursor<Entry<T>> cursor = Cursor.begin(-1L);
+        while (true) {
+            survivorOffset = cursor.offset();
+            Sync<Cursor<Entry<T>>> cursorCallback = new Sync<Cursor<Entry<T>>>();
+            submit(new Next(cursor, cursorCallback));
+            cursor = cursorCallback.get();
+            if (cursor.isEnd()) break;
+            if (cursor.lastValue() == null) continue;
+            Sync<Long> longCallback = new Sync<Long>();
+            submit(new GarbageCollect(survivorOffset, longCallback));
+            collectedLength += longCallback.get();
+        }
+
+        return collectedLength;
+    }
+
     public abstract class Operation extends Task<T> {
 
         protected final Md5Key key;
@@ -253,6 +274,20 @@ public class KVEngine<T> extends Engine {
         public void onFailure(Throwable t) {
             this.t = t;
             latch.countDown();
+        }
+    }
+
+    private class GarbageCollect extends Task<Long> {
+        private final long offset;
+
+        public GarbageCollect(long offset, Sync<Long> longCallback) {
+            super(longCallback);
+            this.offset = offset;
+        }
+
+        @Override
+        protected Long execute() throws Throwable {
+            return iPage.garbageCollect(offset);
         }
     }
 }

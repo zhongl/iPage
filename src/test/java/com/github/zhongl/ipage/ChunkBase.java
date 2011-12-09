@@ -21,8 +21,10 @@ import com.github.zhongl.util.FileBase;
 
 import java.io.IOException;
 
-/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class ChunkBase extends FileBase {
+/**
+ * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
+ */
+public abstract class ChunkBase extends FileBase {
     protected Chunk<String> chunk;
 
     static void fullFill(Chunk<String> chunk) throws IOException {

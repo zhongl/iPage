@@ -20,8 +20,6 @@ import com.github.zhongl.accessor.CommonAccessors;
 import com.github.zhongl.index.Index;
 import com.github.zhongl.index.Md5Key;
 import com.github.zhongl.ipage.IPage;
-import com.github.zhongl.util.FileBase;
-import org.junit.After;
 import org.junit.Test;
 
 import java.util.Iterator;
@@ -34,17 +32,10 @@ import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.*;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
-/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class KVEngineTest extends FileBase {
-    private KVEngine<String> engine;
-
-    @After
-    public void tearDown() throws Exception {
-        if (engine != null) {
-            engine.shutdown();
-            engine.awaitForShutdown(Integer.MAX_VALUE);
-        }
-    }
+/**
+ * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
+ */
+public class KVEngineTest extends KVEngineBase {
 
     @Test
     public void putAndGetAndRemove() throws Exception {
@@ -56,7 +47,6 @@ public class KVEngineTest extends FileBase {
         Md5Key key = Md5Key.generate(value.getBytes());
 
         assertThat(engine.put(key, value), is(nullValue()));
-
         assertThat(engine.get(key), is(value));
         assertThat(engine.remove(key), is(value));
     }
