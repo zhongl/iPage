@@ -91,15 +91,26 @@ class ChunkList<T> {
     public long garbageCollect(long begin, long end) throws IOException {
         int indexOfBeginChunk = indexOfChunkIn(begin);
         int indexOfEndChunk = indexOfChunkIn(end);
-        if (indexOfBeginChunk == indexOfEndChunk) { // collect in one chunk
-            return collect(indexOfBeginChunk, begin, end);
+        if (indexOfBeginChunk == indexOfEndChunk) { // collectIn in one chunk
+            return collectIn(indexOfBeginChunk, begin, end);
         } else {
-
+            return collectBetween(indexOfBeginChunk, indexOfEndChunk, begin, end);
         }
+    }
+
+    private long collectBetween(int indexOfBeginChunk, int indexOfEndChunk, long begin, long end) throws IOException {
+        Chunk<T> left = chunks.remove(indexOfBeginChunk);
+        left = left.left(begin);
+        if (left != null) chunks.add(indexOfBeginChunk, left);
+
+        Chunk<T> right = chunks.remove(indexOfEndChunk);
+        right = right.rightAndErase(end);
+        chunks.add(indexOfEndChunk, right);
+
         return end - begin;
     }
 
-    private long collect(int indexOfChunk, long begin, long end) throws IOException {
+    private long collectIn(int indexOfChunk, long begin, long end) throws IOException {
         Chunk<T> splittingChunk = chunks.remove(indexOfChunk);
         List<Chunk<T>> pieces = splittingChunk.splitBy(begin, end);
         if (pieces.isEmpty()) return 0L; // too small interval to split

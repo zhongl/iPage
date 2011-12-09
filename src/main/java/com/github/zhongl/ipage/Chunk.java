@@ -171,15 +171,54 @@ public class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> {
         return Arrays.asList(left, right);                                              // Case 1
     }
 
-    private Chunk<T> left(long offset) throws IOException {
+    /**
+     * There are two left cases:
+     * <pre>
+     * Case 1: keep left and abandon right.
+     *         offset
+     *    |@@@@@@|-----------------------------|
+     *
+     * Case 2: abandon all
+     *  offset
+     *    |------------------------------------|
+     * </pre>
+     *
+     * @param offset
+     *
+     * @return
+     * @throws IOException
+     */
+    public Chunk<T> left(long offset) throws IOException {
+        if (offset == beginPositionInIPage()) {     // Case 2
+            erase();
+            return null;
+        }
         close();
-        setLength(offset - beginPositionInIPage());
+        setLength(offset - beginPositionInIPage()); // Case 1
         return new Chunk(file, file.length(), beginPositionInIPage(), minimizeCollectLength, accessor, true);
     }
 
-    private Chunk<T> rightAndErase(long offset) throws IOException {
+    /**
+     * There are two right cases:
+     * <pre>
+     * Case 1: keep right and abandon left.
+     *         offset
+     *    |------|@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+     *
+     * Case 2: keep all
+     *  offset
+     *    |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+     * </pre>
+     *
+     * @param offset
+     *
+     * @return
+     * @throws IOException
+     */
+    public Chunk<T> rightAndErase(long offset) throws IOException {
+        if (offset == beginPositionInIPage()) return this;  // Case 2
         Chunk chunk = right(offset);
-        erase();
+        erase();                                            // Case 1
         return chunk;
     }
 
