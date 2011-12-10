@@ -16,17 +16,19 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.accessor.CommonAccessors;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ReadOnlyBufferException;
 import java.util.List;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class ChunkSplitTest extends ChunkBase {
+public class ReadOnlyChunkTest extends ChunkBase {
 
     @Test
     public void splitCase1() throws Exception {
@@ -35,11 +37,9 @@ public class ChunkSplitTest extends ChunkBase {
         file = new File(dir, "0");
         newChunk();
 
-        fullFill(chunk);
-
-        List<Chunk<String>> chunks = chunk.splitBy(16L, 64L);
+        List<Chunk<String>> chunks = chunk.split(32L, 64L);
         assertThat(chunks.size(), is(2));
-        assertThat(new File(dir, "0").length(), is(16L));
+        assertThat(new File(dir, "0").length(), is(32L));
         assertThat(new File(dir, "64").length(), is(4032L));
 
         close(chunks);
@@ -52,9 +52,7 @@ public class ChunkSplitTest extends ChunkBase {
         file = new File(dir, "0");
         newChunk();
 
-        fullFill(chunk);
-
-        List<Chunk<String>> chunks = chunk.splitBy(0L, 64L);
+        List<Chunk<String>> chunks = chunk.split(0L, 64L);
         assertThat(chunks.size(), is(1));
         assertNotExistFile("0");
         assertThat(new File(dir, "64").length(), is(4032L));
@@ -69,9 +67,7 @@ public class ChunkSplitTest extends ChunkBase {
         file = new File(dir, "0");
         newChunk();
 
-        fullFill(chunk);
-
-        List<Chunk<String>> chunks = chunk.splitBy(16L, 32L);
+        List<Chunk<String>> chunks = chunk.split(16L, 32L);
         assertThat(chunks.size(), is(0));
     }
 
@@ -81,9 +77,6 @@ public class ChunkSplitTest extends ChunkBase {
         dir.mkdirs();
         file = new File(dir, "0");
         newChunk();
-
-        fullFill(chunk);
-
 
         Chunk<String> left = chunk.left(16L);
         assertThat(left, is(not(chunk)));
@@ -98,10 +91,7 @@ public class ChunkSplitTest extends ChunkBase {
         file = new File(dir, "0");
         newChunk();
 
-        fullFill(chunk);
-
         assertThat(chunk.left(0L), is(nullValue()));
-
         assertNotExistFile("0");
     }
 
@@ -112,9 +102,7 @@ public class ChunkSplitTest extends ChunkBase {
         file = new File(dir, "0");
         newChunk();
 
-        fullFill(chunk);
-
-        Chunk<String> right = chunk.rightAndErase(64L);
+        Chunk<String> right = chunk.right(64L);
         assertThat(right, is(notNullValue()));
         assertNotExistFile("0");
         assertThat(new File(dir, "64").length(), is(4032L));
@@ -127,11 +115,23 @@ public class ChunkSplitTest extends ChunkBase {
         file = new File(dir, "0");
         newChunk();
 
-        fullFill(chunk);
-
-        Chunk<String> right = chunk.rightAndErase(0L);
+        Chunk<String> right = chunk.right(0L);
         assertThat(right, is(chunk));
         assertThat(new File(dir, "0").length(), is(4096L));
+    }
+
+    @Test
+    public void endPosition() throws Exception {
+        file = testFile("endPosition");
+        newChunk();
+        assertThat(chunk.endPosition(), is(4096 - 1L));
+    }
+
+    @Test(expected = ReadOnlyBufferException.class)
+    public void append() throws Exception {
+        file = testFile("append");
+        newChunk();
+        chunk.append("");
     }
 
     private void close(List<Chunk<String>> chunks) throws IOException {
@@ -140,4 +140,12 @@ public class ChunkSplitTest extends ChunkBase {
         }
     }
 
+    protected void newChunk() throws IOException {
+        long beginPosition = 0L;
+        int capacity = 4096;
+        int minimizeCollectLength = 16;
+        chunk = Chunk.appendableChunk(file, beginPosition, capacity, CommonAccessors.STRING);
+        fullFill(chunk);
+        chunk = Chunk.asReadOnly(chunk, minimizeCollectLength);
+    }
 }

@@ -16,6 +16,7 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.accessor.CommonAccessors;
 import com.github.zhongl.integerity.Validator;
 import org.junit.Test;
 
@@ -26,7 +27,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class ChunkTest extends ChunkBase {
+public class AppendableChunkTest extends ChunkBase {
 
     @Test
     public void appendAndGet() throws Exception {
@@ -48,7 +49,7 @@ public class ChunkTest extends ChunkBase {
             chunk.append("" + i);
         }
 
-        Cursor<String> cursor = Cursor.begin(chunk.beginPositionInIPage());
+        Cursor<String> cursor = Cursor.begin(chunk.beginPosition());
         for (int i = 0; i < 10; i++) {
             cursor = chunk.next(cursor);
             assertThat(cursor.lastValue(), is(i + ""));
@@ -74,47 +75,6 @@ public class ChunkTest extends ChunkBase {
         assertThat(chunk.validateOrRecoverBy(validator), is(false));
     }
 
-
-    @Test(expected = IllegalStateException.class)
-    public void appendAfterErase() throws Exception {
-        file = testFile("appendAfterErase");
-        newChunk();
-        chunk.erase();
-        chunk.append("Oops");
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void getAfterErase() throws Exception {
-        file = testFile("getAfterErase");
-        newChunk();
-        chunk.erase();
-        chunk.get(0L);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void nextAfterErase() throws Exception {
-        file = testFile("nextAfterErase");
-        newChunk();
-        chunk.erase();
-        chunk.next(null);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void getBeginPositionAfterErase() throws Exception {
-        file = testFile("getBeginPositionAfterErase");
-        newChunk();
-        chunk.erase();
-        chunk.beginPositionInIPage();
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void getEndPositionAfterErase() throws Exception {
-        file = testFile("getEndPositionAfterErase");
-        newChunk();
-        chunk.erase();
-        chunk.endPositionInIPage();
-    }
-
     @Test
     public void getByInvalidOffset() throws Exception {
         file = testFile("getByInvalidOffset");
@@ -124,43 +84,40 @@ public class ChunkTest extends ChunkBase {
     }
 
     @Test
-    public void closeAfterErase() throws Exception {
-        file = testFile("closeAfterErase");
+    public void split() throws Exception {
+        file = testFile("split");
         newChunk();
-        chunk.erase();
-        chunk.close();
+        assertThat(chunk.split(0L, 7L).isEmpty(), is(true));
     }
 
     @Test
-    public void eraseAfterErase() throws Exception {
-        file = testFile("eraseAfterErase");
+    public void left() throws Exception {
+        file = testFile("left");
         newChunk();
-        chunk.erase();
-        chunk.erase();
+        Chunk<String> left = chunk.left(7L);
+        assertThat(left, is(chunk));
     }
 
     @Test
-    public void flushAfterErase() throws Exception {
-        file = testFile("flushAfterErase");
+    public void right() throws Exception {
+        file = testFile("right");
         newChunk();
-        chunk.erase();
-        chunk.flush();
+        Chunk<String> right = chunk.right(7L);
+        assertThat(right, is(chunk));
     }
 
     @Test
-    public void flushAfterClose() throws Exception {
-        file = testFile("cleanAfterClose");
+    public void endPosition() throws Exception {
+        file = testFile("endPosition");
         newChunk();
-        chunk.close();
-        chunk.flush();
+        assertThat(chunk.endPosition(), is(chunk.beginPosition()));
+        chunk.append("1234");
+        assertThat(chunk.endPosition(), is(chunk.beginPosition() + 8 - 1));
     }
 
-    @Test
-    public void closeAfterClose() throws Exception {
-        file = testFile("cleanAfterClose");
-        newChunk();
-        chunk.close();
-        chunk.close();
+    protected void newChunk() throws IOException {
+        long beginPositionInIPage = 0L;
+        int capacity = 4096;
+        chunk = Chunk.appendableChunk(file, beginPositionInIPage, capacity, CommonAccessors.STRING);
     }
-
 }

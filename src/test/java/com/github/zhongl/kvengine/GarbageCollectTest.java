@@ -26,10 +26,11 @@ public class GarbageCollectTest extends FileBase {
         for (int i = 0; i < 257; i++) {
             engine.put(Md5Key.generate(Ints.toByteArray(i)), value);
         }
+
         for (int i = 0; i < 256; i++) {
-            engine.remove(Md5Key.generate(Ints.toByteArray(i)));
+            engine.remove(Md5Key.generate(Ints.toByteArray(i))); // remove 0 - 8192
         }
-        long collectedLength = engine.garbageCollect();
-        assertThat(collectedLength, is(8192L));
+        long collectedLength = engine.garbageCollect(); // plan collect 0 - 8192
+        assertThat(collectedLength, is(4096L)); // but last chunk can not collect and minimize collect length is 4096
     }
 }

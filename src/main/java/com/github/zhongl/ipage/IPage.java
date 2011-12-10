@@ -66,14 +66,14 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
 
     public Cursor<T> next(Cursor<T> cursor) throws IOException {
         try {
-            long beginPosition = chunkList.first().beginPositionInIPage();
+            long beginPosition = chunkList.first().beginPosition();
             if (cursor.offset() < beginPosition) cursor = Cursor.begin(beginPosition);
             return chunkList.chunkIn(cursor.offset()).next(cursor);
         } catch (IndexOutOfBoundsException e) {
             return cursor.end();
         }
     }
-    
+
     public long garbageCollect(long survivorOffset) throws IOException {
         return garbageCollector.collect(survivorOffset, chunkList);
     }

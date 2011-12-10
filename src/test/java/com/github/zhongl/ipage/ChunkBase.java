@@ -16,14 +16,11 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.accessor.CommonAccessors;
 import com.github.zhongl.util.FileBase;
 
 import java.io.IOException;
 
-/**
- * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
- */
+/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public abstract class ChunkBase extends FileBase {
     protected Chunk<String> chunk;
 
@@ -39,10 +36,4 @@ public abstract class ChunkBase extends FileBase {
         super.tearDown();
     }
 
-    protected void newChunk() throws IOException {
-        long beginPositionInIPage = 0L;
-        int capacity = 4096;
-        int minimizeCollectLength = 16;
-        chunk = new Chunk(file, capacity, beginPositionInIPage, minimizeCollectLength, CommonAccessors.STRING);
-    }
 }

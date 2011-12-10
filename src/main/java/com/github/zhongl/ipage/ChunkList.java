@@ -16,6 +16,7 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.accessor.Accessor;
 import com.github.zhongl.util.FileNumberNameComparator;
 import com.github.zhongl.util.NumberFileNameFilter;
 
@@ -26,19 +27,21 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-import static com.github.zhongl.ipage.Builder.ChunkFactory;
-
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class ChunkList<T> {
     private final File baseDir;
-    private final ChunkFactory<T> chunkFactory;
     private final LinkedList<Chunk<T>> chunks;
     private final ChunkOffsetRangeList chunkOffsetRangeList;
+    private final int minimizeCollectLength;
+    private final int capacity;
+    private final Accessor<T> accessor;
 
-    public ChunkList(File baseDir, ChunkFactory<T> chunkFactory) throws IOException {
+    public ChunkList(File baseDir, int capacity, Accessor<T> accessor, int minimizeCollectLength) throws IOException {
         this.baseDir = baseDir;
+        this.minimizeCollectLength = minimizeCollectLength;
+        this.accessor = accessor;
+        this.capacity = capacity;
         chunks = new LinkedList<Chunk<T>>();
-        this.chunkFactory = chunkFactory;
         chunkOffsetRangeList = new ChunkOffsetRangeList();
         loadExistChunks();
     }
@@ -49,10 +52,10 @@ class ChunkList<T> {
     }
 
     public Chunk<T> grow() throws IOException {
-        long beginPositionInIPage = chunks.isEmpty() ? 0L : last().endPositionInIPage() + 1;
-        File file = new File(baseDir, beginPositionInIPage + "");
+        long beginPosition = chunks.isEmpty() ? 0L : last().endPosition() + 1;
+        File file = new File(baseDir, Long.toString(beginPosition));
         convertLastRecentlyUsedChunkToReadOnly();
-        Chunk<T> chunk = chunkFactory.create(beginPositionInIPage, file);
+        Chunk<T> chunk = Chunk.<T>appendableChunk(file, beginPosition, capacity, accessor);
         chunks.addLast(chunk);
         return chunk;
     }
@@ -75,16 +78,24 @@ class ChunkList<T> {
 
     private void convertLastRecentlyUsedChunkToReadOnly() throws IOException {
         if (chunks.isEmpty()) return;
-        chunks.addLast(chunks.removeLast().asReadOnly());
+        chunks.addLast(Chunk.asReadOnly(chunks.removeLast(), minimizeCollectLength));
     }
 
     private void loadExistChunks() throws IOException {
         File[] files = baseDir.listFiles(new NumberFileNameFilter());
         if (files == null) return;
         Arrays.sort(files, new FileNumberNameComparator());
-        for (File file : files) {
-            long beginPositionInIPage = Long.parseLong(file.getName());
-            chunks.addLast(chunkFactory.create(beginPositionInIPage, file)); // make sure the appending chunk at last.
+
+        for (int i = 0; i < files.length; i++) {
+            File file = files[i];
+            long beginPosition = Long.parseLong(file.getName());
+            Chunk<T> chunk;
+            if (i == files.length - 1) {
+                chunk = Chunk.appendableChunk(file, beginPosition, capacity, accessor);
+            } else {
+                chunk = Chunk.readOnlyChunk(file, beginPosition, (int) file.length(), accessor, minimizeCollectLength);
+            }
+            chunks.addLast(chunk);
         }
     }
 
@@ -94,34 +105,43 @@ class ChunkList<T> {
         if (indexOfBeginChunk == indexOfEndChunk) { // collectIn in one chunk
             return collectIn(indexOfBeginChunk, begin, end);
         } else {
-            return collectBetween(indexOfBeginChunk, indexOfEndChunk, begin, end);
+            return collectRight(indexOfEndChunk, end) + collectLeft(indexOfBeginChunk, begin);
         }
     }
 
-    private long collectBetween(int indexOfBeginChunk, int indexOfEndChunk, long begin, long end) throws IOException {
-        Chunk<T> left = chunks.remove(indexOfBeginChunk);
-        left = left.left(begin);
-
-        if (left != null)
-            chunks.add(indexOfBeginChunk, left);
-        else
-            indexOfEndChunk--; // decrease index because no add
-
-        Chunk<T> right = chunks.remove(indexOfEndChunk);
-        right = right.rightAndErase(end);
-        chunks.add(indexOfEndChunk, right);
-
-        return end - begin;
+    /** @see Chunk#right(long) */
+    private long collectRight(int indexOfEndChunk, long end) throws IOException {
+        Chunk<T> right = chunks.get(indexOfEndChunk);
+        Chunk<T> newChunk = right.right(end);
+        if (newChunk == right) return 0L;
+        chunks.remove(indexOfEndChunk);
+        chunks.add(indexOfEndChunk, newChunk);
+        return end - right.beginPosition();
     }
 
+    /** @see Chunk#left(long) */
+    private long collectLeft(int indexOfBeginChunk, long begin) throws IOException {
+        Chunk<T> left = chunks.get(indexOfBeginChunk);
+        Chunk<T> newChunk = left.left(begin);
+        if (newChunk == left) return 0L; // too small to collect
+        if (left != null) chunks.add(indexOfBeginChunk, left);
+        return left.endPosition() + 1 - begin;
+    }
+
+    /** @see Chunk#split(long, long) */
     private long collectIn(int indexOfChunk, long begin, long end) throws IOException {
-        Chunk<T> splittingChunk = chunks.remove(indexOfChunk);
-        List<Chunk<T>> pieces = splittingChunk.splitBy(begin, end);
-        if (pieces.isEmpty()) return 0L; // too small interval to split
-        for (int i = 0; i < pieces.size(); i++) {
-            chunks.add(indexOfChunk + i, pieces.get(i));
+        Chunk<T> splittingChunk = chunks.get(indexOfChunk);
+        try {
+            List<Chunk<T>> pieces = splittingChunk.split(begin, end);
+            if (pieces.isEmpty()) return 0L; // too small interval to split
+            chunks.remove(indexOfChunk);
+            for (int i = 0; i < pieces.size(); i++) {
+                chunks.add(indexOfChunk + i, pieces.get(i));
+            }
+            return end - begin;
+        } catch (UnsupportedOperationException e) {
+            return 0L;
         }
-        return end - begin;
     }
 
     private class ChunkOffsetRangeList extends AbstractList<Range> {
@@ -129,7 +149,7 @@ class ChunkList<T> {
         @Override
         public Range get(int index) {
             Chunk<T> chunk = chunks.get(index);
-            return new Range(chunk.beginPositionInIPage(), chunk.endPositionInIPage());
+            return new Range(chunk.beginPosition(), chunk.endPosition());
         }
 
         @Override

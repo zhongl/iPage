@@ -25,7 +25,7 @@ public class GarbageCollector<T> {
     public long collect(long survivorOffset, ChunkList<T> chunkList) throws IOException {
         if (lastSurvivorOffset == survivorOffset) return 0L;
 
-        long beginPosition = chunkList.first().beginPositionInIPage();
+        long beginPosition = chunkList.first().beginPosition();
 
         boolean firstCollection = lastSurvivorOffset < beginPosition;
         boolean recollectFromStart = lastSurvivorOffset > survivorOffset;

@@ -18,25 +18,16 @@ package com.github.zhongl.ipage;
 
 import com.github.zhongl.accessor.Accessor;
 import com.github.zhongl.integerity.ValidateOrRecover;
-import com.github.zhongl.integerity.Validator;
-import com.github.zhongl.util.DirectByteBufferCleaner;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.Files;
-import com.google.common.io.InputSupplier;
 
 import javax.annotation.concurrent.NotThreadSafe;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.BufferOverflowException;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.Arrays;
-import java.util.Collections;
+import java.nio.ReadOnlyBufferException;
 import java.util.List;
 
-import static com.github.zhongl.util.ByteBuffers.slice;
 import static com.google.common.base.Preconditions.checkState;
-import static java.nio.channels.FileChannel.MapMode.READ_ONLY;
-import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 
 /**
  * {@link com.github.zhongl.ipage.Chunk}
@@ -44,106 +35,71 @@ import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @NotThreadSafe
-public class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> {
-
-    // TODO refactor for memory release
-
+public abstract class Chunk<T> implements ValidateOrRecover<T, IOException> {
     public static final int DEFAULT_CAPACITY = 4096; // 4k
-    private final Accessor<T> accessor;
-    private final boolean readOnly;
-    private final long beginPositionInIPage;
-    private final File file;
-    private final long capacity;
-    private final int minimizeCollectLength;
 
-    private volatile int writePosition = 0;
-    private volatile boolean erased;
-    private volatile MappedByteBuffer mappedByteBuffer;
-
-    public Chunk(File file, long capacity, long beginPositionInIPage, int minimizeCollectLength, Accessor<T> accessor) throws IOException {
-        this(file, capacity, beginPositionInIPage, minimizeCollectLength, accessor, false);
+    public static <T> Chunk<T> asReadOnly(Chunk<T> chunk, int minimizeCollectLength) throws IOException {
+        if (chunk instanceof ReadOnlyChunk) return chunk;
+        chunk.close();
+        return readOnlyChunk(chunk.file, chunk.beginPosition(), (int) chunk.file.length(), chunk.accessor, minimizeCollectLength);
     }
 
-    private Chunk(File file, long capacity, long beginPositionInIPage, int minimizeCollectLength, Accessor<T> accessor, boolean readOnly) throws IOException {
+    public static <T> Chunk<T> readOnlyChunk(File file, long beginPosition, int capacity, Accessor<T> accessor, int minimizeCollectLength) throws IOException {
+        return new ReadOnlyChunk<T>(file, beginPosition, capacity, accessor, minimizeCollectLength);
+    }
+
+    public static <T> Chunk<T> appendableChunk(File file, long beginPosition, int capcity, Accessor<T> accessor) throws IOException {
+        return new AppendableChunk(file, beginPosition, capcity, accessor);
+    }
+
+    protected final Accessor<T> accessor;
+    protected final long beginPosition;
+    protected final File file;
+    protected final MappedBufferFile mappedBufferFile;
+
+    protected Chunk(File file, long beginPosition, Accessor<T> accessor, int capacity, boolean readOnly) throws IOException {
         this.file = file;
-        this.capacity = capacity;
-        this.beginPositionInIPage = beginPositionInIPage;
-        this.minimizeCollectLength = minimizeCollectLength;
         this.accessor = accessor;
-        this.readOnly = readOnly;
-        this.writePosition = (int) file.length();
+        this.beginPosition = beginPosition;
+        mappedBufferFile = new MappedBufferFile(file, capacity, readOnly);
     }
 
-    public long append(T record) throws IOException, BufferOverflowException {
-        if (readOnly) throw new UnsupportedOperationException("Readonly chunk.");
-        checkState(!erased, "Chunk %s has already erased", file);
-        checkOverFlowIfAppend(record);
-        long iPageOffset = writePosition + beginPositionInIPage;
-        ensureMap();
-        writePosition += accessor.write(record, slice(mappedByteBuffer, writePosition));  // TODO use a better name to instead "slice"
-        return iPageOffset;
-    }
+    public abstract long append(T object) throws ReadOnlyBufferException, BufferOverflowException;
 
-    public T get(long offset) throws IOException {
-        checkState(!erased, "Chunk %s has already erased", file);
-        return getInternal((int) (offset - beginPositionInIPage));
-    }
-
-    public boolean flush() {
-        if (readOnly || erased || mappedByteBuffer == null) return false;
-        mappedByteBuffer.force();
-        return true;
-    }
-
-    public long endPositionInIPage() {
-        checkState(!erased, "Chunk %s has already erased", file);
-        return beginPositionInIPage + writePosition - 1;
-    }
-
-    public long beginPositionInIPage() {
-        checkState(!erased, "Chunk %s has already erased", file);
-        return beginPositionInIPage;
-    }
-
-    public void erase() throws IOException {
-        if (erased) return;
-        erased = true;
-        releaseBuffer();
-        deleteFile();
-    }
-
-    @Override
-    public void close() throws IOException {
-        if (flush() && releaseBuffer()) setLength(writePosition);
-    }
-
-    public Chunk<T> asReadOnly() throws IOException {
-        close();
-        return new Chunk<T>(file, writePosition, beginPositionInIPage, minimizeCollectLength, accessor, true);
-    }
-
-    @Override
-    public boolean validateOrRecoverBy(Validator<T, IOException> validator) throws IOException {
-        Cursor<T> cursor = Cursor.begin(beginPositionInIPage);
-        while (cursor.offset() < endPositionInIPage()) {
-            long lastOffset = cursor.offset();
-            cursor = next(cursor);
-            if (validator.validate(cursor.lastValue())) continue;
-            writePosition = (int) (lastOffset - beginPositionInIPage);
-            return false;
+    public final T get(long offset) {
+        try {
+            int localOffset = (int) (offset - beginPosition());
+            int length = (int) (endPosition() - offset + 1);
+            return mappedBufferFile.readBy(accessor, localOffset, length);
+        } catch (RuntimeException e) { // java.nio.BufferUnderflowException, java.lang.IllegalArgumentException
+            return null; // invalide offset
         }
-        return true;
     }
 
-    public Cursor<T> next(Cursor<T> cursor) throws IOException {
-        checkState(!erased, "Chunk %s has already erased", file);
-        if (cursor.offset() >= endPositionInIPage()) return cursor.end();
-        long offset = cursor.offset() < beginPositionInIPage ? beginPositionInIPage : cursor.offset();
+    public void flush() {
+        mappedBufferFile.flush();
+    }
+
+    public abstract long endPosition();
+
+    public final long beginPosition() { return beginPosition; }
+
+    public final void delete() {
+        File deleted = new File(file.getParentFile(), "-" + file.getName() + "-"); // rename to "-$name-"
+        checkState(file.renameTo(deleted), "Can't delete file %s", file); // void deleted failed
+        truncate(deleted, 0L);
+        checkState(deleted.delete(), "Can't delete file %s", deleted);
+    }
+
+    public final Cursor<T> next(Cursor<T> cursor) throws IOException {
+        if (cursor.offset() >= endPosition()) return cursor.end();
+        long offset = cursor.offset() < beginPosition() ? beginPosition() : cursor.offset();
         T value = get(offset);
         offset += accessor.byteLengthOf(value);
         return Cursor.cursor(offset, value);
     }
 
+    public abstract void close();
 
     /**
      * There are three split cases:
@@ -163,18 +119,11 @@ public class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> {
      *
      * </pre>
      */
-    public List<Chunk<T>> splitBy(long begin, long end) throws IOException {
-        T value = get(begin);
-        long minimizeInterval = Math.max(accessor.byteLengthOf(value), minimizeCollectLength);
-        if (end - begin <= minimizeInterval) return Collections.emptyList();             // Case 3
-        if (begin == beginPositionInIPage()) return Arrays.asList(rightAndErase(end));  // Case 2
-        Chunk<T> right = right(end); // TODO make sure do right first
-        Chunk<T> left = left(begin);
-        return Arrays.asList(left, right);                                              // Case 1
-    }
+    public abstract List<Chunk<T>> split(long begin, long end) throws IOException;
+
 
     /**
-     * There are two left cases:
+     * There are throe left cases:
      * <pre>
      * Case 1: keep left and abandon right.
      *         offset
@@ -183,22 +132,10 @@ public class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> {
      * Case 2: abandon all
      *  offset
      *    |------------------------------------|
+     *
      * </pre>
-     *
-     * @param offset
-     *
-     * @return
-     * @throws IOException
      */
-    public Chunk<T> left(long offset) throws IOException {
-        if (offset == beginPositionInIPage()) {     // Case 2
-            erase();
-            return null;
-        }
-        close();
-        setLength(offset - beginPositionInIPage()); // Case 1
-        return new Chunk(file, file.length(), beginPositionInIPage(), minimizeCollectLength, accessor, true);
-    }
+    public abstract Chunk<T> left(long offset) throws IOException;
 
     /**
      * There are two right cases:
@@ -207,69 +144,20 @@ public class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> {
      *         offset
      *    |------|@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
      *
-     * Case 2: keep all
+     * Case 2: keep all because offset is begin or too small interval
      *  offset
      *    |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
      * </pre>
-     *
-     * @param offset
-     *
-     * @return
-     * @throws IOException
      */
-    public Chunk<T> rightAndErase(long offset) throws IOException {
-        if (offset == beginPositionInIPage()) return this;  // Case 2
-        Chunk chunk = right(offset);
-        erase();                                            // Case 1
-        return chunk;
-    }
+    public abstract Chunk<T> right(long offset) throws IOException;
 
-    private Chunk<T> right(long offset) throws IOException {
-        File newFile = new File(file.getParentFile(), Long.toString(offset));
-        long length = endPositionInIPage() - offset + 1;
-        offset -= beginPositionInIPage();
-        InputSupplier<InputStream> from = ByteStreams.slice(Files.newInputStreamSupplier(file), offset, length);
-        Files.copy(from, newFile);
-        return new Chunk(newFile, newFile.length(), offset, minimizeCollectLength, accessor, true);
-    }
-
-    private T getInternal(int offset) throws IOException {
-        ensureMap();
+    protected static final void truncate(File file, long size) {
         try {
-            return accessor.read(slice(mappedByteBuffer, offset, writePosition - offset));
-        } catch (RuntimeException e) {
-            return null;
+            RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
+            randomAccessFile.setLength(size);
+            randomAccessFile.close();
+        } catch (IOException e) {
+            throw new IllegalStateException("Can't truncate file " + file, e);
         }
-    }
-
-    private void checkOverFlowIfAppend(T record) throws BufferOverflowException {
-        int appendedPosition = writePosition + accessor.byteLengthOf(record);
-        if (appendedPosition > capacity) throw new BufferOverflowException();
-    }
-
-    private boolean releaseBuffer() {
-        if (mappedByteBuffer == null) return false;
-        DirectByteBufferCleaner.clean(mappedByteBuffer);
-        mappedByteBuffer = null;
-        return true;
-    }
-
-    private void ensureMap() throws IOException {
-        if (mappedByteBuffer != null) return;
-        FileChannel.MapMode mode = readOnly ? READ_ONLY : READ_WRITE;
-        mappedByteBuffer = Files.map(file, mode, capacity);
-    }
-
-    private void deleteFile() throws IOException {
-        setLength(0L);
-        File deleted = new File(file.getParentFile(), "-" + file.getName() + "-");
-        checkState(file.renameTo(deleted), "Can't delete file %s", file); // void deleted failed
-        checkState(deleted.delete(), "Can't delete file %s", file);
-    }
-
-    private void setLength(long value) throws IOException {
-        RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
-        randomAccessFile.setLength(value);
-        randomAccessFile.close();
     }
 }

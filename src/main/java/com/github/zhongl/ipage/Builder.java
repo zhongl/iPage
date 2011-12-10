@@ -30,6 +30,7 @@ public final class Builder<T> {
 
     private final File baseDir;
     private int chunkCapacity = UNSET;
+    private int minimizeCollectLength = UNSET;
     private Accessor<T> accessor;
 
     Builder(File dir) {
@@ -45,6 +46,12 @@ public final class Builder<T> {
         return this;
     }
 
+    public Builder<T> minimizeCollectLength(int value) {
+        checkArgument(value >= 0, "minimize collect length should not less than 0");
+        chunkCapacity = value;
+        return this;
+    }
+
     public Builder<T> accessor(Accessor<T> instance) {
         checkNotNull(instance);
         this.accessor = instance;
@@ -53,26 +60,9 @@ public final class Builder<T> {
 
     public IPage<T> build() throws IOException {
         chunkCapacity = (chunkCapacity == UNSET) ? Chunk.DEFAULT_CAPACITY : chunkCapacity;
+        minimizeCollectLength = (minimizeCollectLength == UNSET) ? 4096 : minimizeCollectLength;
         checkNotNull(accessor, "EntryAccessor should not be null.");
-        ChunkFactory<T> chunkFactory = new ChunkFactory<T>(chunkCapacity, accessor);
-        return new IPage<T>(new ChunkList<T>(baseDir, chunkFactory));
+        return new IPage<T>(new ChunkList<T>(baseDir, chunkCapacity, accessor, minimizeCollectLength));
     }
 
-
-    /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-    static class ChunkFactory<T> {
-
-        private final long chunkCapacity;
-        private final Accessor<T> accessor;
-        private int minimizeCollectLength = 4096; // TODO
-
-        ChunkFactory(long chunkCapacity, Accessor<T> accessor) {
-            this.accessor = accessor;
-            this.chunkCapacity = chunkCapacity;
-        }
-
-        public Chunk<T> create(long beginPositionInIPage, File file) throws IOException {
-            return new Chunk<T>(file, chunkCapacity, beginPositionInIPage, minimizeCollectLength, accessor);
-        }
-    }
 }

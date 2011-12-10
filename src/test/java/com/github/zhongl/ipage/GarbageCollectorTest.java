@@ -16,6 +16,8 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.accessor.CommonAccessors;
+import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 
 import static org.hamcrest.Matchers.is;
@@ -23,13 +25,14 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class GarbageCollectorTest {
+public class GarbageCollectorTest extends FileBase {
 
     @Test
     public void collect() throws Exception {
+        file = testFile("collect");
         GarbageCollector<String> collector = new GarbageCollector<String>();
-        Chunk chunk = mock(Chunk.class);
-        doReturn(0L).when(chunk).beginPositionInIPage();
+        Chunk<String> chunk = Chunk.appendableChunk(file, 0L, 4096, CommonAccessors.STRING);
+
         ChunkList<String> chunkList = mock(ChunkList.class);
         doReturn(chunk).when(chunkList).first();
 
