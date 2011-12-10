@@ -131,7 +131,8 @@ public class KVEngineBuilder<V> {
         backlog = (backlog == UNSET) ? DEFAULT_BACKLOG : backlog;
         Group group = groupCommit ? Group.newInstance() : Group.NULL;
 
-        return new KVEngine<V>(pollTimeout, backlog, group, iPage, index, callByCountOrElapse, dataIntegerity);
+        Operation<V> operation = new Operation<V>(iPage, index, group, callByCountOrElapse);
+        return new KVEngine<V>(pollTimeout, backlog, dataIntegerity, operation);
     }
 
     private CallByCountOrElapse newCallFlushByCountOrElapse(Callable<Object> flusher) {

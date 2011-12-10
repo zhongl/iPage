@@ -16,28 +16,44 @@
 
 package com.github.zhongl.kvengine;
 
-import com.github.zhongl.index.Index;
-import com.github.zhongl.integerity.Validator;
-import com.github.zhongl.ipage.IPage;
-import org.junit.Ignore;
+import com.github.zhongl.accessor.CommonAccessors;
+import com.github.zhongl.index.Md5Key;
+import com.github.zhongl.util.FileBase;
+import org.junit.After;
 import org.junit.Test;
 
-import java.io.IOException;
+import java.io.File;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class RecoveryTest {
+public class RecoveryTest extends FileBase {
 
-    @Test(expected = IllegalStateException.class)
-    @Ignore("TODO")
-    public void runFailureBecauseOfIOException() throws Exception {
-        Index index = mock(Index.class);
-        IPage<String> iPage = mock(IPage.class);
-        doThrow(new IOException()).when(index).validateOrRecoverBy(any(Validator.class));
-        new Recovery(index, iPage).run();
+    private KVEngine<String> engine;
+
+    @After
+    public void tearDown() throws Exception {
+        if (engine != null) engine.shutdown();
     }
 
+    @Test
+    public void dataIsOkButDotSafeNotExist() throws Exception {
+        dir = testDir("dataIsOkButDotSafeNotExist");
+        engine = KVEngine.<String>baseOn(dir).valueAccessor(CommonAccessors.STRING).build();
+        engine.startup();
+
+        String value = "value";
+        Md5Key key = Md5Key.generate(value.getBytes());
+        Sync<String> callback = new Sync<String>();
+        engine.put(key, value, callback);
+        callback.get();
+        engine.shutdown();
+
+        boolean delete = new File(dir, ".safe").delete(); // delete .safe file
+        assertThat(delete, is(true));
+
+        engine = KVEngine.<String>baseOn(dir).valueAccessor(CommonAccessors.STRING).build();
+
+    }
 }
