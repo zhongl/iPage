@@ -30,14 +30,13 @@ import java.util.Collection;
 import java.util.concurrent.Callable;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class KVEngineBenchmark extends FileBase {
+public class BlockingKVEngineBenchmark extends FileBase {
 
-    private KVEngine<byte[]> engine;
+    private BlockingKVEngine<byte[]> engine;
 
     @After
     public void tearDown() throws Exception {
         engine.shutdown();
-        engine.awaitForShutdown(Long.MAX_VALUE);
     }
 
     @Override
@@ -45,14 +44,15 @@ public class KVEngineBenchmark extends FileBase {
     public void setUp() throws Exception {
         super.setUp();
         dir = testDir("benchmark");
-        engine = KVEngine.<byte[]>baseOn(dir)
-                .initialBucketSize(100)
-                .flushByCount(5)
-                .flushByElapseMilliseconds(10L)
-                .chunkCapacity(1024 * 1024 * 32)
-                .valueAccessor(CommonAccessors.BYTES)
-                .groupCommit(true)
-                .build();
+        engine = new BlockingKVEngine<byte[]>(
+                KVEngine.<byte[]>baseOn(dir)
+                        .initialBucketSize(100)
+                        .flushByCount(5)
+                        .flushByElapseMilliseconds(10L)
+                        .chunkCapacity(1024 * 1024 * 32)
+                        .valueAccessor(CommonAccessors.BYTES)
+                        .groupCommit(true)
+                        .build());
         engine.startup();
     }
 
@@ -77,10 +77,10 @@ public class KVEngineBenchmark extends FileBase {
     }
 
     abstract static class OperationFactory implements CallableFactory {
-        protected final KVEngine engine;
+        protected final BlockingKVEngine engine;
         private int count;
 
-        public OperationFactory(KVEngine engine) {this.engine = engine;}
+        public OperationFactory(BlockingKVEngine engine) {this.engine = engine;}
 
         protected byte[] generateValue() {
             return Bytes.concat(Ints.toByteArray(count++), new byte[1020]);
@@ -89,7 +89,7 @@ public class KVEngineBenchmark extends FileBase {
 
     private static class PutFactory extends OperationFactory {
 
-        public PutFactory(KVEngine engine) {
+        public PutFactory(BlockingKVEngine engine) {
             super(engine);
         }
 
@@ -108,7 +108,7 @@ public class KVEngineBenchmark extends FileBase {
 
     private static class GetFactory extends OperationFactory {
 
-        public GetFactory(KVEngine engine) {
+        public GetFactory(BlockingKVEngine engine) {
             super(engine);
         }
 
@@ -126,7 +126,7 @@ public class KVEngineBenchmark extends FileBase {
 
     private static class RemoveFactory extends OperationFactory {
 
-        public RemoveFactory(KVEngine engine) {
+        public RemoveFactory(BlockingKVEngine engine) {
             super(engine);
         }
 

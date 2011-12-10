@@ -40,8 +40,8 @@ import static org.mockito.Mockito.*;
  *
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
-public class KVEngineGroupCommitTest {
-    private KVEngine<String> engine;
+public class GroupCommitTest {
+    private BlockingKVEngine<String> engine;
     private IPage<Entry<String>> ipage;
     private Index index;
     private Callable flusher;
@@ -51,12 +51,8 @@ public class KVEngineGroupCommitTest {
 
     @After
     public void tearDown() throws Exception {
-        if (engine != null) {
-            engine.shutdown();
-            engine.awaitForShutdown(Integer.MAX_VALUE);
-        }
+        if (engine != null) engine.shutdown();
     }
-
 
     @Before
     public void setUp() throws Exception {
@@ -113,7 +109,8 @@ public class KVEngineGroupCommitTest {
     }
 
     private void newEngineAndStartup() {
-        engine = new KVEngine<String>(10L, 10, group, ipage, index, callByCountOrElapse, dataIntegerity);
+        Operation<String> operation = new Operation<String>(ipage, index, group, callByCountOrElapse);
+        engine = new BlockingKVEngine<String>(new KVEngine<String>(10L, 10, dataIntegerity, operation));
         engine.startup();
     }
 

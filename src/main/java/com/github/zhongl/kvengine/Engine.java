@@ -16,9 +16,6 @@
 
 package com.github.zhongl.kvengine;
 
-import com.google.common.base.Throwables;
-import com.google.common.util.concurrent.FutureCallback;
-
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -52,17 +49,10 @@ public abstract class Engine {
         core.start();
     }
 
-    public void shutdown() {
-        try {
-            if (core.isAlive())
-                tasks.put(SHUTDOWN);
-        } catch (InterruptedException e) {
-            Throwables.propagate(e);
-        }
-    }
-
-    public void awaitForShutdown(long timeout) throws InterruptedException {
-        core.join(timeout);
+    public void shutdown() throws InterruptedException {
+        if (!core.isAlive()) return;
+        tasks.put(SHUTDOWN);
+        core.join();
     }
 
     protected final boolean submit(Task<?> task) {
@@ -97,21 +87,4 @@ public abstract class Engine {
     /** Overwrite this method for some time-sensitive stuff. */
     protected void hearbeat() {}
 
-    public abstract static class Task<T> implements Runnable {
-        protected final FutureCallback<T> callback;
-
-        public Task(FutureCallback<T> callback) {this.callback = callback;}
-
-        @Override
-        public final void run() {
-            try {
-                T result = execute();
-                callback.onSuccess(result);
-            } catch (Throwable t) {
-                callback.onFailure(t);
-            }
-        }
-
-        protected abstract T execute() throws Throwable;
-    }
 }
