@@ -17,24 +17,17 @@
 package com.github.zhongl.kvengine;
 
 import com.github.zhongl.accessor.CommonAccessors;
-import com.github.zhongl.index.Index;
 import com.github.zhongl.index.Md5Key;
-import com.github.zhongl.ipage.IPage;
 import com.github.zhongl.util.FileBase;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.concurrent.Callable;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Mockito.*;
-import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class KVEngineTest extends FileBase {
@@ -69,62 +62,6 @@ public class KVEngineTest extends FileBase {
     }
 
     @Test
-    public void flushByCountFirst() throws Exception {
-        dir = testDir("flushByCountFirst");
-        dir.mkdirs();
-
-        IPage<Entry<String>> ipage = mock(IPage.class);
-        doReturn(new Entry(mock(Md5Key.class), "")).when(ipage).get(anyLong());
-        Index index = mock(Index.class);
-        int count = 2;
-        long elapseMilliseconds = 100L;
-        Callable<?> flusher = mock(Callable.class);
-
-        DataIntegerity dataIntegerity = new DataIntegerity(dir);
-        CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(count, elapseMilliseconds, flusher);
-
-        Operation<String> operation = new Operation<String>(ipage, index, Group.NULL, callByCountOrElapse);
-        engine = new BlockingKVEngine<String>(new KVEngine<String>(10L, 10, dataIntegerity, operation));
-        engine.startup();
-
-        engine.put(mock(Md5Key.class), "");
-        Thread.sleep(elapseMilliseconds / 2);
-        engine.put(mock(Md5Key.class), ""); // flush by count and reset
-        Thread.sleep(elapseMilliseconds / 2);
-
-        verify(flusher, times(1)).call();
-    }
-
-    @Test
-    @Ignore("TODO")
-    public void flushByElapseFirst() throws Exception {
-        dir = testDir("flushByElapseFirst");
-        dir.mkdirs();
-
-        IPage<Entry<String>> ipage = mock(IPage.class);
-        doReturn(new Entry(mock(Md5Key.class), "")).when(ipage).get(anyLong());
-
-        Index index = mock(Index.class);
-        int count = 2;
-        long elapseMilliseconds = 100L;
-        Callable<?> flusher = mock(Callable.class);
-
-        DataIntegerity dataIntegerity = new DataIntegerity(dir);
-        CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(count, elapseMilliseconds, flusher);
-
-        Operation<String> operation = new Operation<String>(ipage, index, Group.NULL, callByCountOrElapse);
-        engine = new BlockingKVEngine<String>(new KVEngine<String>(10L, 10, dataIntegerity, operation));
-        engine.startup();
-
-        engine.put(mock(Md5Key.class), "");
-        Thread.sleep(elapseMilliseconds);                   // flush by elapse and reset
-        engine.put(mock(Md5Key.class), "");
-
-        verify(flusher, times(1)).call();
-    }
-
-    @Test
-    @Ignore("TODO")
     public void iterator() throws Exception {
         dir = testDir("valueIterator");
 
@@ -144,7 +81,6 @@ public class KVEngineTest extends FileBase {
         assertThat(iterator.next(), is(value0));
         assertThat(iterator.next(), is(value2));
         assertThat(iterator.hasNext(), is(false));
-
     }
 
     @After
