@@ -16,19 +16,15 @@
 
 package com.github.zhongl.index;
 
+import com.github.zhongl.buffer.MappedBufferFile;
 import com.github.zhongl.integerity.ValidateOrRecover;
 import com.github.zhongl.integerity.Validator;
-import com.github.zhongl.util.DirectByteBufferCleaner;
-import com.google.common.io.Files;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
 import java.io.IOException;
-import java.nio.MappedByteBuffer;
 
-import static com.github.zhongl.util.ByteBuffers.slice;
 import static com.google.common.base.Preconditions.checkState;
-import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 
 /**
  * {@link FileHashTable} is a file-based hash map for mapping
@@ -45,33 +41,28 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
     public static final Long NULL_OFFSET = null;
     public static final int DEFAULT_SIZE = 256;
 
-    private final MappedByteBuffer mappedByteBuffer;
     private final int amountOfBuckets;
     private final File file;
 
     private volatile int occupiedSlots;
-    private volatile boolean cleaned;
-    private volatile boolean closed;
+    private final MappedBufferFile mappedBufferFile;
 
     public FileHashTable(File file, int buckets) throws IOException {
         this.file = file;
         amountOfBuckets = buckets > 0 ? buckets : DEFAULT_SIZE;
-        mappedByteBuffer = Files.map(file, READ_WRITE, amountOfBuckets * Bucket.LENGTH);
+        mappedBufferFile = new MappedBufferFile(file, amountOfBuckets * Bucket.LENGTH, false);
         calculateOccupiedSlots();
     }
 
     public int amountOfBuckets() {
-        checkState(!cleaned && !closed, "FileHashTable %s has already cleaned or closed.", file);
         return amountOfBuckets;
     }
 
     public int size() {
-        checkState(!cleaned && !closed, "FileHashTable %s has already cleaned or closed.", file);
         return occupiedSlots;
     }
 
     public Long put(Md5Key key, Long offset) {
-        checkState(!cleaned && !closed, "FileHashTable %s has already cleaned or closed.", file);
         Bucket bucket = buckets(hashAndMod(key));
         Long preoffset = bucket.put(key, offset);
         bucket.updateCRC();
@@ -80,12 +71,10 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
     }
 
     public Long get(Md5Key key) {
-        checkState(!cleaned && !closed, "FileHashTable %s has already cleaned or closed.", file);
         return buckets(hashAndMod(key)).get(key);
     }
 
     public Long remove(Md5Key key) {
-        checkState(!cleaned && !closed, "FileHashTable %s has already cleaned or closed.", file);
         Bucket bucket = buckets(hashAndMod(key));
         Long preoffset = bucket.remove(key);
         if (preoffset != null) { // remove an exist key
@@ -95,11 +84,9 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
         return preoffset;
     }
 
-    public void close() { // TODO remve Closeable because of IOException
-        if (cleaned || closed) return;
+    public void close() {
         flush();
-        DirectByteBufferCleaner.clean(mappedByteBuffer);
-        closed = true;
+        mappedBufferFile.release();
     }
 
     private int hashAndMod(Md5Key key) {
@@ -113,12 +100,11 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
     }
 
     private Bucket buckets(int i) {
-        return new Bucket(slice(mappedByteBuffer, i * Bucket.LENGTH, Bucket.LENGTH));
+        return new Bucket(i * Bucket.LENGTH, mappedBufferFile);
     }
 
     public void flush() {
-        checkState(!cleaned && !closed, "FileHashTable %s has already cleaned or closed.", file);
-        mappedByteBuffer.force();
+        mappedBufferFile.flush();
     }
 
     public boolean isEmpty() {
@@ -126,19 +112,15 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
     }
 
     public void clean() {
-        if (cleaned) return;
-        cleaned = true;
         checkState(file.delete(), "Can't delete file %s", file);
     }
 
     public File file() {
-        checkState(!cleaned && !closed, "FileHashTable %s has already cleaned or closed.", file);
         return file;
     }
 
     @Override
     public boolean validateOrRecoverBy(Validator<Slot, IOException> validator) throws IOException {
-        checkState(!cleaned && !closed, "FileHashTable %s has already cleaned or closed.", file);
         for (int i = 0; i < amountOfBuckets; i++) {
             Bucket bucket = buckets(i);
             if (bucket.checkCRC()) continue;
@@ -149,16 +131,4 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
         return true;
     }
 
-    @Override
-    public String toString() {
-        final StringBuilder sb = new StringBuilder();
-        sb.append("FileHashTable");
-        sb.append("{amountOfBuckets=").append(amountOfBuckets);
-        sb.append(", file=").append(file);
-        sb.append(", occupiedSlots=").append(occupiedSlots);
-        sb.append(", cleaned=").append(cleaned);
-        sb.append(", closed=").append(closed);
-        sb.append('}');
-        return sb.toString();
-    }
 }

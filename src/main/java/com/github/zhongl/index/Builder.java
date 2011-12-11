@@ -29,19 +29,19 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public final class IndexBuilder {
+public final class Builder {
 
     private static final int UNSET = -1;
     private final File baseDir;
     private int initialBucketSize = UNSET;
 
-    IndexBuilder(File dir) {
+    Builder(File dir) {
         if (!dir.exists()) checkState(dir.mkdirs(), "Can not create directory: %s", dir);
         checkArgument(dir.isDirectory(), "%s should be a directory.", dir);
         baseDir = dir;
     }
 
-    public IndexBuilder initialBucketSize(int value) {
+    public Builder initialBucketSize(int value) {
         checkState(initialBucketSize == UNSET, "Initial bucket amountOfBuckets can only set once.");
         initialBucketSize = value;
         return this;

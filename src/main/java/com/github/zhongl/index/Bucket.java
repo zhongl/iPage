@@ -16,7 +16,8 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.accessor.CommonAccessors;
+import com.github.zhongl.buffer.Accessor;
+import com.github.zhongl.buffer.MappedBufferFile;
 import com.github.zhongl.integerity.ValidateOrRecover;
 import com.github.zhongl.integerity.Validator;
 
@@ -25,8 +26,7 @@ import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.zip.CRC32;
 
-import static com.github.zhongl.util.ByteBuffers.slice;
-import static com.google.common.base.Preconditions.checkArgument;
+import static com.github.zhongl.buffer.CommonAccessors.LONG;
 
 /**
  * {@link Bucket} has 163
@@ -39,10 +39,14 @@ import static com.google.common.base.Preconditions.checkArgument;
 class Bucket implements ValidateOrRecover<Slot, IOException> {
 
     public static final int LENGTH = Integer.getInteger("com.github.zhongl.ipage.bucket.length", 4096); // default 4K
-    private final ByteBuffer buffer;
+    private static final int CRC_OFFSET = LENGTH - 8;
 
-    public Bucket(ByteBuffer buffer) {
-        this.buffer = buffer;
+    private final int beginPosition;
+    private final MappedBufferFile mappedBufferFile;
+
+    Bucket(int beginPosition, MappedBufferFile mappedBufferFile) {
+        this.beginPosition = beginPosition;
+        this.mappedBufferFile = mappedBufferFile;
     }
 
     public Long put(Md5Key key, Long offset) {
@@ -70,7 +74,6 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
             if (slot.state() == Slot.State.EMPTY) return FileHashTable.NULL_OFFSET; // because rest slots are all empty
             if (slot.state() == Slot.State.OCCUPIED && slot.key().equals(key)) return slot.offset();
         }
-
         return FileHashTable.NULL_OFFSET;
     }
 
@@ -86,7 +89,7 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
     }
 
     public void updateCRC() {
-        CommonAccessors.LONG.write(calculateCRC(), slice(buffer, LENGTH - 8));
+        mappedBufferFile.writeBy(LONG, CRC_OFFSET, calculateCRC());
     }
 
     public boolean checkCRC() {
@@ -109,7 +112,9 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
         int occupiedSlots = 0;
         for (int i = 0; i < amountOfSlots(); i++) {
             Slot slot = slots(i);
-            if (slot.state() == Slot.State.OCCUPIED) occupiedSlots++;
+            Slot.State state = slot.state();
+            if (state == Slot.State.EMPTY) break;
+            if (state == Slot.State.OCCUPIED) occupiedSlots++;
         }
         return occupiedSlots;
     }
@@ -117,20 +122,34 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
     private int amountOfSlots() {return LENGTH / Slot.LENGTH;}
 
     private Slot slots(int index) {
-        checkArgument(index >= 0 && index < amountOfSlots());
-        return new Slot(slice(buffer, index * Slot.LENGTH, Slot.LENGTH));
+        return new Slot(index * Slot.LENGTH + beginPosition, mappedBufferFile);
     }
 
     private long calculateCRC() {
-        byte[] allSlotBytes = new byte[Slot.LENGTH * amountOfSlots()];
-        buffer.position(0);
-        buffer.get(allSlotBytes);
+        final int length = Slot.LENGTH * amountOfSlots();
+        byte[] allSlotBytes = mappedBufferFile.readBy(new Accessor<byte[]>() {
+            @Override
+            public int byteLengthOf(byte[] object) { throw new UnsupportedOperationException(); }
+
+            @Override
+            public int write(byte[] object, ByteBuffer buffer) { throw new UnsupportedOperationException(); }
+
+            @Override
+            public byte[] read(ByteBuffer buffer) {
+                byte[] bytes = new byte[length];
+                buffer.get(bytes);
+                return bytes;
+            }
+        }, beginPosition, length);
+
         CRC32 crc32 = new CRC32();
         crc32.update(allSlotBytes);
         return crc32.getValue();
     }
 
     private long readCRC() {
-        return CommonAccessors.LONG.read(slice(buffer, LENGTH - 8));
+        return mappedBufferFile.readBy(LONG, CRC_OFFSET, LONG.byteLengthOf(0L));
     }
+
+
 }

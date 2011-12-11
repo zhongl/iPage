@@ -16,7 +16,7 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.accessor.CommonAccessors;
+import com.github.zhongl.buffer.CommonAccessors;
 import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 

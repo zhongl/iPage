@@ -16,7 +16,7 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.accessor.CommonAccessors;
+import com.github.zhongl.buffer.CommonAccessors;
 import com.github.zhongl.util.FileBase;
 import org.junit.Before;
 import org.junit.Test;
@@ -94,10 +94,25 @@ public class ChunkListTest extends FileBase {
     }
 
     @Test
+    public void garbageCollectInAppendingChunk() throws Exception {
+        dir = testDir("garbageCollectInAppendingChunk");
+        dir.mkdirs();
+        newChunkList();
+
+        ChunkBase.fullFill(chunkList.last()); // read only chunk
+
+        assertExistFile("0");
+
+        long collected = chunkList.garbageCollect(0L, 64L);
+        assertThat(collected, is(0L));
+
+    }
+
+    @Test
     public void garbageCollectInOneChunk() throws Exception {
         dir = testDir("garbageCollectInOneChunk");
         dir.mkdirs();
-        chunkList = new ChunkList<String>(dir, 4096, CommonAccessors.STRING, 32);
+        newChunkList();
 
         ChunkBase.fullFill(chunkList.last());
         chunkList.grow();
@@ -115,6 +130,6 @@ public class ChunkListTest extends FileBase {
     }
 
     private void newChunkList() throws IOException {
-        chunkList = new ChunkList<String>(dir, 4096, CommonAccessors.STRING, 4096);
+        chunkList = new ChunkList<String>(dir, 4096, CommonAccessors.STRING, 32);
     }
 }

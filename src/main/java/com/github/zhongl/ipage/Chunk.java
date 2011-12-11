@@ -16,7 +16,8 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.accessor.Accessor;
+import com.github.zhongl.buffer.Accessor;
+import com.github.zhongl.buffer.MappedBufferFile;
 import com.github.zhongl.integerity.ValidateOrRecover;
 
 import javax.annotation.concurrent.NotThreadSafe;
@@ -85,10 +86,7 @@ public abstract class Chunk<T> implements ValidateOrRecover<T, IOException> {
     public final long beginPosition() { return beginPosition; }
 
     public final void delete() {
-        File deleted = new File(file.getParentFile(), "-" + file.getName() + "-"); // rename to "-$name-"
-        checkState(file.renameTo(deleted), "Can't delete file %s", file); // void deleted failed
-        truncate(deleted, 0L);
-        checkState(deleted.delete(), "Can't delete file %s", deleted);
+        checkState(file.delete(), "Can't delete file %s", file);
     }
 
     public final Cursor<T> next(Cursor<T> cursor) throws IOException {

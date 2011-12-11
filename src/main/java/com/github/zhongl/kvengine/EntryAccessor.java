@@ -16,8 +16,8 @@
 
 package com.github.zhongl.kvengine;
 
-import com.github.zhongl.accessor.AbstractAccessor;
-import com.github.zhongl.accessor.Accessor;
+import com.github.zhongl.buffer.AbstractAccessor;
+import com.github.zhongl.buffer.Accessor;
 import com.github.zhongl.index.Md5Key;
 
 import java.nio.ByteBuffer;

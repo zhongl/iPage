@@ -51,8 +51,8 @@ public class KVEngine<T> extends Engine {
         }
     }
 
-    public static <V> KVEngineBuilder<V> baseOn(File dir) {
-        return new KVEngineBuilder<V>(dir);
+    public static <V> Builder<V> baseOn(File dir) {
+        return new Builder<V>(dir);
     }
 
     // TODO @Count monitor

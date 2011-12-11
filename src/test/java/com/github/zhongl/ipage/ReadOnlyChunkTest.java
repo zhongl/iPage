@@ -16,7 +16,7 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.accessor.CommonAccessors;
+import com.github.zhongl.buffer.CommonAccessors;
 import org.junit.Test;
 
 import java.io.File;
@@ -67,7 +67,7 @@ public class ReadOnlyChunkTest extends ChunkBase {
         file = new File(dir, "0");
         newChunk();
 
-        List<Chunk<String>> chunks = chunk.split(16L, 32L);
+        List<Chunk<String>> chunks = chunk.split(16L, 30L);
         assertThat(chunks.size(), is(0));
     }
 

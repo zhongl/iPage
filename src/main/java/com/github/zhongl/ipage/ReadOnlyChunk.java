@@ -15,7 +15,7 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.accessor.Accessor;
+import com.github.zhongl.buffer.Accessor;
 import com.github.zhongl.integerity.Validator;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
@@ -66,8 +66,9 @@ class ReadOnlyChunk<T> extends Chunk<T> {
     }
 
     @Override
+    @Deprecated
     public boolean validateOrRecoverBy(Validator<T, IOException> validator) throws IOException {
-        return true; // unsupport for read only chunk
+        return true; // TODO remove this method
     }
 
     /** @see Chunk#split(long, long) */
@@ -75,7 +76,7 @@ class ReadOnlyChunk<T> extends Chunk<T> {
     public List<Chunk<T>> split(long begin, long end) throws IOException {
         T value = get(begin);
         long minimizeInterval = (long) Math.max(accessor.byteLengthOf(value), minimizeCollectLength);
-        if (end - begin <= minimizeInterval) return Collections.emptyList();                // Case 3
+        if (end - begin < minimizeInterval) return Collections.emptyList();                 // Case 3
         if (begin == beginPosition()) return Arrays.asList(right(end));                     // Case 2
         Chunk<T> right = right0(end); // do right first for avoiding delete by left
         Chunk<T> left = left(begin);

@@ -16,7 +16,7 @@
 
 package com.github.zhongl.kvengine;
 
-import com.github.zhongl.accessor.Accessor;
+import com.github.zhongl.buffer.Accessor;
 import com.github.zhongl.index.FileHashTable;
 import com.github.zhongl.index.Index;
 import com.github.zhongl.ipage.Chunk;
@@ -31,7 +31,7 @@ import static com.google.common.base.Preconditions.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-public class KVEngineBuilder<V> {
+public class Builder<V> {
 
     static final long DEFAULT_FLUSH_ELAPSE_MILLISECONDS = 10L;
     static final int DEFAULT_BACKLOG = 10;
@@ -50,11 +50,11 @@ public class KVEngineBuilder<V> {
     private boolean groupCommit = false;
     private Accessor<V> valueAccessor;
 
-    KVEngineBuilder(File dir) {
+    Builder(File dir) {
         this.dir = dir;
     }
 
-    public KVEngineBuilder<V> chunkCapacity(int value) {
+    public Builder<V> chunkCapacity(int value) {
         checkState(chunkCapacity == UNSET, "Chunk capacity can only set once.");
         checkArgument(value >= Chunk.DEFAULT_CAPACITY,
                 "Chunk capacity should not less than " + Chunk.DEFAULT_CAPACITY);
@@ -62,28 +62,28 @@ public class KVEngineBuilder<V> {
         return this;
     }
 
-    public KVEngineBuilder<V> valueAccessor(Accessor<V> accessor) {
+    public Builder<V> valueAccessor(Accessor<V> accessor) {
         checkState(valueAccessor == null, "Value accessor can only set once.");
         checkNotNull(accessor, "Value accessor should not be null");
         this.valueAccessor = accessor;
         return this;
     }
 
-    public KVEngineBuilder<V> backlog(int value) {
+    public Builder<V> backlog(int value) {
         checkState(backlog == UNSET, "Backlog can only set once.");
         checkArgument(value > 0, "Backlog should not less than 0");
         backlog = value;
         return this;
     }
 
-    public KVEngineBuilder<V> initialBucketSize(int value) {
+    public Builder<V> initialBucketSize(int value) {
         checkState(initialBucketSize == UNSET, "Initial bucket amountOfBuckets can only set once.");
         checkArgument(value > 0, "Initial bucket amountOfBuckets should not less than 0");
         initialBucketSize = value;
         return this;
     }
 
-    public KVEngineBuilder<V> flushByElapseMilliseconds(long value) {
+    public Builder<V> flushByElapseMilliseconds(long value) {
         checkState(flushElapseMilliseconds == UNSET,
                 "Flush elapse milliseconds can only set once.");
         checkArgument(value >= DEFAULT_FLUSH_ELAPSE_MILLISECONDS,
@@ -92,14 +92,14 @@ public class KVEngineBuilder<V> {
         return this;
     }
 
-    public KVEngineBuilder<V> flushByCount(int value) {
+    public Builder<V> flushByCount(int value) {
         checkState(flushCount == UNSET, "Flush count can only set once.");
         checkArgument(value > 0, "Flush count should not less than 0");
         flushCount = value;
         return this;
     }
 
-    public KVEngineBuilder<V> groupCommit(boolean b) {
+    public Builder<V> groupCommit(boolean b) {
         groupCommit = b;
         return this;
     }

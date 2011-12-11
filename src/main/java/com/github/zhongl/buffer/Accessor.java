@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.accessor;
+package com.github.zhongl.buffer;
 
 import java.nio.ByteBuffer;
 
@@ -24,7 +24,6 @@ public interface Accessor<T> {
      * Byte length of the object store in {@link java.nio.ByteBuffer}.
      *
      * @param object T
-     *
      * @return length
      */
     int byteLengthOf(T object);
@@ -33,7 +32,6 @@ public interface Accessor<T> {
      * Write object to {@link java.nio.ByteBuffer}.
      *
      * @param buffer {@link java.nio.ByteBuffer}
-     *
      * @return wrote length.
      */
     int write(T object, ByteBuffer buffer);

@@ -16,7 +16,7 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.accessor.Accessor;
+import com.github.zhongl.buffer.Accessor;
 
 import java.io.File;
 import java.io.IOException;

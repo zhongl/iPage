@@ -12,3 +12,19 @@ For example:
 The name of `chunk[0]` is `0`, and so on.
 
 A given offset can easy be located at only one chunk by binary search.
+
+# Index
+
+TODO
+
+# Engine and Non-Blocking
+
+TODO
+
+# Garbage collect
+
+TODO
+
+# Recovery
+
+TODO

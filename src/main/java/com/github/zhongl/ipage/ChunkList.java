@@ -16,7 +16,7 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.accessor.Accessor;
+import com.github.zhongl.buffer.Accessor;
 import com.github.zhongl.util.FileNumberNameComparator;
 import com.github.zhongl.util.NumberFileNameFilter;
 
@@ -121,27 +121,22 @@ class ChunkList<T> {
 
     /** @see Chunk#left(long) */
     private long collectLeft(int indexOfBeginChunk, long begin) throws IOException {
-        Chunk<T> left = chunks.get(indexOfBeginChunk);
-        Chunk<T> newChunk = left.left(begin);
-        if (newChunk == left) return 0L; // too small to collect
-        if (left != null) chunks.add(indexOfBeginChunk, left);
+        Chunk<T> left = chunks.remove(indexOfBeginChunk);
+        Chunk<T> newLeft = left.left(begin);
+        if (newLeft != null) chunks.add(indexOfBeginChunk, newLeft);
         return left.endPosition() + 1 - begin;
     }
 
     /** @see Chunk#split(long, long) */
     private long collectIn(int indexOfChunk, long begin, long end) throws IOException {
         Chunk<T> splittingChunk = chunks.get(indexOfChunk);
-        try {
-            List<Chunk<T>> pieces = splittingChunk.split(begin, end);
-            if (pieces.isEmpty()) return 0L; // too small interval to split
-            chunks.remove(indexOfChunk);
-            for (int i = 0; i < pieces.size(); i++) {
-                chunks.add(indexOfChunk + i, pieces.get(i));
-            }
-            return end - begin;
-        } catch (UnsupportedOperationException e) {
-            return 0L;
+        List<Chunk<T>> pieces = splittingChunk.split(begin, end);
+        if (pieces.isEmpty()) return 0L; // can't left appending chunk
+        chunks.remove(indexOfChunk);
+        for (int i = 0; i < pieces.size(); i++) {
+            chunks.add(indexOfChunk + i, pieces.get(i));
         }
+        return end - begin;
     }
 
     private class ChunkOffsetRangeList extends AbstractList<Range> {

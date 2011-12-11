@@ -103,10 +103,10 @@ public class FileHashTableTest extends FileBase {
         byte[] md5Bytes1 = DigestUtils.md5("value1");
         byte[] bucketCRC = Longs.toByteArray(0);
         byte[] brokenBucketContent = Bytes.concat(
-                new byte[] {1},
+                new byte[]{1},
                 md5Bytes0,
                 Longs.toByteArray(4L),
-                new byte[] {1},
+                new byte[]{1},
                 md5Bytes1,
                 Longs.toByteArray(7L),
                 new byte[4038],
@@ -167,7 +167,7 @@ public class FileHashTableTest extends FileBase {
     public void unknownSlotState() throws Exception {
         file = testFile("unknownSlotState");
         fileHashTable = new FileHashTable(file, 1);
-        Files.write(new byte[] {3}, file);  // write a unknown slot state
+        Files.write(new byte[]{3}, file);  // write a unknown slot state
         fileHashTable.get(Md5Key.generate(Ints.toByteArray(1))); // trigger exception
     }
 
@@ -200,215 +200,6 @@ public class FileHashTableTest extends FileBase {
         assertThat(fileHashTable.isEmpty(), is(true));
         fileHashTable.clean();
         assertThat(file.exists(), is(false));
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void putAfterClose() throws Exception {
-        file = testFile("putAfterClose");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.close();
-        fileHashTable.put(null, null);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void getAfterClose() throws Exception {
-        file = testFile("getAfterClose");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.close();
-        fileHashTable.get(null);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void removeAfterClose() throws Exception {
-        file = testFile("removeAfterClose");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.close();
-        fileHashTable.remove(null);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void sizeAfterClose() throws Exception {
-        file = testFile("sizeAfterClose");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.close();
-        fileHashTable.size();
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void bucketsAfterClose() throws Exception {
-        file = testFile("bucketsAfterClose");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.close();
-        fileHashTable.amountOfBuckets();
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void flushAfterClose() throws Exception {
-        file = testFile("flushAfterClose");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.close();
-        fileHashTable.flush();
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void isEmptyAfterClose() throws Exception {
-        file = testFile("isEmptyAfterClose");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.close();
-        fileHashTable.isEmpty();
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void fileAfterClose() throws Exception {
-        file = testFile("fileAfterClose");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.close();
-        fileHashTable.file();
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void validateOrRecoverAfterClose() throws Exception {
-        file = testFile("validateOrRecoverAfterClose");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.close();
-        fileHashTable.validateOrRecoverBy(null);
-    }
-
-    @Test
-    public void closeAfterClose() throws Exception {
-        file = testFile("closeAfterClose");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.close();
-        fileHashTable.close();
-    }
-
-    @Test
-    public void cleanAfterClose() throws Exception {
-        file = testFile("cleanAfterClose");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.close();
-        fileHashTable.clean();
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void putAfterClean() throws Exception {
-        file = testFile("putAfterClean");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.clean();
-        fileHashTable.put(null, null);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void getAfterClean() throws Exception {
-        file = testFile("getAfterClean");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.clean();
-        fileHashTable.get(null);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void removeAfterClean() throws Exception {
-        file = testFile("removeAfterClean");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.clean();
-        fileHashTable.remove(null);
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void sizeAfterClean() throws Exception {
-        file = testFile("sizeAfterClean");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.clean();
-        fileHashTable.size();
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void bucketsAfterClean() throws Exception {
-        file = testFile("bucketsAfterClean");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.clean();
-        fileHashTable.amountOfBuckets();
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void flushAfterClean() throws Exception {
-        file = testFile("flushAfterClean");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.clean();
-        fileHashTable.flush();
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void isEmptyAfterClean() throws Exception {
-        file = testFile("isEmptyAfterClean");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.clean();
-        fileHashTable.isEmpty();
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void fileAfterClean() throws Exception {
-        file = testFile("fileAfterClean");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.clean();
-        fileHashTable.file();
-    }
-
-    @Test(expected = IllegalStateException.class)
-    public void validateOrRecoverAfterClean() throws Exception {
-        file = testFile("validateOrRecoverAfterClean");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.clean();
-        fileHashTable.validateOrRecoverBy(null);
-    }
-
-    @Test
-    public void closeAfterClean() throws Exception {
-        file = testFile("closeAfterClean");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.clean();
-        fileHashTable.close();
-    }
-
-    @Test
-    public void cleanAfterClean() throws Exception {
-        file = testFile("cleanAfterClean");
-
-        fileHashTable = new FileHashTable(file, 1);
-        fileHashTable.clean();
-        fileHashTable.clean();
-    }
-
-    @Test
-    public void fileHashTableToString() throws Exception {
-        file = testFile("fileHashTableToString");
-        String expect = "FileHashTable{amountOfBuckets=1, " +
-                "file=target/tmpTestFiles/FileHashTableTest.fileHashTableToString, " +
-                "occupiedSlots=0, " +
-                "cleaned=false, " +
-                "closed=false}";
-        assertThat(new FileHashTable(file, 1).toString(), is(expect));
     }
 
     private void fillFullBuckets() throws Exception {

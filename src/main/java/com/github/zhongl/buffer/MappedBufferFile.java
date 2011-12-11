@@ -13,9 +13,8 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.buffer;
 
-import com.github.zhongl.accessor.Accessor;
 import com.github.zhongl.util.DirectByteBufferCleaner;
 import com.google.common.io.Files;
 
@@ -27,11 +26,12 @@ import java.nio.MappedByteBuffer;
 import java.nio.ReadOnlyBufferException;
 
 import static com.github.zhongl.util.ByteBuffers.slice;
+import static com.google.common.base.Preconditions.checkState;
 import static java.nio.channels.FileChannel.MapMode.READ_ONLY;
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 
 /**
- * {@link com.github.zhongl.ipage.MappedBufferFile}
+ * {@link MappedBufferFile}
  *
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
@@ -39,27 +39,31 @@ import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 public class MappedBufferFile {
 
     private final MappedByteBuffer buffer;
+    private volatile boolean released;
 
     public MappedBufferFile(File file, int capacity, boolean readOnly) throws IOException {
         this.buffer = Files.map(file, readOnly ? READ_ONLY : READ_WRITE, capacity);
     }
 
     public <T> int writeBy(Accessor<T> accessor, int offset, T object) throws ReadOnlyBufferException, BufferOverflowException {
+        checkState(!released, "MappedDirectBuffer is not loaded.");
         int length = accessor.byteLengthOf(object);
         if (offset + length > buffer.limit()) throw new BufferOverflowException();
         return accessor.write(object, slice(buffer, offset, length));
     }
 
     public void flush() {
-        if (buffer.isLoaded()) buffer.force();
+        if (!released) buffer.force();
     }
 
     public <T> T readBy(Accessor<T> accessor, int offset, int length) {
+        checkState(!released, "MappedDirectBuffer is not loaded.");
         return accessor.read(slice(buffer, offset, length));
     }
 
     public void release() {
-        DirectByteBufferCleaner.clean(buffer);
+        if (!released) DirectByteBufferCleaner.clean(buffer);
+        released = true;
     }
 
 

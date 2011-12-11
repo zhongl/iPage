@@ -16,19 +16,19 @@
 
 package com.github.zhongl.kvengine;
 
-import com.github.zhongl.accessor.CommonAccessors;
+import com.github.zhongl.buffer.CommonAccessors;
 import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 
 import java.io.File;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class KVEngineBuilderTest extends FileBase {
+public class BuilderTest extends FileBase {
 
     @Test
     public void fullConfig() throws Exception {
         dir = testDir("fullConfig");
-        new KVEngineBuilder<String>(dir)
+        new Builder<String>(dir)
                 .backlog(10)
                 .initialBucketSize(256)
                 .chunkCapacity(4096)
@@ -41,32 +41,32 @@ public class KVEngineBuilderTest extends FileBase {
     @Test
     public void defaultConfig() throws Exception {
         dir = testDir("defaultConfig");
-        new KVEngineBuilder(dir).valueAccessor(CommonAccessors.STRING).build();
+        new Builder(dir).valueAccessor(CommonAccessors.STRING).build();
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void invalidFlushElapseMilliseconds() throws Exception {
-        new KVEngineBuilder(new File(".")).flushByElapseMilliseconds(9);
+        new Builder(new File(".")).flushByElapseMilliseconds(9);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void invalidFlushCount() throws Exception {
-        new KVEngineBuilder(new File(".")).flushByElapseMilliseconds(0);
+        new Builder(new File(".")).flushByElapseMilliseconds(0);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void invalidChunkCapacity() throws Exception {
-        new KVEngineBuilder(new File(".")).chunkCapacity(4095);
+        new Builder(new File(".")).chunkCapacity(4095);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void invalidBacklog() throws Exception {
-        new KVEngineBuilder(new File(".")).backlog(0);
+        new Builder(new File(".")).backlog(0);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void invalidInitialBucketSize() throws Exception {
-        new KVEngineBuilder(new File(".")).initialBucketSize(0);
+        new Builder(new File(".")).initialBucketSize(0);
     }
 
 

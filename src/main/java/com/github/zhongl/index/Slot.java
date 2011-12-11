@@ -16,11 +16,10 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.accessor.CommonAccessors;
+import com.github.zhongl.buffer.CommonAccessors;
+import com.github.zhongl.buffer.MappedBufferFile;
 
-import java.nio.ByteBuffer;
-
-import static com.github.zhongl.util.ByteBuffers.slice;
+import static com.github.zhongl.buffer.CommonAccessors.LONG;
 
 
 /**
@@ -30,34 +29,38 @@ import static com.github.zhongl.util.ByteBuffers.slice;
  */
 public class Slot {
 
-    public static final int LENGTH = 1/*head byte*/ + Md5Key.BYTE_LENGTH + 8 /*offset:Long*/;
-    private final ByteBuffer buffer;
+    public static final int LENGTH = 1 + Md5Key.BYTE_LENGTH + LONG.byteLengthOf(0L);
 
-    public Slot(ByteBuffer buffer) {
-        this.buffer = buffer;
+    private final int beginPosition;
+    private final MappedBufferFile mappedBufferFile;
+
+    public Slot(int beginPosition, MappedBufferFile mappedBufferFile) {
+        this.beginPosition = beginPosition;
+        this.mappedBufferFile = mappedBufferFile;
     }
 
     public State state() {
-        return State.readFrom(buffer.duplicate());
+        return State.readFrom(mappedBufferFile, beginPosition);
     }
 
     public Md5Key key() {
-        ByteBuffer slice = slice(buffer, 1); // skip head byte
-        return Md5Key.ACCESSOR.read(slice);
+        return mappedBufferFile.readBy(Md5Key.ACCESSOR, beginPositionOfKey(), Md5Key.BYTE_LENGTH);
     }
 
     public Long offset() {
-        ByteBuffer slice = slice(buffer, 1 + Md5Key.BYTE_LENGTH); // skip head byte and key
-        return CommonAccessors.LONG.read(slice);
+        return mappedBufferFile.readBy(LONG, beginPositionOfOffset(), LONG.byteLengthOf(0L));
     }
 
     Long add(Md5Key key, Long offset) {
-        ByteBuffer slice = slice(buffer, 0);
-        State.OCCUPIED.writeTo(slice);
-        Md5Key.ACCESSOR.write(key, slice);
-        CommonAccessors.LONG.write(offset, slice);
+        State.OCCUPIED.writeTo(mappedBufferFile, beginPosition);
+        mappedBufferFile.writeBy(Md5Key.ACCESSOR, beginPositionOfKey(), key);
+        mappedBufferFile.writeBy(LONG, beginPositionOfOffset(), offset);
         return null;
     }
+
+    private int beginPositionOfOffset() {return beginPosition + 1 + Md5Key.BYTE_LENGTH;}
+
+    private int beginPositionOfKey() {return beginPosition + 1;}
 
     Long replace(Md5Key key, Long offset) {
         Long previous = offset();
@@ -66,23 +69,24 @@ public class Slot {
     }
 
     Long release() {
-        State.RELEASED.writeTo(slice(buffer, 0));
+        State.RELEASED.writeTo(mappedBufferFile, beginPosition);
         return offset();
     }
 
     enum State {
         EMPTY, OCCUPIED, RELEASED;
 
-        public void writeTo(ByteBuffer byteBuffer) {
-            byteBuffer.put((byte) ordinal());
+        public void writeTo(MappedBufferFile mappedBufferFile, int offset) {
+            mappedBufferFile.writeBy(CommonAccessors.BYTE, offset, (byte) ordinal());
         }
 
-        public static State readFrom(ByteBuffer byteBuffer) {
-            byte b = byteBuffer.get();
+        public static State readFrom(MappedBufferFile mappedBufferFile, int offset) {
+            Byte b = mappedBufferFile.readBy(CommonAccessors.BYTE, offset, 1);
             if (EMPTY.ordinal() == b) return EMPTY;
             if (OCCUPIED.ordinal() == b) return OCCUPIED;
             if (RELEASED.ordinal() == b) return RELEASED;
             throw new IllegalStateException("Unknown slot state: " + b);
         }
     }
+
 }

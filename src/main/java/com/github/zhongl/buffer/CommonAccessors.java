@@ -14,17 +14,36 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.accessor;
+package com.github.zhongl.buffer;
 
 import java.nio.ByteBuffer;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class CommonAccessors {
-    public static final Accessor<byte[]> BYTES = new BytesAccessor();
+    public static final Accessor<Byte> BYTE = new ByteAccessor();
     public static final Accessor<Long> LONG = new LongAccessor();
+    public static final Accessor<byte[]> BYTES = new BytesAccessor();
     public static final Accessor<String> STRING = new StringAccessor();
 
     private CommonAccessors() {}
+
+    private static class ByteAccessor extends AbstractAccessor<Byte> {
+
+        @Override
+        protected void doWrite(Byte b, ByteBuffer buffer) {
+            buffer.put(b);
+        }
+
+        @Override
+        public int byteLengthOf(Byte b) {
+            return 1;
+        }
+
+        @Override
+        public Byte read(ByteBuffer buffer) {
+            return buffer.get();
+        }
+    }
 
     private static class BytesAccessor extends AbstractAccessor<byte[]> {
 

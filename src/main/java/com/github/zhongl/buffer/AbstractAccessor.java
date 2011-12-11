@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.accessor;
+package com.github.zhongl.buffer;
 
 import java.nio.ByteBuffer;
 

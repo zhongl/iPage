@@ -16,8 +16,8 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.accessor.AbstractAccessor;
-import com.github.zhongl.accessor.Accessor;
+import com.github.zhongl.buffer.AbstractAccessor;
+import com.github.zhongl.buffer.Accessor;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
 

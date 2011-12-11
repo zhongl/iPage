@@ -16,37 +16,41 @@
 
 package com.github.zhongl.index;
 
+import com.github.zhongl.buffer.MappedBufferFile;
 import com.github.zhongl.integerity.Validator;
+import com.github.zhongl.util.FileBase;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class BucketTest {
+public class BucketTest extends FileBase {
 
     @Test
     public void validateOrRecoveryIfOnlyCRCBroken() throws Exception {
+        file = testFile("validateOrRecoveryIfOnlyCRCBroken");
         byte[] md5Bytes0 = DigestUtils.md5("value0");
         byte[] md5Bytes1 = DigestUtils.md5("value1");
         byte[] brokenCRC = Longs.toByteArray(0);
         byte[] brokenBucketContent = Bytes.concat(
-                new byte[] {1},
+                new byte[]{1},
                 md5Bytes0,
                 Longs.toByteArray(4L),
-                new byte[] {1},
+                new byte[]{1},
                 md5Bytes1,
                 Longs.toByteArray(7L),
                 new byte[4038],
                 brokenCRC
         );
-        Bucket bucket = new Bucket(ByteBuffer.wrap(brokenBucketContent));// mock broken fileHashTable file.
+
+        MappedBufferFile mappedBufferFile = new MappedBufferFile(file, brokenBucketContent.length, false);
+        Bucket bucket = new Bucket(0, mappedBufferFile);// mock broken fileHashTable file.
 
         Validator<Slot, IOException> validator = new Validator<Slot, IOException>() {
             @Override

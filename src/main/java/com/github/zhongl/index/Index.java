@@ -127,8 +127,8 @@ public class Index implements Closeable, ValidateOrRecover<Slot, IOException> {
         return true;
     }
 
-    public static IndexBuilder baseOn(File dir) {
-        return new IndexBuilder(dir);
+    public static Builder baseOn(File dir) {
+        return new Builder(dir);
     }
 }
 
