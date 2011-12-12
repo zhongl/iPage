@@ -17,20 +17,24 @@ Please see [issues](https://github.com/zhongl/iPage/issues?sort=created&directio
 
 # Benchmark
 
-    | Operation(sync) | Times | Total Eplase | Average Elapse | Minimize Elapse | Maximzie Elapse |
-    |-----------------|-------|--------------|----------------|-----------------|-----------------|
-    | Get             | 1000  | 0ms          | 0ms            | 0ms             | 0ms             |
-    | Remove          | 1000  | 497ms        | 0ms            | 0ms             | 12ms            |
-    | Put             | 1000  | 2,080ms      | 2ms            | 0ms             | 61ms            |
+    | Operation(sync) |   Times   | Total Eplase | Average Elapse | Minimize Elapse | Maximzie Elapse |
+    |-----------------|-----------|--------------|----------------|-----------------|-----------------|
+    | Get             | 1,000     | 36ms         | 0ms            | 0ms             | 1ms             |
+    | Remove          | 1,000     | 97ms         | 0ms            | 0ms             | 11ms            |
+    | Put             | 1,000     | 1,583ms      | 1ms            | 0ms             | 28ms            |
+    |-----------------|-----------|--------------|----------------|-----------------|-----------------|
+    | Get             | 1,000,000 | 9,850ms      | 0ms            | 0ms             | 25ms            |
+    | Remove          | 1,000,000 | 32,421ms     | 0ms            | 0ms             | 74ms            |
+    | Put             | 1,000,000 | 1,111,221ms  | 0ms            | 0ms             | 257ms           |
 
 ## Configuration
 
 * Concurrency threads is 8
 * Read and write data is 1KB
 * Synchronize invocation
-* Flush by count 5 or elapse 10ms
-* Chunk capacity is 32MB
-* Initial bucket size is 100
+* Flush by count 4 or elapse 10ms
+* Chunk capacity is 128MB
+* Initial bucket size is 8192
 * Group commit is on
 
 ## Enviroment
@@ -66,20 +70,10 @@ iPage need it to run benchmark:
 
 ## Run benchmark
 
-    > mvn clean test -Dtest=KVEngineBenchmark
+    > mvn clean test -Dtest=BlockingKVEngineBenchmark -Dblocking.kvengine.benchmark.times=1000
 
 ## Use KVEngine
 
-Here is a simple test case code:
-
-    File dir = new File("/path/to/dir");
-    KVEngine engine = KVEngine.baseOn(dir).build();
-	engine.startup();
-	Record record = new Record("record");
-	Md5Key key = Md5Key.valueOf(record);
-
-	assertThat(engine.put(key, record), is(nullValue()));
-	assertThat(engine.get(key), is(record));
-	assertThat(engine.remove(key), is(record));
+TODO
 
 More usage please see <https://github.com/zhongl/iPage/tree/master/src/test/java/com/github/zhongl/ipage> .

@@ -32,6 +32,7 @@ import java.util.concurrent.Callable;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class BlockingKVEngineBenchmark extends FileBase {
 
+    public static final int TIMES = Integer.getInteger("blocking.kvengine.benchmark.times", 1000);
     private BlockingKVEngine<byte[]> engine;
 
     @After
@@ -46,10 +47,10 @@ public class BlockingKVEngineBenchmark extends FileBase {
         dir = testDir("benchmark");
         engine = new BlockingKVEngine<byte[]>(
                 KVEngine.<byte[]>baseOn(dir)
-                        .initialBucketSize(100)
-                        .flushByCount(5)
+                        .initialBucketSize(8192)
+                        .flushByCount(4)
                         .flushByElapseMilliseconds(10L)
-                        .chunkCapacity(1024 * 1024 * 32)
+                        .chunkCapacity(1024 * 1024 * 128)
                         .valueAccessor(CommonAccessors.BYTES)
                         .groupCommit(true)
                         .build());
@@ -64,16 +65,18 @@ public class BlockingKVEngineBenchmark extends FileBase {
         CallableFactory removeFactory = new RemoveFactory(engine);
 
         CallableFactory concatCallableFactory = new ConcatCallableFactory(
-                new FixInstanceSizeFactory(1000, addFactory),
-                new FixInstanceSizeFactory(1000, getFactory),
-                new FixInstanceSizeFactory(1000, removeFactory)
+                new FixInstanceSizeFactory(TIMES, addFactory),
+                new FixInstanceSizeFactory(TIMES, getFactory),
+                new FixInstanceSizeFactory(TIMES, removeFactory)
         );
 
         Collection<Statistics> statisticses =
-                new Benchmarker(concatCallableFactory, 8, 3000).benchmark(); // setup concurrent 1, because engine is not thread-safe
+                new Benchmarker(concatCallableFactory, 8, TIMES * 3).benchmark();
         for (Statistics statisticse : statisticses) {
             System.out.println(statisticse);
         }
+
+        engine.garbageCollect();
     }
 
     abstract static class OperationFactory implements CallableFactory {
