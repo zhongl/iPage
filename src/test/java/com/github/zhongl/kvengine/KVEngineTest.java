@@ -74,12 +74,15 @@ public class KVEngineTest extends FileBase {
         String value2 = "value2";
         engine.put(Md5Key.generate(value2.getBytes()), value2);
 
+
+        String value3 = "value3";
+        engine.put(Md5Key.generate(value0.getBytes()), value3);
         engine.remove(Md5Key.generate(value1.getBytes()));
 
         Iterator<String> iterator = engine.valueIterator();
 
-        assertThat(iterator.next(), is(value0));
         assertThat(iterator.next(), is(value2));
+        assertThat(iterator.next(), is(value3));
         assertThat(iterator.hasNext(), is(false));
     }
 

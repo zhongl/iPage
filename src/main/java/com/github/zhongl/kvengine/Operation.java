@@ -1,5 +1,6 @@
 /*
  * Copyright 2011 zhongl
+ *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -92,7 +93,9 @@ class Operation<T> implements Closeable {
             protected Cursor<Entry<T>> execute() throws Throwable {
                 Cursor<Entry<T>> next = iPage.next(entryCursor);
                 if (next.isEnd()) return next; // EOF
-                if (index.contains(next.lastValue().key()))
+                Long offset = index.get(next.lastValue().key());
+                if (offset != null // existed key
+                        && offset.equals(entryCursor.offset()) /*is the newest version value*/)
                     return next;
                 return Cursor.cursor(next.offset(), null); // value was deleted
             }
