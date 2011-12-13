@@ -18,9 +18,6 @@ package com.github.zhongl.index;
 
 import org.junit.Test;
 
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
-
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class Md5KeyTest {
 
@@ -34,9 +31,4 @@ public class Md5KeyTest {
         new Md5Key(new byte[17]);
     }
 
-    @Test
-    public void md5KeyToString() throws Exception {
-        String expect = "Md5Key{md5Bytes=1bc29b36f623ba82aaf6724fd3b16718}";
-        assertThat(Md5Key.generate("md5".getBytes()).toString(), is(expect));
-    }
 }

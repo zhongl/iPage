@@ -55,7 +55,7 @@ class ChunkList<T> {
         long beginPosition = chunks.isEmpty() ? 0L : last().endPosition() + 1;
         File file = new File(baseDir, Long.toString(beginPosition));
         convertLastRecentlyUsedChunkToReadOnly();
-        Chunk<T> chunk = Chunk.<T>appendableChunk(file, beginPosition, capacity, accessor);
+        Chunk<T> chunk = Chunk.appendableChunk(file, beginPosition, capacity, accessor);
         chunks.addLast(chunk);
         return chunk;
     }

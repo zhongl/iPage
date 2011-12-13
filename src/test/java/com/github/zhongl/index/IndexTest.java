@@ -22,7 +22,6 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.After;
 import org.junit.Test;
 
@@ -159,8 +158,8 @@ public class IndexTest extends FileBase {
     public void validateOrRecoveryIfHasBroken() throws Exception {
         dir = testDir("validateOrRecoveryIfHasBroken");
 
-        byte[] md5Bytes0 = DigestUtils.md5("value0");
-        byte[] md5Bytes1 = DigestUtils.md5("value1");
+        byte[] md5Bytes0 = Md5Key.md5("value0".getBytes());
+        byte[] md5Bytes1 = Md5Key.md5("value1".getBytes());
         byte[] bucketCRC = Longs.toByteArray(0);
         byte[] brokenBucketContent = Bytes.concat(
                 new byte[] {1},

@@ -48,14 +48,4 @@ final class Entry<V> {
         return value;
     }
 
-    @Override
-    public String toString() {
-        final StringBuilder sb = new StringBuilder();
-        sb.append("Entry");
-        sb.append("{key=").append(key);
-        sb.append(", value=").append(value);
-        sb.append('}');
-        return sb.toString();
-    }
-
 }

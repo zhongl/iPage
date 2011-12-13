@@ -18,11 +18,11 @@ package com.github.zhongl.index;
 
 import com.github.zhongl.buffer.AbstractAccessor;
 import com.github.zhongl.buffer.Accessor;
-import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.codec.digest.DigestUtils;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.nio.ByteBuffer;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -36,20 +36,22 @@ public class Md5Key {
 
     private final byte[] md5Bytes;
 
+    public static byte[] md5(byte[] bytes) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("MD5");
+            return digest.digest(bytes);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static Md5Key generate(byte[] bytes) {
-        return new Md5Key(DigestUtils.md5(bytes));
+        return new Md5Key(md5(bytes));
     }
 
     public Md5Key(byte[] md5Bytes) {
         checkArgument(md5Bytes.length == BYTE_LENGTH, "Invalid generate bytes length %s", md5Bytes.length);
         this.md5Bytes = md5Bytes;
-    }
-
-    @Override
-    public String toString() {
-        final StringBuilder sb = new StringBuilder();
-        sb.append("Md5Key").append("{md5Bytes=").append(Hex.encodeHexString(md5Bytes)).append('}');
-        return sb.toString();
     }
 
     @Override
