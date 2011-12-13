@@ -54,8 +54,8 @@ class ChunkList<T> {
     public Chunk<T> grow() throws IOException {
         long beginPosition = chunks.isEmpty() ? 0L : last().endPosition() + 1;
         File file = new File(baseDir, Long.toString(beginPosition));
-        convertLastRecentlyUsedChunkToReadOnly();
         Chunk<T> chunk = Chunk.appendableChunk(file, beginPosition, capacity, accessor);
+        convertLastRecentlyUsedChunkToReadOnly();
         chunks.addLast(chunk);
         return chunk;
     }
