@@ -32,13 +32,13 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
     private final GarbageCollector<T> garbageCollector;
     private final ChunkList<T> chunkList;
 
-    public IPage(ChunkList<T> chunkList) {
-        this.chunkList = chunkList;
-        garbageCollector = new GarbageCollector<T>();
-    }
-
     public static <T> Builder<T> baseOn(File dir) {
         return new Builder<T>(dir);
+    }
+
+    IPage(ChunkList<T> chunkList) {
+        this.chunkList = chunkList;
+        garbageCollector = new GarbageCollector<T>();
     }
 
     public long append(T record) throws IOException {
