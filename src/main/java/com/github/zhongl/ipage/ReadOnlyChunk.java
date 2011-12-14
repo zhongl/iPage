@@ -17,6 +17,7 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.buffer.Accessor;
+import com.github.zhongl.buffer.MappedBufferFile;
 import com.github.zhongl.integerity.Validator;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
@@ -39,16 +40,17 @@ import java.util.List;
  */
 @NotThreadSafe
 class ReadOnlyChunk<T> extends Chunk<T> {
-
-    private final File file;
-    private final int capacity;
     private final int minimizeCollectLength;
+    private final MappedBufferFile mappedBufferFile;
 
-    public ReadOnlyChunk(File file, long beginPosition, int capacity, Accessor<T> accessor, int minimizeCollectLength) throws IOException {
-        super(file, beginPosition, accessor, capacity, true);
-        this.file = file;
-        this.capacity = capacity;
+    public ReadOnlyChunk(File file,
+                         long beginPosition,
+                         Accessor<T> accessor,
+                         int minimizeCollectLength,
+                         long maxIdleTimeMillis) throws IOException {
+        super(file, beginPosition, accessor);
         this.minimizeCollectLength = minimizeCollectLength;
+        mappedBufferFile = MappedBufferFile.readOnly(file, maxIdleTimeMillis);
     }
 
     @Override
@@ -57,14 +59,10 @@ class ReadOnlyChunk<T> extends Chunk<T> {
     }
 
     @Override
-    public long endPosition() {
-        return beginPosition() + capacity - 1;
-    }
+    public long endPosition() { return beginPosition() + file.length() - 1; }
 
     @Override
-    public void close() {
-        mappedBufferFile.release();
-    }
+    public void close() { mappedBufferFile.release(); }
 
     @Override
     @Deprecated
@@ -87,14 +85,14 @@ class ReadOnlyChunk<T> extends Chunk<T> {
     /** @see Chunk#left(long) */
     @Override
     public Chunk<T> left(long offset) throws IOException {
+        close();
         if (offset == beginPosition()) {                                                    // Case 2
             delete();
             return null;
         }
-        close();
         long size = offset - beginPosition();
         truncate(file, size);                                                               // Case 1
-        return new ReadOnlyChunk(file, beginPosition(), (int) size, accessor, minimizeCollectLength);
+        return new ReadOnlyChunk(file, beginPosition(), accessor, minimizeCollectLength, 0);
     }
 
     /** @see Chunk#right(long) */
@@ -106,12 +104,15 @@ class ReadOnlyChunk<T> extends Chunk<T> {
         return chunk;
     }
 
+    @Override
+    protected MappedBufferFile mappedBufferFile() { return mappedBufferFile; }
+
     private Chunk<T> right0(long offset) throws IOException {
         File newFile = new File(file.getParentFile(), Long.toString(offset));
         long length = endPosition() - offset + 1;
         offset -= beginPosition();
         InputSupplier<InputStream> from = ByteStreams.slice(Files.newInputStreamSupplier(file), offset, length);
         Files.copy(from, newFile);
-        return new ReadOnlyChunk(newFile, offset, (int) newFile.length(), accessor, minimizeCollectLength);
+        return new ReadOnlyChunk(newFile, offset, accessor, minimizeCollectLength, 0);
     }
 }

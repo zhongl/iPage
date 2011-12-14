@@ -113,7 +113,7 @@ public class Builder<V> {
         final IPage<Entry<V>> iPage = newIPage();
         final Index index = newIndex();
 
-        if (exists && dataIntegerity.validate()) {
+        if (exists && !dataIntegerity.validate()) {
             new Recovery(index, iPage).run();
         }
 

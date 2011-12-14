@@ -48,13 +48,17 @@ public class BucketTest extends FileBase {
                 brokenCRC
         );
 
-        MappedBufferFile mappedBufferFile = new MappedBufferFile(file, brokenBucketContent.length, false);
+        MappedBufferFile mappedBufferFile = MappedBufferFile.writeable(file, brokenBucketContent.length);
         Bucket bucket = new Bucket(0, mappedBufferFile);// mock broken fileHashTable file.
 
         Validator<Slot, IOException> validator = new Validator<Slot, IOException>() {
             @Override
             public boolean validate(Slot slot) {
-                return slot.offset() < 10L;
+                try {
+                    return slot.offset() < 10L;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
         };
         assertThat(bucket.validateOrRecoverBy(validator), is(true));

@@ -43,7 +43,6 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
 
     public long append(T record) throws IOException {
         try {
-            releaseChunkIfNecessary();
             return chunkList.last().append(record);
         } catch (BufferOverflowException e) {
             chunkList.grow();
@@ -51,12 +50,7 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
         }
     }
 
-    private void releaseChunkIfNecessary() {
-        // TODO releaseChunkIfNecessary
-    }
-
     public T get(long offset) throws IOException {
-        releaseChunkIfNecessary();
         try {
             return chunkList.chunkIn(offset).get(offset);
         } catch (IndexOutOfBoundsException e) {
@@ -80,7 +74,6 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
 
     public void flush() throws IOException {
         chunkList.last().flush();
-        releaseChunkIfNecessary();
     }
 
     @Override

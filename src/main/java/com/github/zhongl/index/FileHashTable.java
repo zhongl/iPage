@@ -50,7 +50,7 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
     public FileHashTable(File file, int buckets) throws IOException {
         this.file = file;
         amountOfBuckets = buckets > 0 ? buckets : DEFAULT_SIZE;
-        mappedBufferFile = new MappedBufferFile(file, amountOfBuckets * Bucket.LENGTH, false);
+        mappedBufferFile = MappedBufferFile.writeable(file, amountOfBuckets * Bucket.LENGTH);
         calculateOccupiedSlots();
     }
 
@@ -62,7 +62,7 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
         return occupiedSlots;
     }
 
-    public Long put(Md5Key key, Long offset) {
+    public Long put(Md5Key key, Long offset) throws IOException {
         Bucket bucket = buckets(hashAndMod(key));
         Long preoffset = bucket.put(key, offset);
         bucket.updateCRC();
@@ -70,11 +70,11 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
         return preoffset;
     }
 
-    public Long get(Md5Key key) {
+    public Long get(Md5Key key) throws IOException {
         return buckets(hashAndMod(key)).get(key);
     }
 
-    public Long remove(Md5Key key) {
+    public Long remove(Md5Key key) throws IOException {
         Bucket bucket = buckets(hashAndMod(key));
         Long preoffset = bucket.remove(key);
         if (preoffset != null) { // remove an exist key
@@ -93,7 +93,7 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
         return Math.abs(key.hashCode()) % amountOfBuckets;
     }
 
-    private void calculateOccupiedSlots() {
+    private void calculateOccupiedSlots() throws IOException {
         for (int i = 0; i < amountOfBuckets; i++) {
             occupiedSlots += buckets(i).occupiedSlots();
         }

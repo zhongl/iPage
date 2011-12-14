@@ -31,7 +31,7 @@ public class GarbageCollectorTest extends FileBase {
     public void collect() throws Exception {
         file = testFile("collect");
         GarbageCollector<String> collector = new GarbageCollector<String>();
-        Chunk<String> chunk = Chunk.appendableChunk(file, 0L, 4096, CommonAccessors.STRING);
+        Chunk<String> chunk = new AppendableChunk(file, 0L, 4096, CommonAccessors.STRING);
 
         ChunkList<String> chunkList = mock(ChunkList.class);
         doReturn(chunk).when(chunkList).first();

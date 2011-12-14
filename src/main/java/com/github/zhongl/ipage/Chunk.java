@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.BufferOverflowException;
+import java.nio.BufferUnderflowException;
 import java.nio.ReadOnlyBufferException;
 import java.util.List;
 
@@ -39,55 +40,41 @@ import static com.google.common.base.Preconditions.checkState;
 public abstract class Chunk<T> implements ValidateOrRecover<T, IOException> {
     public static final int DEFAULT_CAPACITY = 4096; // 4k
 
-    public static <T> Chunk<T> asReadOnly(Chunk<T> chunk, int minimizeCollectLength) throws IOException {
+    public static <T> Chunk<T> asReadOnly(Chunk<T> chunk, int minimizeCollectLength, long maxIdleTimeMillis) throws IOException {
         if (chunk instanceof ReadOnlyChunk) return chunk;
         chunk.close();
-        return readOnlyChunk(chunk.file, chunk.beginPosition(), (int) chunk.file.length(), chunk.accessor, minimizeCollectLength);
-    }
-
-    public static <T> Chunk<T> readOnlyChunk(File file, long beginPosition, int capacity, Accessor<T> accessor, int minimizeCollectLength) throws IOException {
-        return new ReadOnlyChunk<T>(file, beginPosition, capacity, accessor, minimizeCollectLength);
-    }
-
-    public static <T> Chunk<T> appendableChunk(File file, long beginPosition, int capcity, Accessor<T> accessor) throws IOException {
-        return new AppendableChunk(file, beginPosition, capcity, accessor);
+        return new ReadOnlyChunk(chunk.file, chunk.beginPosition(), chunk.accessor, minimizeCollectLength, maxIdleTimeMillis);
     }
 
     protected final Accessor<T> accessor;
     protected final long beginPosition;
     protected final File file;
-    protected final MappedBufferFile mappedBufferFile;
 
-    protected Chunk(File file, long beginPosition, Accessor<T> accessor, int capacity, boolean readOnly) throws IOException {
+    protected Chunk(File file, long beginPosition, Accessor<T> accessor) throws IOException {
         this.file = file;
         this.accessor = accessor;
         this.beginPosition = beginPosition;
-        mappedBufferFile = new MappedBufferFile(file, capacity, readOnly);
     }
 
-    public abstract long append(T object) throws ReadOnlyBufferException, BufferOverflowException;
+    public abstract long append(T object) throws ReadOnlyBufferException, BufferOverflowException, IOException;
 
-    public final T get(long offset) {
+    public final T get(long offset) throws IOException {
         try {
             int localOffset = (int) (offset - beginPosition());
             int length = (int) (endPosition() - offset + 1);
-            return mappedBufferFile.readBy(accessor, localOffset, length);
-        } catch (RuntimeException e) { // java.nio.BufferUnderflowException, java.lang.IllegalArgumentException
-            return null; // invalide offset
-        }
+            return mappedBufferFile().readBy(accessor, localOffset, length);
+        } catch (BufferUnderflowException e) { // invalid offset
+        } catch (IllegalArgumentException e) {} // invalid offset
+        return null;
     }
 
-    public void flush() {
-        mappedBufferFile.flush();
-    }
+    public void flush() { mappedBufferFile().flush(); }
 
     public abstract long endPosition();
 
     public final long beginPosition() { return beginPosition; }
 
-    public final void delete() {
-        checkState(file.delete(), "Can't delete file %s", file);
-    }
+    public final void delete() { checkState(file.delete(), "Can't delete file %s", file); }
 
     public final Cursor<T> next(Cursor<T> cursor) throws IOException {
         if (cursor.offset() >= endPosition()) return cursor.end();
@@ -119,7 +106,6 @@ public abstract class Chunk<T> implements ValidateOrRecover<T, IOException> {
      */
     public abstract List<Chunk<T>> split(long begin, long end) throws IOException;
 
-
     /**
      * There are throe left cases:
      * <pre>
@@ -135,6 +121,7 @@ public abstract class Chunk<T> implements ValidateOrRecover<T, IOException> {
      */
     public abstract Chunk<T> left(long offset) throws IOException;
 
+
     /**
      * There are two right cases:
      * <pre>
@@ -149,7 +136,9 @@ public abstract class Chunk<T> implements ValidateOrRecover<T, IOException> {
      */
     public abstract Chunk<T> right(long offset) throws IOException;
 
-    protected static final void truncate(File file, long size) {
+    protected abstract MappedBufferFile mappedBufferFile();
+
+    protected static void truncate(File file, long size) {
         try {
             RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
             randomAccessFile.setLength(size);

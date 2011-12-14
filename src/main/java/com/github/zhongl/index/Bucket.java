@@ -29,16 +29,13 @@ import java.util.zip.CRC32;
 import static com.github.zhongl.buffer.CommonAccessors.LONG;
 
 /**
- * {@link Bucket} has 163
- * {@link com.github.zhongl.index.Slot} for storing tuple of
- * {@link com.github.zhongl.index.Md5Key} and offset of {@link com.github.zhongl.kvengine.Entry} in
- * {@link com.github.zhongl.ipage.IPage}.
- * <p/>
- * Every slot has a head byte to indicate it is empty, occupied or released.
+ * {@link Bucket}
+ *
+ * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl</a>
  */
 class Bucket implements ValidateOrRecover<Slot, IOException> {
 
-    public static final int LENGTH = Integer.getInteger("com.github.zhongl.ipage.bucket.length", 4096); // default 4K
+    public static final int LENGTH = Integer.getInteger("com.github.zhongl.index.bucket.length", 4096); // default 4K
     private static final int CRC_OFFSET = LENGTH - 8;
 
     private final int beginPosition;
@@ -49,7 +46,7 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
         this.mappedBufferFile = mappedBufferFile;
     }
 
-    public Long put(Md5Key key, Long offset) {
+    public Long put(Md5Key key, Long offset) throws IOException {
         int firstReleased = -1;
         for (int i = 0; i < amountOfSlots(); i++) {
             switch (slots(i).state()) {
@@ -68,7 +65,7 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
         return slots(firstReleased).add(key, offset);
     }
 
-    public Long get(Md5Key key) {
+    public Long get(Md5Key key) throws IOException {
         for (int i = 0; i < amountOfSlots(); i++) {
             Slot slot = slots(i);
             if (slot.state() == Slot.State.EMPTY) return FileHashTable.NULL_OFFSET; // because rest slots are all empty
@@ -77,7 +74,7 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
         return FileHashTable.NULL_OFFSET;
     }
 
-    public Long remove(Md5Key key) {
+    public Long remove(Md5Key key) throws IOException {
         for (int i = 0; i < amountOfSlots(); i++) {
             Slot slot = slots(i);
             if (slot.state() == Slot.State.EMPTY) return FileHashTable.NULL_OFFSET; // because rest slots are all empty
@@ -88,11 +85,11 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
         return FileHashTable.NULL_OFFSET;
     }
 
-    public void updateCRC() {
+    public void updateCRC() throws IOException {
         mappedBufferFile.writeBy(LONG, CRC_OFFSET, calculateCRC());
     }
 
-    public boolean checkCRC() {
+    public boolean checkCRC() throws IOException {
         if (slots(0).state() == Slot.State.EMPTY) return true;
         return readCRC() == calculateCRC();
     }
@@ -108,7 +105,7 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
         return true;
     }
 
-    public int occupiedSlots() {
+    public int occupiedSlots() throws IOException {
         int occupiedSlots = 0;
         for (int i = 0; i < amountOfSlots(); i++) {
             Slot slot = slots(i);
@@ -125,7 +122,7 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
         return new Slot(index * Slot.LENGTH + beginPosition, mappedBufferFile);
     }
 
-    private long calculateCRC() {
+    private long calculateCRC() throws IOException {
         final int length = Slot.LENGTH * amountOfSlots();
         byte[] allSlotBytes = mappedBufferFile.readBy(new Accessor<byte[]>() {
             @Override
@@ -147,7 +144,7 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
         return crc32.getValue();
     }
 
-    private long readCRC() {
+    private long readCRC() throws IOException {
         return mappedBufferFile.readBy(LONG, CRC_OFFSET, LONG.byteLengthOf(0L));
     }
 

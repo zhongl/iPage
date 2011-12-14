@@ -118,6 +118,6 @@ public class AppendableChunkTest extends ChunkBase {
     protected void newChunk() throws IOException {
         long beginPositionInIPage = 0L;
         int capacity = 4096;
-        chunk = Chunk.appendableChunk(file, beginPositionInIPage, capacity, CommonAccessors.STRING);
+        chunk = new AppendableChunk(file, beginPositionInIPage, capacity, CommonAccessors.STRING);
     }
 }

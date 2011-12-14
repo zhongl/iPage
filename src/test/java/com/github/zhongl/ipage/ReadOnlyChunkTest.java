@@ -144,8 +144,8 @@ public class ReadOnlyChunkTest extends ChunkBase {
         long beginPosition = 0L;
         int capacity = 4096;
         int minimizeCollectLength = 16;
-        chunk = Chunk.appendableChunk(file, beginPosition, capacity, CommonAccessors.STRING);
+        chunk = new AppendableChunk(file, beginPosition, capacity, CommonAccessors.STRING);
         fullFill(chunk);
-        chunk = Chunk.asReadOnly(chunk, minimizeCollectLength);
+        chunk = Chunk.asReadOnly(chunk, minimizeCollectLength, 1000 * 5);
     }
 }
