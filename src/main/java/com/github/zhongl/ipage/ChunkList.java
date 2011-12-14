@@ -18,7 +18,7 @@ package com.github.zhongl.ipage;
 
 import com.github.zhongl.buffer.Accessor;
 import com.github.zhongl.util.FileNumberNameComparator;
-import com.github.zhongl.util.NumberFileNameFilter;
+import com.github.zhongl.util.NumberNameFilter;
 
 import java.io.File;
 import java.io.IOException;
@@ -83,7 +83,7 @@ class ChunkList<T> {
     }
 
     private void loadExistChunks() throws IOException {
-        File[] files = baseDir.listFiles(new NumberFileNameFilter());
+        File[] files = baseDir.listFiles(new NumberNameFilter());
         if (files == null) return;
         Arrays.sort(files, new FileNumberNameComparator());
 

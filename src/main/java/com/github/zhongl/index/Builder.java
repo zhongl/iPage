@@ -17,7 +17,7 @@
 package com.github.zhongl.index;
 
 import com.github.zhongl.util.FileNumberNameComparator;
-import com.github.zhongl.util.NumberFileNameFilter;
+import com.github.zhongl.util.NumberNameFilter;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,7 +54,7 @@ public final class Builder {
     }
 
     private List<FileHashTable> loadExistFileHashTables() throws IOException {
-        File[] files = baseDir.listFiles(new NumberFileNameFilter());
+        File[] files = baseDir.listFiles(new NumberNameFilter());
         Arrays.sort(files, new FileNumberNameComparator());
         ArrayList<FileHashTable> fileHashTableList = new ArrayList<FileHashTable>(files.length);
         for (File file : files) {

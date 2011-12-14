@@ -32,6 +32,7 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
     private final GarbageCollector<T> garbageCollector;
     private final ChunkList<T> chunkList;
 
+
     public static <T> Builder<T> baseOn(File dir) {
         return new Builder<T>(dir);
     }
@@ -84,6 +85,10 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
     @Override
     public void close() throws IOException {
         chunkList.close();
+    }
+
+    public interface Options extends com.github.zhongl.options.Options {
+
     }
 
 }
