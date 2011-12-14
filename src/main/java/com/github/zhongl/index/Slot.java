@@ -19,6 +19,8 @@ package com.github.zhongl.index;
 import com.github.zhongl.buffer.CommonAccessors;
 import com.github.zhongl.buffer.MappedBufferFile;
 
+import java.io.IOException;
+
 import static com.github.zhongl.buffer.CommonAccessors.LONG;
 
 
@@ -39,19 +41,19 @@ public class Slot {
         this.mappedBufferFile = mappedBufferFile;
     }
 
-    public State state() {
+    public State state() throws IOException {
         return State.readFrom(mappedBufferFile, beginPosition);
     }
 
-    public Md5Key key() {
+    public Md5Key key() throws IOException {
         return mappedBufferFile.readBy(Md5Key.ACCESSOR, beginPositionOfKey(), Md5Key.BYTE_LENGTH);
     }
 
-    public Long offset() {
+    public Long offset() throws IOException {
         return mappedBufferFile.readBy(LONG, beginPositionOfOffset(), LONG.byteLengthOf(0L));
     }
 
-    Long add(Md5Key key, Long offset) {
+    Long add(Md5Key key, Long offset) throws IOException {
         State.OCCUPIED.writeTo(mappedBufferFile, beginPosition);
         mappedBufferFile.writeBy(Md5Key.ACCESSOR, beginPositionOfKey(), key);
         mappedBufferFile.writeBy(LONG, beginPositionOfOffset(), offset);
@@ -62,13 +64,13 @@ public class Slot {
 
     private int beginPositionOfKey() {return beginPosition + 1;}
 
-    Long replace(Md5Key key, Long offset) {
+    Long replace(Md5Key key, Long offset) throws IOException {
         Long previous = offset();
         add(key, offset);
         return previous;
     }
 
-    Long release() {
+    Long release() throws IOException {
         State.RELEASED.writeTo(mappedBufferFile, beginPosition);
         return offset();
     }
@@ -76,11 +78,11 @@ public class Slot {
     enum State {
         EMPTY, OCCUPIED, RELEASED;
 
-        public void writeTo(MappedBufferFile mappedBufferFile, int offset) {
+        public void writeTo(MappedBufferFile mappedBufferFile, int offset) throws IOException {
             mappedBufferFile.writeBy(CommonAccessors.BYTE, offset, (byte) ordinal());
         }
 
-        public static State readFrom(MappedBufferFile mappedBufferFile, int offset) {
+        public static State readFrom(MappedBufferFile mappedBufferFile, int offset) throws IOException {
             Byte b = mappedBufferFile.readBy(CommonAccessors.BYTE, offset, 1);
             if (EMPTY.ordinal() == b) return EMPTY;
             if (OCCUPIED.ordinal() == b) return OCCUPIED;

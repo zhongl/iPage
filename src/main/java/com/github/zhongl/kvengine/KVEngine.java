@@ -47,7 +47,7 @@ public class KVEngine<T> extends Engine {
             operation.close();
             dataIntegerity.safeClose();
         } catch (IOException e) {
-            e.printStackTrace();  // TODO log e
+            throw new RuntimeException(e);
         }
     }
 

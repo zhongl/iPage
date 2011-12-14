@@ -110,9 +110,7 @@ abstract class Group {
 
         @Override
         public void register(FutureCallback<?> callback) {
-            if (callback instanceof GroupableFutureCallback) {
-                pendingCallbacks.add((GroupableFutureCallback<?>) callback);
-            }
+            pendingCallbacks.add((GroupableFutureCallback<?>) callback);
         }
     }
 

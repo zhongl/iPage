@@ -30,8 +30,9 @@ public final class Builder<T> {
 
     private final File baseDir;
     private int chunkCapacity = UNSET;
-    private int minimizeCollectLength = UNSET;
+    private int minCollectLength = UNSET;
     private Accessor<T> accessor;
+    private long maxIdleTimeMillis;
 
     Builder(File dir) {
         if (!dir.exists()) checkState(dir.mkdirs(), "Can not create directory: %s", dir);
@@ -46,9 +47,15 @@ public final class Builder<T> {
         return this;
     }
 
-    public Builder<T> minimizeCollectLength(int value) {
+    public Builder<T> maxIdleTimeMillis(long value) {
+        checkArgument(value >= 0, "maximize idle time milliseconds should not less than 0");
+        maxIdleTimeMillis = value;
+        return this;
+    }
+
+    public Builder<T> minCollectLength(int value) {
         checkArgument(value >= 0, "minimize collect length should not less than 0");
-        chunkCapacity = value;
+        minCollectLength = value;
         return this;
     }
 
@@ -60,9 +67,10 @@ public final class Builder<T> {
 
     public IPage<T> build() throws IOException {
         chunkCapacity = (chunkCapacity == UNSET) ? Chunk.DEFAULT_CAPACITY : chunkCapacity;
-        minimizeCollectLength = (minimizeCollectLength == UNSET) ? 4096 : minimizeCollectLength;
+        minCollectLength = (minCollectLength == UNSET) ? 4096 : minCollectLength;
+        maxIdleTimeMillis = (maxIdleTimeMillis == UNSET) ? 1000 * 5 : minCollectLength;
         checkNotNull(accessor, "EntryAccessor should not be null.");
-        return new IPage<T>(new ChunkList<T>(baseDir, chunkCapacity, accessor, minimizeCollectLength));
+        return new IPage<T>(new ChunkList<T>(baseDir, chunkCapacity, accessor, minCollectLength, maxIdleTimeMillis));
     }
 
 }

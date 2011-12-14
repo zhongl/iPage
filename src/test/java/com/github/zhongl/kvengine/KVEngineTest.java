@@ -32,15 +32,15 @@ import static org.junit.Assert.assertThat;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class KVEngineTest extends FileBase {
 
-    protected BlockingKVEngine<String> engine;
+    protected BlockingKVEngine<byte[]> engine;
 
     @Test
     public void putAndGetAndRemove() throws Exception {
         dir = testDir("putAndGetAndRemove");
         newEngineAndStartup();
 
-        String value = "value";
-        Md5Key key = Md5Key.generate(value.getBytes());
+        byte[] value = "value".getBytes();
+        Md5Key key = Md5Key.generate(value);
 
         assertThat(engine.put(key, value), is(nullValue()));
         assertThat(engine.get(key), is(value));
@@ -48,7 +48,7 @@ public class KVEngineTest extends FileBase {
     }
 
     private void newEngineAndStartup() throws IOException {
-        engine = new BlockingKVEngine<String>(KVEngine.<String>baseOn(dir).valueAccessor(CommonAccessors.STRING).build());
+        engine = new BlockingKVEngine<byte[]>(KVEngine.<byte[]>baseOn(dir).valueAccessor(CommonAccessors.BYTES).build());
         engine.startup();
     }
 
@@ -67,19 +67,19 @@ public class KVEngineTest extends FileBase {
 
         newEngineAndStartup();
 
-        String value0 = "value0";
-        engine.put(Md5Key.generate(value0.getBytes()), value0);
-        String value1 = "value1";
-        engine.put(Md5Key.generate(value1.getBytes()), value1);
-        String value2 = "value2";
-        engine.put(Md5Key.generate(value2.getBytes()), value2);
+        byte[] value0 = "value0".getBytes();
+        engine.put(Md5Key.generate(value0), value0);
+        byte[] value1 = "value1".getBytes();
+        engine.put(Md5Key.generate(value1), value1);
+        byte[] value2 = "value2".getBytes();
+        engine.put(Md5Key.generate(value2), value2);
 
 
-        String value3 = "value3";
-        engine.put(Md5Key.generate(value0.getBytes()), value3);
-        engine.remove(Md5Key.generate(value1.getBytes()));
+        byte[] value3 = "value3".getBytes();
+        engine.put(Md5Key.generate(value0), value3);
+        engine.remove(Md5Key.generate(value1));
 
-        Iterator<String> iterator = engine.valueIterator();
+        Iterator<byte[]> iterator = engine.valueIterator();
 
         assertThat(iterator.next(), is(value2));
         assertThat(iterator.next(), is(value3));

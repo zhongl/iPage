@@ -130,6 +130,6 @@ public class ChunkListTest extends FileBase {
     }
 
     private void newChunkList() throws IOException {
-        chunkList = new ChunkList<String>(dir, 4096, CommonAccessors.STRING, 32);
+        chunkList = new ChunkList<String>(dir, 4096, CommonAccessors.STRING, 32, 1000 * 5);
     }
 }

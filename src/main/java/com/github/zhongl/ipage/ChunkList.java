@@ -35,12 +35,14 @@ class ChunkList<T> {
     private final int minimizeCollectLength;
     private final int capacity;
     private final Accessor<T> accessor;
+    private final long maxIdleTimeMillis;
 
-    public ChunkList(File baseDir, int capacity, Accessor<T> accessor, int minimizeCollectLength) throws IOException {
+    public ChunkList(File baseDir, int capacity, Accessor<T> accessor, int minimizeCollectLength, long maxIdleTimeMillis) throws IOException {
         this.baseDir = baseDir;
         this.minimizeCollectLength = minimizeCollectLength;
         this.accessor = accessor;
         this.capacity = capacity;
+        this.maxIdleTimeMillis = maxIdleTimeMillis;
         chunks = new LinkedList<Chunk<T>>();
         chunkOffsetRangeList = new ChunkOffsetRangeList();
         loadExistChunks();
@@ -54,7 +56,7 @@ class ChunkList<T> {
     public Chunk<T> grow() throws IOException {
         long beginPosition = chunks.isEmpty() ? 0L : last().endPosition() + 1;
         File file = new File(baseDir, Long.toString(beginPosition));
-        Chunk<T> chunk = Chunk.appendableChunk(file, beginPosition, capacity, accessor);
+        Chunk<T> chunk = new AppendableChunk<T>(file, beginPosition, capacity, accessor);
         convertLastRecentlyUsedChunkToReadOnly();
         chunks.addLast(chunk);
         return chunk;
@@ -68,7 +70,6 @@ class ChunkList<T> {
     private int indexOfChunkIn(long offset) {return Range.binarySearch(chunkOffsetRangeList, offset);}
 
     public Chunk<T> first() throws IOException {
-        if (chunks.isEmpty()) return grow();
         return chunks.getFirst();
     }
 
@@ -78,7 +79,7 @@ class ChunkList<T> {
 
     private void convertLastRecentlyUsedChunkToReadOnly() throws IOException {
         if (chunks.isEmpty()) return;
-        chunks.addLast(Chunk.asReadOnly(chunks.removeLast(), minimizeCollectLength));
+        chunks.addLast(Chunk.asReadOnly(chunks.removeLast(), minimizeCollectLength, 0));
     }
 
     private void loadExistChunks() throws IOException {
@@ -91,9 +92,9 @@ class ChunkList<T> {
             long beginPosition = Long.parseLong(file.getName());
             Chunk<T> chunk;
             if (i == files.length - 1) {
-                chunk = Chunk.appendableChunk(file, beginPosition, capacity, accessor);
+                chunk = new AppendableChunk<T>(file, beginPosition, capacity, accessor);
             } else {
-                chunk = Chunk.readOnlyChunk(file, beginPosition, (int) file.length(), accessor, minimizeCollectLength);
+                chunk = new ReadOnlyChunk<T>(file, beginPosition, accessor, minimizeCollectLength, maxIdleTimeMillis);
             }
             chunks.addLast(chunk);
         }
@@ -122,9 +123,10 @@ class ChunkList<T> {
     /** @see Chunk#left(long) */
     private long collectLeft(int indexOfBeginChunk, long begin) throws IOException {
         Chunk<T> left = chunks.remove(indexOfBeginChunk);
+        long collectedLength = left.endPosition() + 1 - begin;
         Chunk<T> newLeft = left.left(begin);
         if (newLeft != null) chunks.add(indexOfBeginChunk, newLeft);
-        return left.endPosition() + 1 - begin;
+        return collectedLength;
     }
 
     /** @see Chunk#split(long, long) */
@@ -151,4 +153,5 @@ class ChunkList<T> {
         public int size() { return chunks.size(); }
 
     }
+
 }
