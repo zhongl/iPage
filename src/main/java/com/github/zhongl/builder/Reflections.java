@@ -39,6 +39,7 @@ public class Reflections {
     }
 
     private static Class getBoxClassOrReturn(Class aClass) {
+        if (aClass.equals(boolean.class)) return Boolean.class;
         if (aClass.equals(int.class)) return Integer.class;
         if (aClass.equals(float.class)) return Float.class;
         if (aClass.equals(long.class)) return Long.class;

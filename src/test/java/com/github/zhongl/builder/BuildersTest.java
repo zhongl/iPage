@@ -51,22 +51,28 @@ public class BuildersTest {
 
     public interface Builder extends BuilderConvention {
 
+        @OptionIndex(0)
         @GreaterThan("0")
         @DefaultValue("7")
         Builder intValue(int value);
 
+        @OptionIndex(1)
         @GreaterThanOrEqual("0")
         Builder longValue(long value);
 
+        @OptionIndex(2)
         @LessThan("7")
         Builder floatValue(float value);
 
+        @OptionIndex(3)
         @LessThanOrEqual("7")
         Builder doubleValue(double value);
 
+        @OptionIndex(4)
         @NotNull
         Builder objectValue(Object value);
 
+        @OptionIndex(5)
         @Match("(\\d{1,3}\\.){3}\\d{1,3}")
         Builder ipAddress(String value);
 

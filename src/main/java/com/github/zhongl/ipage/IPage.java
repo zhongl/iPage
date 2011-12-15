@@ -39,46 +39,20 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
     private final GarbageCollector<T> garbageCollector;
     private final ChunkFactory<T> chunkFactory;
 
-    public static Builder baseOn(File dir) {
-        Builder builder = Builders.newInstanceOf(Builder.class);
+    public static <T> Builder<T> baseOn(File dir) {
+        Builder<T> builder = Builders.newInstanceOf(Builder.class);
         builder.dir(dir);
         return builder;
     }
 
     IPage(File baseDir,
           Accessor<T> accessor,
-          int minimizeChunkCapacity,
+          int maximizeChunkCapacity,
           long minimizeCollectLength,
           long maxChunkIdleTimeMillis) throws IOException {
-        this.chunkFactory = new ChunkFactory<T>(baseDir, accessor, minimizeChunkCapacity, maxChunkIdleTimeMillis);
+        this.chunkFactory = new ChunkFactory<T>(baseDir, accessor, maximizeChunkCapacity, maxChunkIdleTimeMillis);
         this.chunkList = new ChunkList<T>(loadExistChunksBy(baseDir, chunkFactory));
         garbageCollector = new GarbageCollector<T>(chunkList, minimizeCollectLength);
-    }
-
-    private ArrayList<Chunk<T>> loadExistChunksBy(File baseDir, final ChunkFactory<T> chunkFactory) throws IOException {
-        baseDir.mkdirs();
-        Preconditions.checkArgument(baseDir.isDirectory(), "%s should be a directory", baseDir);
-        return new NumberNamedFilesLoader<Chunk<T>>(baseDir, new FileHandler<Chunk<T>>() {
-            @Override
-            public Chunk<T> handle(File file, boolean last) throws IOException {
-                return last ? chunkFactory.appendableChunkOn(file) : chunkFactory.readOnlyChunkOn(file);
-            }
-        }).loadTo(new ArrayList<Chunk<T>>());
-    }
-
-    public Chunk<T> grow() throws IOException {
-        Chunk<T> chunk;
-        if (chunkList.isEmpty()) chunk = chunkFactory.newFirstAppendableChunk();
-        else {
-            chunk = chunkFactory.newAppendableAfter(chunkList.last());
-            convertLastRecentlyUsedChunkToReadOnly();
-        }
-        chunkList.append(chunk);
-        return chunk;
-    }
-
-    private void convertLastRecentlyUsedChunkToReadOnly() throws IOException {
-        chunkList.set(chunkList.lastIndex(), chunkList.last().asReadOnly());
     }
 
     public long append(T record) throws IOException {
@@ -108,7 +82,7 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
         return garbageCollector.collect(survivorOffset);
     }
 
-    public void flush() throws IOException { chunkList.last().flush(); }
+    public void flush() throws IOException { if (!chunkList.isEmpty()) chunkList.last().flush(); }
 
     @Override
     public boolean validateOrRecoverBy(Validator<T, IOException> validator) throws IOException {
@@ -118,22 +92,53 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
     @Override
     public void close() throws IOException { chunkList.close(); }
 
+    private ArrayList<Chunk<T>> loadExistChunksBy(File baseDir, final ChunkFactory<T> chunkFactory) throws IOException {
+        baseDir.mkdirs();
+        Preconditions.checkArgument(baseDir.isDirectory(), "%s should be a directory", baseDir);
+        return new NumberNamedFilesLoader<Chunk<T>>(baseDir, new FileHandler<Chunk<T>>() {
+            @Override
+            public Chunk<T> handle(File file, boolean last) throws IOException {
+                return last ? chunkFactory.appendableChunkOn(file) : chunkFactory.readOnlyChunkOn(file);
+            }
+        }).loadTo(new ArrayList<Chunk<T>>());
+    }
+
+    private Chunk<T> grow() throws IOException {
+        Chunk<T> chunk;
+        if (chunkList.isEmpty()) chunk = chunkFactory.newFirstAppendableChunk();
+        else {
+            chunk = chunkFactory.newAppendableAfter(chunkList.last());
+            convertLastRecentlyUsedChunkToReadOnly();
+        }
+        chunkList.append(chunk);
+        return chunk;
+    }
+
+    private void convertLastRecentlyUsedChunkToReadOnly() throws IOException {
+        chunkList.set(chunkList.lastIndex(), chunkList.last().asReadOnly());
+    }
+
     public static interface Builder<T> extends BuilderConvention {
 
+        @OptionIndex(0)
         @NotNull
         Builder<T> dir(File dir);
 
+        @OptionIndex(1)
         @NotNull
         Builder<T> accessor(Accessor<T> value);
 
+        @OptionIndex(2)
         @DefaultValue("4096")
         @GreaterThanOrEqual("4096")
-        Builder<T> minimizeChunkCapacity(int value);
+        Builder<T> maximizeChunkCapacity(int value);
 
+        @OptionIndex(3)
         @DefaultValue("4096")
         @GreaterThanOrEqual("4096")
         Builder<T> minimizeCollectLength(long value);
 
+        @OptionIndex(4)
         @DefaultValue("4000")
         @GreaterThanOrEqual("1000")
         Builder<T> maxChunkIdleTimeMillis(long value);

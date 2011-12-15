@@ -20,7 +20,6 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.ArrayList;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -40,7 +39,7 @@ public class Builders {
 
     private static class InnerInvocationHandler implements InvocationHandler {
 
-        private final ArrayList<Method> proxyMethods;
+        private final Method[] optionMethods;
         private final Object[] optionValues;
         private final Object[] optionDefaultValues;
         private final Method buildMethod;
@@ -49,7 +48,7 @@ public class Builders {
             int length = proxyMethods.length - 1; // exclude method "build"
             this.optionValues = new Object[length];
             this.optionDefaultValues = new Object[length];
-            this.proxyMethods = new ArrayList<Method>(length);
+            this.optionMethods = new Method[length];
             this.buildMethod = filterAndSetDefaultValueAndGetBuildMethod(proxyMethods);
         }
 
@@ -66,6 +65,7 @@ public class Builders {
         private void validate(Object value, Annotation[] annotations) {
             for (Annotation annotation : annotations) {
                 if (annotation instanceof DefaultValue) continue;
+                if (annotation instanceof OptionIndex) continue;
                 Validators.validator(annotation).validate(value);
             }
         }
@@ -87,7 +87,7 @@ public class Builders {
         private void checkOrSetDefaultValue() {
             for (int i = 0; i < optionValues.length; i++) {
                 if (optionValues[i] != null) continue;
-                if (optionDefaultValues[i] == null) throw new NullPointerException(proxyMethods.get(i).getName());
+                if (optionDefaultValues[i] == null) throw new NullPointerException(optionMethods[i].getName());
                 optionValues[i] = optionDefaultValues[i];
             }
         }
@@ -95,28 +95,31 @@ public class Builders {
         private Method filterAndSetDefaultValueAndGetBuildMethod(Method[] proxyMethods) throws Exception {
             // TODO refactor this method
             Method buildMethod = null;
-            int index = 0;
             for (Method proxyMethod : proxyMethods) {
                 if (proxyMethod.getName().equals("build")) {
                     buildMethod = proxyMethod;
                     continue;
                 }
 
+                OptionIndex optionIndex = proxyMethod.getAnnotation(OptionIndex.class);
+
                 DefaultValue defaultValue = proxyMethod.getAnnotation(DefaultValue.class);
                 if (defaultValue != null) {
                     Class<?> aClass = proxyMethod.getParameterTypes()[0];
-                    optionDefaultValues[index] = getDefaultValueBy(defaultValue.value(), aClass);
+                    optionDefaultValues[optionIndex.value()] = getDefaultValueBy(defaultValue.value(), aClass);
                 }
-                index++;
-                this.proxyMethods.add(proxyMethod);
+                optionMethods[optionIndex.value()] = proxyMethod;
             }
             return buildMethod;
         }
 
         public void set(Method method, Object value) {
-            int index = proxyMethods.indexOf(method);
-            checkState(optionValues[index] == null, "Can't repeat set " + method);
-            optionValues[index] = value;
+            for (int i = 0; i < optionMethods.length; i++) {
+                if (!optionMethods[i].equals(method)) continue;
+                checkState(optionValues[i] == null, "Can't repeat set " + method);
+                optionValues[i] = value;
+                return;
+            }
         }
 
     }

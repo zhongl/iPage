@@ -48,9 +48,9 @@ public class BlockingKVEngineBenchmark extends FileBase {
         engine = new BlockingKVEngine<byte[]>(
                 KVEngine.<byte[]>baseOn(dir)
                         .initialBucketSize(8192)
-                        .flushByCount(4)
-                        .flushByElapseMilliseconds(10L)
-                        .chunkCapacity(1024 * 1024 * 128)
+                        .flushCount(4)
+                        .flushElapseMilliseconds(10L)
+                        .maximizeChunkCapacity(1024 * 1024 * 128)
                         .valueAccessor(CommonAccessors.BYTES)
                         .groupCommit(true)
                         .build());
