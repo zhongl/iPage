@@ -18,10 +18,8 @@ package com.github.zhongl.ipage;
 
 import com.github.zhongl.buffer.Accessor;
 import com.github.zhongl.buffer.MappedDirectBuffers;
-import com.google.common.base.Preconditions;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
 class ChunkFactory<T> {
@@ -52,11 +50,6 @@ class ChunkFactory<T> {
     }
 
     public Chunk<T> newFirstAppendableChunk() throws IOException {
-        try {
-            return appendableChunkOn(new File(baseDir, "0"));
-        } catch (FileNotFoundException e) {
-            Preconditions.checkState(baseDir.mkdirs(), "Can't mkdirs %s", baseDir);
-            return newFirstAppendableChunk();
-        }
+        return appendableChunkOn(new File(baseDir, "0"));
     }
 }

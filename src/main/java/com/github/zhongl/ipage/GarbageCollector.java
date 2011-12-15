@@ -79,7 +79,7 @@ public class GarbageCollector<T> {
         List<? extends Chunk<T>> pieces = splittingChunk.split(begin, end);
         if (pieces.get(0).equals(splittingChunk)) return 0L; // can't left appending chunk
         chunkList.set(indexOfChunk, pieces.get(0));
-        if (pieces.size() == 2) chunkList.insert(indexOfChunk + 1, pieces.get(1));
+        chunkList.insert(indexOfChunk + 1, pieces.get(1));
         return end - begin;
     }
 

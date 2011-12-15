@@ -33,6 +33,7 @@ public class NumberNamedFilesLoader<V> {
 
     public <T extends Collection<V>> T loadTo(T collection) throws IOException {
         File[] files = dir.listFiles(new NumberNameFilter());
+        if (files == null) return collection;
         Arrays.sort(files, new FileNumberNameComparator());
         for (File file : files) {
             for (int i = 0; i < files.length; i++) {

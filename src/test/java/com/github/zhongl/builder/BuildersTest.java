@@ -25,7 +25,7 @@ import static org.junit.Assert.assertThat;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class BuildersTest {
 
-    public static class TestObject {
+    public static class A {
         final int intValue;
         final long longValue;
         final float floatValue;
@@ -33,12 +33,12 @@ public class BuildersTest {
         final Object objectValue;
         final String ipAddress;
 
-        public TestObject(int intValue,
-                          long longValue,
-                          float floatValue,
-                          double doubleValue,
-                          Object objectValue,
-                          String ipAddress) {
+        public A(int intValue,
+                 long longValue,
+                 float floatValue,
+                 double doubleValue,
+                 Object objectValue,
+                 String ipAddress) {
             this.intValue = intValue;
             this.longValue = longValue;
             this.floatValue = floatValue;
@@ -70,7 +70,7 @@ public class BuildersTest {
         @Match("(\\d{1,3}\\.){3}\\d{1,3}")
         Builder ipAddress(String value);
 
-        TestObject build();
+        A build();
     }
 
     @Test
@@ -143,54 +143,54 @@ public class BuildersTest {
     @Test
     public void defaultIntValue() throws Exception {
         Builder builder = newInstanceOf(Builder.class);
-        TestObject testObject = builder.longValue(0L)
-                                       .floatValue(6.9f)
-                                       .doubleValue(7.0)
-                                       .objectValue("")
-                                       .ipAddress("127.0.0.1")
-                                       .build();
+        A a = builder.longValue(0L)
+                     .floatValue(6.9f)
+                     .doubleValue(7.0)
+                     .objectValue("")
+                     .ipAddress("127.0.0.1")
+                     .build();
 
-        assertThat(testObject.intValue, is(7));
-        assertThat(testObject.longValue, is(0L));
-        assertThat(testObject.floatValue, is(6.9f));
-        assertThat(testObject.doubleValue, is(7.0));
-        assertThat((String) testObject.objectValue, is(""));
-        assertThat(testObject.ipAddress, is("127.0.0.1"));
+        assertThat(a.intValue, is(7));
+        assertThat(a.longValue, is(0L));
+        assertThat(a.floatValue, is(6.9f));
+        assertThat(a.doubleValue, is(7.0));
+        assertThat((String) a.objectValue, is(""));
+        assertThat(a.ipAddress, is("127.0.0.1"));
     }
 
     @Test
     public void setIntValue() throws Exception {
         Builder builder = newInstanceOf(Builder.class);
-        TestObject testObject = builder.intValue(8)
-                                       .longValue(0L)
-                                       .floatValue(6.9f)
-                                       .doubleValue(7.0)
-                                       .objectValue("")
-                                       .ipAddress("127.0.0.1")
-                                       .build();
+        A a = builder.intValue(8)
+                     .longValue(0L)
+                     .floatValue(6.9f)
+                     .doubleValue(7.0)
+                     .objectValue("")
+                     .ipAddress("127.0.0.1")
+                     .build();
 
-        assertThat(testObject.intValue, is(8));
-        assertThat(testObject.longValue, is(0L));
-        assertThat(testObject.floatValue, is(6.9f));
-        assertThat(testObject.doubleValue, is(7.0));
-        assertThat((String) testObject.objectValue, is(""));
-        assertThat(testObject.ipAddress, is("127.0.0.1"));
+        assertThat(a.intValue, is(8));
+        assertThat(a.longValue, is(0L));
+        assertThat(a.floatValue, is(6.9f));
+        assertThat(a.doubleValue, is(7.0));
+        assertThat((String) a.objectValue, is(""));
+        assertThat(a.ipAddress, is("127.0.0.1"));
     }
 
     @Test(expected = NullPointerException.class)
     public void notSetLongValue() throws Exception {
         Builder builder = newInstanceOf(Builder.class);
-        TestObject testObject = builder.floatValue(6.9f)
-                                       .doubleValue(7.0)
-                                       .objectValue("")
-                                       .ipAddress("127.0.0.1")
-                                       .build();
+        A a = builder.floatValue(6.9f)
+                     .doubleValue(7.0)
+                     .objectValue("")
+                     .ipAddress("127.0.0.1")
+                     .build();
 
-        assertThat(testObject.intValue, is(8));
-        assertThat(testObject.longValue, is(0L));
-        assertThat(testObject.floatValue, is(6.9f));
-        assertThat(testObject.doubleValue, is(7.0));
-        assertThat((String) testObject.objectValue, is(""));
-        assertThat(testObject.ipAddress, is("127.0.0.1"));
+        assertThat(a.intValue, is(8));
+        assertThat(a.longValue, is(0L));
+        assertThat(a.floatValue, is(6.9f));
+        assertThat(a.doubleValue, is(7.0));
+        assertThat((String) a.objectValue, is(""));
+        assertThat(a.ipAddress, is("127.0.0.1"));
     }
 }

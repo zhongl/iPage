@@ -26,12 +26,13 @@ public class Reflections {
         return getBoxClassOrReturn(aClass).getMethod("valueOf", String.class).invoke(null, value);
     }
 
-    public static Object newInstanceOf(Class<?> aClass, Object[] args) throws Exception {
-        Constructor<?>[] constructors = aClass.getConstructors();
-        for (Constructor<?> constructor : constructors) {
+    public static Object newInstanceOf(Class<?> aClass, final Object[] args) throws Exception {
+        Constructor<?>[] constructors = aClass.getDeclaredConstructors();
+        for (final Constructor<?> constructor : constructors) {
             Class<?>[] parameterTypes = constructor.getParameterTypes();
             if (parameterTypes.length != args.length) continue;
             if (typeNotMatch(parameterTypes, args)) continue;
+            constructor.setAccessible(true);
             return constructor.newInstance(args);
         }
         throw new NoSuchMethodException();
@@ -48,7 +49,7 @@ public class Reflections {
     private static boolean typeNotMatch(Class<?>[] parameterTypes, Object[] args) {
         for (int i = 0; i < parameterTypes.length; i++) {
             if (parameterTypes[i].equals(Object.class)) continue;
-            if (!getBoxClassOrReturn(parameterTypes[i]).equals(args[i].getClass())) return true;
+            if (!getBoxClassOrReturn(parameterTypes[i]).isAssignableFrom(args[i].getClass())) return true;
         }
         return false;
     }

@@ -22,6 +22,7 @@ import com.github.zhongl.integerity.ValidateOrRecover;
 import com.github.zhongl.integerity.Validator;
 import com.github.zhongl.util.FileHandler;
 import com.github.zhongl.util.NumberNamedFilesLoader;
+import com.google.common.base.Preconditions;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
@@ -55,6 +56,8 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
     }
 
     private ArrayList<Chunk<T>> loadExistChunksBy(File baseDir, final ChunkFactory<T> chunkFactory) throws IOException {
+        baseDir.mkdirs();
+        Preconditions.checkArgument(baseDir.isDirectory(), "%s should be a directory", baseDir);
         return new NumberNamedFilesLoader<Chunk<T>>(baseDir, new FileHandler<Chunk<T>>() {
             @Override
             public Chunk<T> handle(File file, boolean last) throws IOException {
@@ -129,7 +132,7 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
 
         @DefaultValue("4096")
         @GreaterThanOrEqual("4096")
-        Builder<T> minimizeCollectLength(int value);
+        Builder<T> minimizeCollectLength(long value);
 
         @DefaultValue("4000")
         @GreaterThanOrEqual("1000")

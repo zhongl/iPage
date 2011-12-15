@@ -95,8 +95,8 @@ public class Builders {
         private Method filterAndSetDefaultValueAndGetBuildMethod(Method[] proxyMethods) throws Exception {
             // TODO refactor this method
             Method buildMethod = null;
-            for (int i = 0; i < proxyMethods.length; i++) {
-                Method proxyMethod = proxyMethods[i];
+            int index = 0;
+            for (Method proxyMethod : proxyMethods) {
                 if (proxyMethod.getName().equals("build")) {
                     buildMethod = proxyMethod;
                     continue;
@@ -105,9 +105,9 @@ public class Builders {
                 DefaultValue defaultValue = proxyMethod.getAnnotation(DefaultValue.class);
                 if (defaultValue != null) {
                     Class<?> aClass = proxyMethod.getParameterTypes()[0];
-                    optionDefaultValues[i] = getDefaultValueBy(defaultValue.value(), aClass);
+                    optionDefaultValues[index] = getDefaultValueBy(defaultValue.value(), aClass);
                 }
-
+                index++;
                 this.proxyMethods.add(proxyMethod);
             }
             return buildMethod;
