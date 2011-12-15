@@ -17,21 +17,17 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.buffer.Accessor;
-import com.github.zhongl.buffer.MappedBufferFile;
+import com.github.zhongl.buffer.MappedDirectBuffers;
 import com.github.zhongl.integerity.Validator;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.Files;
-import com.google.common.io.InputSupplier;
 
 import javax.annotation.concurrent.NotThreadSafe;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.BufferOverflowException;
 import java.nio.ReadOnlyBufferException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+
+import static java.util.Collections.singletonList;
 
 /**
  * {@link com.github.zhongl.ipage.ReadOnlyChunk}
@@ -40,17 +36,9 @@ import java.util.List;
  */
 @NotThreadSafe
 class ReadOnlyChunk<T> extends Chunk<T> {
-    private final int minimizeCollectLength;
-    private final MappedBufferFile mappedBufferFile;
 
-    public ReadOnlyChunk(File file,
-                         long beginPosition,
-                         Accessor<T> accessor,
-                         int minimizeCollectLength,
-                         long maxIdleTimeMillis) throws IOException {
-        super(file, beginPosition, accessor);
-        this.minimizeCollectLength = minimizeCollectLength;
-        mappedBufferFile = MappedBufferFile.readOnly(file, maxIdleTimeMillis);
+    public ReadOnlyChunk(MappedDirectBuffers buffers, FileOperator fileOperator, Accessor<T> accessor) throws IOException {
+        super(buffers, fileOperator, accessor);
     }
 
     @Override
@@ -59,10 +47,13 @@ class ReadOnlyChunk<T> extends Chunk<T> {
     }
 
     @Override
-    public long endPosition() { return beginPosition() + file.length() - 1; }
+    public long endPosition() { return beginPosition() + fileOperator.length() - 1; }
 
     @Override
-    public void close() { mappedBufferFile.release(); }
+    public Chunk<T> asReadOnly() { return this; }
+
+    @Override
+    public void close() throws IOException { mappedDirectBuffer().release(); }
 
     @Override
     @Deprecated
@@ -72,27 +63,25 @@ class ReadOnlyChunk<T> extends Chunk<T> {
 
     /** @see Chunk#split(long, long) */
     @Override
-    public List<Chunk<T>> split(long begin, long end) throws IOException {
+    public List<? extends Chunk<T>> split(long begin, long end) throws IOException {
         T value = get(begin);
-        long minimizeInterval = (long) Math.max(accessor.byteLengthOf(value), minimizeCollectLength);
-        if (end - begin < minimizeInterval) return Collections.emptyList();                 // Case 3
-        if (begin == beginPosition()) return Arrays.asList(right(end));                     // Case 2
+        if (end - begin < accessor.byteLengthOf(value)) return singletonList(this);    // Case 3
+        if (begin == beginPosition()) return singletonList(right(end));                 // Case 2
         Chunk<T> right = right0(end); // do right first for avoiding delete by left
         Chunk<T> left = left(begin);
-        return Arrays.asList(left, right);                                                  // Case 1
+        return Arrays.asList(left, right);                                              // Case 1
     }
 
     /** @see Chunk#left(long) */
     @Override
     public Chunk<T> left(long offset) throws IOException {
         close();
-        if (offset == beginPosition()) {                                                    // Case 2
+        if (offset == beginPosition()) {                                                // Case 2
             delete();
             return null;
         }
         long size = offset - beginPosition();
-        truncate(file, size);                                                               // Case 1
-        return new ReadOnlyChunk(file, beginPosition(), accessor, minimizeCollectLength, 0);
+        return new ReadOnlyChunk(buffers, fileOperator.left(offset), accessor);     // Case 1
     }
 
     /** @see Chunk#right(long) */
@@ -104,15 +93,7 @@ class ReadOnlyChunk<T> extends Chunk<T> {
         return chunk;
     }
 
-    @Override
-    protected MappedBufferFile mappedBufferFile() { return mappedBufferFile; }
-
     private Chunk<T> right0(long offset) throws IOException {
-        File newFile = new File(file.getParentFile(), Long.toString(offset));
-        long length = endPosition() - offset + 1;
-        offset -= beginPosition();
-        InputSupplier<InputStream> from = ByteStreams.slice(Files.newInputStreamSupplier(file), offset, length);
-        Files.copy(from, newFile);
-        return new ReadOnlyChunk(newFile, offset, accessor, minimizeCollectLength, 0);
+        return new ReadOnlyChunk(buffers, fileOperator.right(offset), accessor);
     }
 }

@@ -16,14 +16,15 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.buffer.CommonAccessors;
+import com.github.zhongl.buffer.MappedDirectBuffers;
 import com.github.zhongl.integerity.Validator;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 
+import static com.github.zhongl.buffer.CommonAccessors.STRING;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
@@ -31,7 +32,7 @@ public class AppendableChunkTest extends ChunkBase {
 
     @Test
     public void appendAndGet() throws Exception {
-        file = testFile("appendAndGet");
+        dir = testDir("appendAndGet");
         newChunk();
 
         String record = "record";
@@ -42,7 +43,7 @@ public class AppendableChunkTest extends ChunkBase {
 
     @Test
     public void nextCursor() throws Exception {
-        file = testFile("nextCursor");
+        dir = testDir("nextCursor");
         newChunk();
 
         for (int i = 0; i < 10; i++) {
@@ -58,7 +59,7 @@ public class AppendableChunkTest extends ChunkBase {
 
     @Test
     public void validate() throws Exception {
-        file = testFile("checkCRC");
+        dir = testDir("checkCRC");
         newChunk();
 
         for (int i = 0; i < 10; i++) {
@@ -76,23 +77,15 @@ public class AppendableChunkTest extends ChunkBase {
     }
 
     @Test
-    public void getByInvalidOffset() throws Exception {
-        file = testFile("getByInvalidOffset");
-        newChunk();
-        chunk.append("record");
-        assertThat(chunk.get(1L), is(nullValue()));
-    }
-
-    @Test
     public void split() throws Exception {
-        file = testFile("split");
+        dir = testDir("split");
         newChunk();
-        assertThat(chunk.split(0L, 7L).isEmpty(), is(true));
+        assertThat(chunk.split(0L, 7L).get(0), is(chunk));
     }
 
     @Test
     public void left() throws Exception {
-        file = testFile("left");
+        dir = testDir("left");
         newChunk();
         Chunk<String> left = chunk.left(7L);
         assertThat(left, is(chunk));
@@ -100,7 +93,7 @@ public class AppendableChunkTest extends ChunkBase {
 
     @Test
     public void right() throws Exception {
-        file = testFile("right");
+        dir = testDir("right");
         newChunk();
         Chunk<String> right = chunk.right(7L);
         assertThat(right, is(chunk));
@@ -108,7 +101,7 @@ public class AppendableChunkTest extends ChunkBase {
 
     @Test
     public void endPosition() throws Exception {
-        file = testFile("endPosition");
+        dir = testDir("endPosition");
         newChunk();
         assertThat(chunk.endPosition(), is(chunk.beginPosition()));
         chunk.append("1234");
@@ -116,8 +109,7 @@ public class AppendableChunkTest extends ChunkBase {
     }
 
     protected void newChunk() throws IOException {
-        long beginPositionInIPage = 0L;
-        int capacity = 4096;
-        chunk = new AppendableChunk(file, beginPositionInIPage, capacity, CommonAccessors.STRING);
+        dir.mkdirs();
+        chunk = new AppendableChunk(new MappedDirectBuffers(), FileOperator.writeable(new File(dir, "0"), 4096), STRING);
     }
 }

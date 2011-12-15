@@ -16,7 +16,6 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.buffer.CommonAccessors;
 import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 
@@ -31,7 +30,8 @@ public class GarbageCollectorTest extends FileBase {
     public void collect() throws Exception {
         file = testFile("collect");
         GarbageCollector<String> collector = new GarbageCollector<String>();
-        Chunk<String> chunk = new AppendableChunk(file, 0L, 4096, CommonAccessors.STRING);
+        Chunk<String> chunk = mock(Chunk.class);
+        when(chunk.beginPosition()).thenReturn(0L);
 
         ChunkList<String> chunkList = mock(ChunkList.class);
         doReturn(chunk).when(chunkList).first();

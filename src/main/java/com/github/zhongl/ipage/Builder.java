@@ -42,7 +42,7 @@ public final class Builder<T> {
 
     public Builder<T> chunkCapacity(int value) {
         checkState(chunkCapacity == UNSET, "Chunk capacity can only set once.");
-        checkArgument(value >= Chunk.DEFAULT_CAPACITY, "Chunk capacity should not less than %s", Chunk.DEFAULT_CAPACITY);
+        checkArgument(value >= 4096, "Chunk capacity should not less than %s", 4096);
         chunkCapacity = value;
         return this;
     }
@@ -66,7 +66,7 @@ public final class Builder<T> {
     }
 
     public IPage<T> build() throws IOException {
-        chunkCapacity = (chunkCapacity == UNSET) ? Chunk.DEFAULT_CAPACITY : chunkCapacity;
+        chunkCapacity = (chunkCapacity == UNSET) ? 4096 : chunkCapacity;
         minCollectLength = (minCollectLength == UNSET) ? 4096 : minCollectLength;
         maxIdleTimeMillis = (maxIdleTimeMillis == UNSET) ? 1000 * 5 : minCollectLength;
         checkNotNull(accessor, "EntryAccessor should not be null.");

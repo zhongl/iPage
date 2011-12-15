@@ -19,7 +19,6 @@ package com.github.zhongl.kvengine;
 import com.github.zhongl.buffer.Accessor;
 import com.github.zhongl.index.FileHashTable;
 import com.github.zhongl.index.Index;
-import com.github.zhongl.ipage.Chunk;
 import com.github.zhongl.ipage.IPage;
 
 import javax.annotation.concurrent.NotThreadSafe;
@@ -56,8 +55,8 @@ public class Builder<V> {
 
     public Builder<V> chunkCapacity(int value) {
         checkState(chunkCapacity == UNSET, "Chunk capacity can only set once.");
-        checkArgument(value >= Chunk.DEFAULT_CAPACITY,
-                "Chunk capacity should not less than " + Chunk.DEFAULT_CAPACITY);
+        checkArgument(value >= 4096,
+                "Chunk capacity should not less than " + 4096);
         chunkCapacity = value;
         return this;
     }
@@ -150,7 +149,7 @@ public class Builder<V> {
 
     private IPage<Entry<V>> newIPage() throws IOException {
         checkNotNull(valueAccessor, "Value accessor need to set.");
-        chunkCapacity = (chunkCapacity == UNSET) ? Chunk.DEFAULT_CAPACITY : chunkCapacity;
+        chunkCapacity = (chunkCapacity == UNSET) ? 4096 : chunkCapacity;
         return IPage.<Entry<V>>baseOn(new File(dir, IPAGE_DIR))
                 .accessor(new EntryAccessor<V>(valueAccessor))
                 .chunkCapacity(chunkCapacity).build();

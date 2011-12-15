@@ -32,7 +32,7 @@ public abstract class ChunkBase extends FileBase {
 
     @Override
     public void tearDown() throws Exception {
-        chunk.close();
+        if (chunk != null) chunk.close();
         super.tearDown();
     }
 

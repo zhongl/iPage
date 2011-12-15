@@ -17,6 +17,7 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.buffer.Accessor;
+import com.github.zhongl.buffer.MappedDirectBuffers;
 import com.github.zhongl.util.FileNumberNameComparator;
 import com.github.zhongl.util.NumberNameFilter;
 
@@ -36,6 +37,7 @@ class ChunkList<T> {
     private final int capacity;
     private final Accessor<T> accessor;
     private final long maxIdleTimeMillis;
+    private final MappedDirectBuffers buffers;
 
     public ChunkList(File baseDir, int capacity, Accessor<T> accessor, int minimizeCollectLength, long maxIdleTimeMillis) throws IOException {
         this.baseDir = baseDir;
@@ -44,6 +46,7 @@ class ChunkList<T> {
         this.capacity = capacity;
         this.maxIdleTimeMillis = maxIdleTimeMillis;
         chunks = new LinkedList<Chunk<T>>();
+        buffers = new MappedDirectBuffers();
         chunkOffsetRangeList = new ChunkOffsetRangeList();
         loadExistChunks();
     }
@@ -56,10 +59,14 @@ class ChunkList<T> {
     public Chunk<T> grow() throws IOException {
         long beginPosition = chunks.isEmpty() ? 0L : last().endPosition() + 1;
         File file = new File(baseDir, Long.toString(beginPosition));
-        Chunk<T> chunk = new AppendableChunk<T>(file, beginPosition, capacity, accessor);
+        Chunk<T> chunk = appendableChunk(file);
         convertLastRecentlyUsedChunkToReadOnly();
         chunks.addLast(chunk);
         return chunk;
+    }
+
+    private AppendableChunk<T> appendableChunk(File file) throws IOException {
+        return new AppendableChunk<T>(buffers, FileOperator.writeable(file, capacity), accessor);
     }
 
     public Chunk<T> chunkIn(long offset) throws IOException {
@@ -79,7 +86,7 @@ class ChunkList<T> {
 
     private void convertLastRecentlyUsedChunkToReadOnly() throws IOException {
         if (chunks.isEmpty()) return;
-        chunks.addLast(Chunk.asReadOnly(chunks.removeLast(), minimizeCollectLength, 0));
+        chunks.addLast(chunks.removeLast().asReadOnly());
     }
 
     private void loadExistChunks() throws IOException {
@@ -89,12 +96,11 @@ class ChunkList<T> {
 
         for (int i = 0; i < files.length; i++) {
             File file = files[i];
-            long beginPosition = Long.parseLong(file.getName());
             Chunk<T> chunk;
             if (i == files.length - 1) {
-                chunk = new AppendableChunk<T>(file, beginPosition, capacity, accessor);
+                chunk = appendableChunk(file);
             } else {
-                chunk = new ReadOnlyChunk<T>(file, beginPosition, accessor, minimizeCollectLength, maxIdleTimeMillis);
+                chunk = new ReadOnlyChunk<T>(buffers, FileOperator.readOnly(file, maxIdleTimeMillis), accessor);
             }
             chunks.addLast(chunk);
         }
@@ -132,8 +138,8 @@ class ChunkList<T> {
     /** @see Chunk#split(long, long) */
     private long collectIn(int indexOfChunk, long begin, long end) throws IOException {
         Chunk<T> splittingChunk = chunks.get(indexOfChunk);
-        List<Chunk<T>> pieces = splittingChunk.split(begin, end);
-        if (pieces.isEmpty()) return 0L; // can't left appending chunk
+        List<? extends Chunk<T>> pieces = splittingChunk.split(begin, end);
+        if (pieces.get(0).equals(splittingChunk)) return 0L; // can't left appending chunk
         chunks.remove(indexOfChunk);
         for (int i = 0; i < pieces.size(); i++) {
             chunks.add(indexOfChunk + i, pieces.get(i));
