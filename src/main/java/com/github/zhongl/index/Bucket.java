@@ -17,7 +17,7 @@
 package com.github.zhongl.index;
 
 import com.github.zhongl.buffer.Accessor;
-import com.github.zhongl.buffer.MappedBufferFile;
+import com.github.zhongl.buffer.MappedDirectBuffer;
 import com.github.zhongl.integerity.ValidateOrRecover;
 import com.github.zhongl.integerity.Validator;
 
@@ -39,11 +39,11 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
     private static final int CRC_OFFSET = LENGTH - 8;
 
     private final int beginPosition;
-    private final MappedBufferFile mappedBufferFile;
+    private final MappedDirectBuffer buffer;
 
-    Bucket(int beginPosition, MappedBufferFile mappedBufferFile) {
+    Bucket(int beginPosition, MappedDirectBuffer buffer) {
         this.beginPosition = beginPosition;
-        this.mappedBufferFile = mappedBufferFile;
+        this.buffer = buffer;
     }
 
     public Long put(Md5Key key, Long offset) throws IOException {
@@ -86,7 +86,7 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
     }
 
     public void updateCRC() throws IOException {
-        mappedBufferFile.writeBy(LONG, CRC_OFFSET, calculateCRC());
+        buffer.writeBy(LONG, CRC_OFFSET, calculateCRC());
     }
 
     public boolean checkCRC() throws IOException {
@@ -119,12 +119,12 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
     private int amountOfSlots() {return LENGTH / Slot.LENGTH;}
 
     private Slot slots(int index) {
-        return new Slot(index * Slot.LENGTH + beginPosition, mappedBufferFile);
+        return new Slot(index * Slot.LENGTH + beginPosition, buffer);
     }
 
     private long calculateCRC() throws IOException {
         final int length = Slot.LENGTH * amountOfSlots();
-        byte[] allSlotBytes = mappedBufferFile.readBy(new Accessor<byte[]>() {
+        byte[] allSlotBytes = buffer.readBy(new Accessor<byte[]>() {
             @Override
             public int byteLengthOf(byte[] object) { throw new UnsupportedOperationException(); }
 
@@ -137,7 +137,7 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
                 buffer.get(bytes);
                 return bytes;
             }
-        }, beginPosition, length);
+        }, beginPosition);
 
         CRC32 crc32 = new CRC32();
         crc32.update(allSlotBytes);
@@ -145,7 +145,7 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
     }
 
     private long readCRC() throws IOException {
-        return mappedBufferFile.readBy(LONG, CRC_OFFSET, LONG.byteLengthOf(0L));
+        return buffer.readBy(LONG, CRC_OFFSET);
     }
 
 

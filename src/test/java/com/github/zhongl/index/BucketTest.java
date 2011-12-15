@@ -16,15 +16,20 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.buffer.MappedBufferFile;
+import com.github.zhongl.buffer.DirectBufferMapper;
+import com.github.zhongl.buffer.MappedDirectBuffer;
+import com.github.zhongl.buffer.MappedDirectBuffers;
 import com.github.zhongl.integerity.Validator;
 import com.github.zhongl.util.FileBase;
+import com.google.common.io.Files;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.nio.MappedByteBuffer;
 
+import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
@@ -37,7 +42,7 @@ public class BucketTest extends FileBase {
         byte[] md5Bytes0 = Md5Key.md5("value0".getBytes());
         byte[] md5Bytes1 = Md5Key.md5("value1".getBytes());
         byte[] brokenCRC = Longs.toByteArray(0);
-        byte[] brokenBucketContent = Bytes.concat(
+        final byte[] brokenBucketContent = Bytes.concat(
                 new byte[] {1},
                 md5Bytes0,
                 Longs.toByteArray(4L),
@@ -48,8 +53,18 @@ public class BucketTest extends FileBase {
                 brokenCRC
         );
 
-        MappedBufferFile mappedBufferFile = MappedBufferFile.writeable(file, brokenBucketContent.length);
-        Bucket bucket = new Bucket(0, mappedBufferFile);// mock broken fileHashTable file.
+        MappedDirectBuffer buffer = new MappedDirectBuffers().getOrMapBy(new DirectBufferMapper() {
+            @Override
+            public MappedByteBuffer map() throws IOException {
+                return Files.map(file, READ_WRITE, brokenBucketContent.length);
+            }
+
+            @Override
+            public long maxIdleTimeMillis() {
+                return 0;  // TODO maxIdleTimeMillis
+            }
+        });
+        Bucket bucket = new Bucket(0, buffer);// mock broken fileHashTable file.
 
         Validator<Slot, IOException> validator = new Validator<Slot, IOException>() {
             @Override

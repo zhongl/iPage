@@ -16,6 +16,8 @@
 
 package com.github.zhongl.buffer;
 
+import com.google.common.io.Files;
+
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
 import java.io.IOException;
@@ -27,6 +29,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static java.nio.channels.FileChannel.MapMode.READ_ONLY;
+import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
+
 /**
  * {@link MappedBufferFile}
  *
@@ -37,11 +42,11 @@ public class MappedBufferFile implements Comparable {
     final static List<MappedBufferFile> aliveFiles = new ArrayList<MappedBufferFile>();
 
     public static MappedBufferFile writeable(File file, int capacity) {
-        return newMappedBufferFile(new DirectBufferMapper(file, capacity, false), Long.MAX_VALUE);
+        return newMappedBufferFile(new InnerDirectBufferMapper(file, capacity, false), Long.MAX_VALUE);
     }
 
     public static MappedBufferFile readOnly(File file, long maxIdleTimeMIllis) {
-        return newMappedBufferFile(new DirectBufferMapper(file, (int) file.length(), true), maxIdleTimeMIllis);
+        return newMappedBufferFile(new InnerDirectBufferMapper(file, (int) file.length(), true), maxIdleTimeMIllis);
     }
 
     private static MappedBufferFile newMappedBufferFile(DirectBufferMapper mapper, long maxIdleTimeMIllis) {
@@ -82,7 +87,7 @@ public class MappedBufferFile implements Comparable {
     public <T> int writeBy(Accessor<T> accessor, int offset, T object)
             throws ReadOnlyBufferException, BufferOverflowException, IOException {
         int length = accessor.byteLengthOf(object);
-        if (offset + length > mapper.capacity()) throw new BufferOverflowException();
+        if (offset + length > buffer().limit()) throw new BufferOverflowException();
         return accessor.write(object, slice(buffer(), offset, length));
     }
 
@@ -132,5 +137,27 @@ public class MappedBufferFile implements Comparable {
     public int compareTo(Object o) {
         MappedBufferFile that = (MappedBufferFile) o;
         return (int) (this.remainIdleTimeMillis() - that.remainIdleTimeMillis());
+    }
+
+    private static class InnerDirectBufferMapper implements DirectBufferMapper {
+        private final File file;
+        private final int capacity;
+        private final boolean readOnly;
+
+        public InnerDirectBufferMapper(File file, int capacity, boolean readOnly) {
+            this.file = file;
+            this.capacity = capacity;
+            this.readOnly = readOnly;
+        }
+
+        @Override
+        public MappedByteBuffer map() throws IOException {
+            return Files.map(file, readOnly ? READ_ONLY : READ_WRITE, capacity);
+        }
+
+        @Override
+        public long maxIdleTimeMillis() {
+            return 7000L;
+        }
     }
 }
