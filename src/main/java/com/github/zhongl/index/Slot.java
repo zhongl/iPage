@@ -17,7 +17,7 @@
 package com.github.zhongl.index;
 
 import com.github.zhongl.buffer.CommonAccessors;
-import com.github.zhongl.buffer.MappedBufferFile;
+import com.github.zhongl.buffer.MappedDirectBuffer;
 
 import java.io.IOException;
 
@@ -34,29 +34,29 @@ public class Slot {
     public static final int LENGTH = 1 + Md5Key.BYTE_LENGTH + LONG.byteLengthOf(0L);
 
     private final int beginPosition;
-    private final MappedBufferFile mappedBufferFile;
+    private final MappedDirectBuffer buffer;
 
-    public Slot(int beginPosition, MappedBufferFile mappedBufferFile) {
+    public Slot(int beginPosition, MappedDirectBuffer buffer) {
         this.beginPosition = beginPosition;
-        this.mappedBufferFile = mappedBufferFile;
+        this.buffer = buffer;
     }
 
     public State state() throws IOException {
-        return State.readFrom(mappedBufferFile, beginPosition);
+        return State.readFrom(buffer, beginPosition);
     }
 
     public Md5Key key() throws IOException {
-        return mappedBufferFile.readBy(Md5Key.ACCESSOR, beginPositionOfKey(), Md5Key.BYTE_LENGTH);
+        return buffer.readBy(Md5Key.ACCESSOR, beginPositionOfKey());
     }
 
     public Long offset() throws IOException {
-        return mappedBufferFile.readBy(LONG, beginPositionOfOffset(), LONG.byteLengthOf(0L));
+        return buffer.readBy(LONG, beginPositionOfOffset());
     }
 
     Long add(Md5Key key, Long offset) throws IOException {
-        State.OCCUPIED.writeTo(mappedBufferFile, beginPosition);
-        mappedBufferFile.writeBy(Md5Key.ACCESSOR, beginPositionOfKey(), key);
-        mappedBufferFile.writeBy(LONG, beginPositionOfOffset(), offset);
+        State.OCCUPIED.writeTo(buffer, beginPosition);
+        buffer.writeBy(Md5Key.ACCESSOR, beginPositionOfKey(), key);
+        buffer.writeBy(LONG, beginPositionOfOffset(), offset);
         return null;
     }
 
@@ -71,19 +71,19 @@ public class Slot {
     }
 
     Long release() throws IOException {
-        State.RELEASED.writeTo(mappedBufferFile, beginPosition);
+        State.RELEASED.writeTo(buffer, beginPosition);
         return offset();
     }
 
     enum State {
         EMPTY, OCCUPIED, RELEASED;
 
-        public void writeTo(MappedBufferFile mappedBufferFile, int offset) throws IOException {
-            mappedBufferFile.writeBy(CommonAccessors.BYTE, offset, (byte) ordinal());
+        public void writeTo(MappedDirectBuffer buffer, int offset) throws IOException {
+            buffer.writeBy(CommonAccessors.BYTE, offset, (byte) ordinal());
         }
 
-        public static State readFrom(MappedBufferFile mappedBufferFile, int offset) throws IOException {
-            Byte b = mappedBufferFile.readBy(CommonAccessors.BYTE, offset, 1);
+        public static State readFrom(MappedDirectBuffer buffer, int offset) throws IOException {
+            Byte b = buffer.readBy(CommonAccessors.BYTE, offset);
             if (EMPTY.ordinal() == b) return EMPTY;
             if (OCCUPIED.ordinal() == b) return OCCUPIED;
             if (RELEASED.ordinal() == b) return RELEASED;

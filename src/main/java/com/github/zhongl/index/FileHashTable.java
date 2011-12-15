@@ -16,15 +16,20 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.buffer.MappedBufferFile;
+import com.github.zhongl.buffer.DirectBufferMapper;
+import com.github.zhongl.buffer.MappedDirectBuffer;
+import com.github.zhongl.buffer.MappedDirectBuffers;
 import com.github.zhongl.integerity.ValidateOrRecover;
 import com.github.zhongl.integerity.Validator;
+import com.google.common.io.Files;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
 import java.io.IOException;
+import java.nio.MappedByteBuffer;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 
 /**
  * {@link FileHashTable} is a file-based hash map for mapping
@@ -45,12 +50,12 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
     private final File file;
 
     private volatile int occupiedSlots;
-    private final MappedBufferFile mappedBufferFile;
+    private final MappedDirectBuffer mappedDirectBuffers;
 
     public FileHashTable(File file, int buckets) throws IOException {
         this.file = file;
         amountOfBuckets = buckets > 0 ? buckets : DEFAULT_SIZE;
-        mappedBufferFile = MappedBufferFile.writeable(file, amountOfBuckets * Bucket.LENGTH);
+        mappedDirectBuffers = new MappedDirectBuffers().getOrMapBy(new InnerDirectBufferMapper(file));
         calculateOccupiedSlots();
     }
 
@@ -86,7 +91,7 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
 
     public void close() {
         flush();
-        mappedBufferFile.release();
+        mappedDirectBuffers.release();
     }
 
     private int hashAndMod(Md5Key key) {
@@ -100,11 +105,11 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
     }
 
     private Bucket buckets(int i) {
-        return new Bucket(i * Bucket.LENGTH, mappedBufferFile);
+        return new Bucket(i * Bucket.LENGTH, mappedDirectBuffers);
     }
 
     public void flush() {
-        mappedBufferFile.flush();
+        mappedDirectBuffers.flush();
     }
 
     public boolean isEmpty() {
@@ -131,4 +136,19 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
         return true;
     }
 
+    private class InnerDirectBufferMapper implements DirectBufferMapper {
+        private final File file;
+
+        public InnerDirectBufferMapper(File file) {this.file = file;}
+
+        @Override
+        public MappedByteBuffer map() throws IOException {
+            return Files.map(file, READ_WRITE, amountOfBuckets * Bucket.LENGTH);
+        }
+
+        @Override
+        public long maxIdleTimeMillis() {
+            return Long.MAX_VALUE;
+        }
+    }
 }

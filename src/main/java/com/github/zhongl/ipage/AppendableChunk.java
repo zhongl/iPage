@@ -17,11 +17,10 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.buffer.Accessor;
-import com.github.zhongl.buffer.MappedBufferFile;
+import com.github.zhongl.buffer.MappedDirectBuffers;
 import com.github.zhongl.integerity.Validator;
 
 import javax.annotation.concurrent.NotThreadSafe;
-import java.io.File;
 import java.io.IOException;
 import java.nio.BufferOverflowException;
 import java.nio.ReadOnlyBufferException;
@@ -35,50 +34,53 @@ import java.util.List;
  */
 @NotThreadSafe
 class AppendableChunk<T> extends Chunk<T> {
-    private final MappedBufferFile mappedBufferFile;
     private volatile int writePosition = 0;
 
-    public AppendableChunk(File file, long beginPosition, int capacity, Accessor<T> accessor) throws IOException {
-        super(file, beginPosition, accessor);
-        mappedBufferFile = MappedBufferFile.writeable(file, capacity);
+    public AppendableChunk(MappedDirectBuffers buffers, FileOperator fileOperator, Accessor<T> accessor) throws IOException {
+        super(buffers, fileOperator, accessor);
     }
 
     @Override
     public long append(T object) throws ReadOnlyBufferException, BufferOverflowException, IOException {
-        long iPageOffset = writePosition + beginPosition;
-        writePosition += mappedBufferFile.writeBy(accessor, writePosition, object);
+        long iPageOffset = writePosition + beginPosition();
+        writePosition += mappedDirectBuffer().writeBy(accessor, writePosition, object);
         return iPageOffset;
     }
 
     @Override
     public long endPosition() {
-        if (writePosition == 0) return beginPosition;
-        return beginPosition + writePosition - 1;
+        if (writePosition == 0) return beginPosition();
+        return beginPosition() + writePosition - 1;
     }
 
     @Override
-    public void close() {
+    public Chunk<T> asReadOnly() throws IOException {
+        return new ReadOnlyChunk<T>(buffers, fileOperator.asReadOnly(), accessor);
+    }
+
+    @Override
+    public void close() throws IOException {
         flush();
-        mappedBufferFile.release();
-        truncate(file, writePosition);
+        mappedDirectBuffer().release();
+        fileOperator.left(writePosition);
     }
 
     @Override
     public boolean validateOrRecoverBy(Validator<T, IOException> validator) throws IOException {
-        Cursor<T> cursor = Cursor.begin(beginPosition);
+        Cursor<T> cursor = Cursor.begin(beginPosition());
         while (cursor.offset() < endPosition()) {
             long lastOffset = cursor.offset();
             cursor = next(cursor);
             if (validator.validate(cursor.lastValue())) continue;
-            writePosition = (int) (lastOffset - beginPosition);
+            writePosition = (int) (lastOffset - beginPosition());
             return false;
         }
         return true;
     }
 
     @Override
-    public List<Chunk<T>> split(long begin, long end) throws IOException {
-        return Collections.emptyList(); // unsupport for appending chunk
+    public List<? extends Chunk<T>> split(long begin, long end) throws IOException {
+        return Collections.singletonList(this); // unsupport for appending chunk
     }
 
     @Override
@@ -86,8 +88,5 @@ class AppendableChunk<T> extends Chunk<T> {
 
     @Override
     public Chunk<T> right(long offset) throws IOException { return this;  /*unsupport for appending chunk*/ }
-
-    @Override
-    protected MappedBufferFile mappedBufferFile() { return mappedBufferFile; }
 
 }

@@ -16,42 +16,117 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.buffer.CommonAccessors;
-import com.github.zhongl.util.FileBase;
+import org.junit.Before;
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class GarbageCollectorTest extends FileBase {
+public class GarbageCollectorTest {
+
+    private ChunkList<String> chunkList;
+    private GarbageCollector<String> collector;
+
+    @Before
+    public void setUp() throws Exception {
+        chunkList = new ChunkList<String>(new ArrayList<Chunk<String>>());
+        collector = new GarbageCollector<String>(chunkList, 16L);
+    }
 
     @Test
-    public void collect() throws Exception {
-        file = testFile("collect");
-        GarbageCollector<String> collector = new GarbageCollector<String>();
-        Chunk<String> chunk = new AppendableChunk(file, 0L, 4096, CommonAccessors.STRING);
-
-        ChunkList<String> chunkList = mock(ChunkList.class);
-        doReturn(chunk).when(chunkList).first();
-
-        collector.collect(64L, chunkList);
-
-        verify(chunkList).garbageCollect(0L, 64L);
-
-        collector.collect(128L, chunkList);
-
-        verify(chunkList).garbageCollect(64L, 128L);
-
-        collector.collect(16L, chunkList);
-
-        verify(chunkList).garbageCollect(0L, 16L);
-
-        reset(chunkList);
-        long collect = collector.collect(16L, chunkList);
-        assertThat(collect, is(0L));
-
-        verify(chunkList, never()).garbageCollect(anyLong(), anyLong());
+    public void beginEqualEnd() throws Exception {
+        chunkList.append(mockChunk(0L, 4095L));
+        assertThat(collector.collect(15L), is(0L));
+        assertThat(collector.collect(15L), is(0L));
     }
+
+    @Test
+    public void beginGreaterThanEnd() throws Exception {
+        chunkList.append(mockChunk(0L, 4095L));
+        assertThat(collector.collect(15L), is(0L));
+        assertThat(collector.collect(7L), is(0L));
+    }
+
+    @Test
+    public void lessThanMinimizeCollectLength() throws Exception {
+        chunkList.append(mockChunk(0L, 4095L));
+        assertThat(collector.collect(15L), is(0L));
+    }
+
+    @Test
+    public void tooSmallToCollect() throws Exception {
+        Chunk<String> chunk = mockChunk(0L, 4095L);
+        List<Chunk<String>> pieces = Collections.singletonList(chunk);
+        doReturn(pieces).when(chunk).split(0L, 32L);
+        chunkList.append(chunk);
+        long collect = collector.collect(32L);
+        assertThat(collect, is(0L));
+    }
+
+    @Test
+    public void collectInOneChunk() throws Exception {
+        Chunk<String> chunk = mockChunk(0L, 4095L);
+        List<Chunk<String>> pieces = Arrays.asList(mockChunk(0L, 14L), mockChunk(64L, 4095));
+        doReturn(pieces).when(chunk).split(15L, 64);
+        chunkList.append(chunk);
+        assertThat(collector.collect(15L), is(0L));
+        assertThat(collector.collect(64L), is(64 - 15L));
+    }
+
+    @Test
+    public void collectBetweenTwoChunk() throws Exception {
+        Chunk<String> chunk0 = mockChunk(0L, 4095L);
+        doReturn(mockChunk(0L, 14L)).when(chunk0).left(15L);
+        Chunk<String> chunk1 = mockChunk(4096L, 8191L);
+        doReturn(mockChunk(4112L, 8191L)).when(chunk1).left(15L);
+
+        chunkList.append(chunk0);
+        chunkList.append(chunk1);
+
+        assertThat(collector.collect(15L), is(0L));
+        assertThat(collector.collect(4112L), is(4112 - 15L));
+
+    }
+
+    @Test
+    public void collectHoleLeft() throws Exception {
+        Chunk<String> chunk0 = mockChunk(0L, 4095L);
+        doReturn(null).when(chunk0).left(15L);
+        Chunk<String> chunk1 = mockChunk(4096L, 8191L);
+        doReturn(mockChunk(4112L, 8191L)).when(chunk1).right(4112L);
+
+        chunkList.append(chunk0);
+        chunkList.append(chunk1);
+
+        assertThat(collector.collect(4112L), is(4112L));
+    }
+
+    @Test
+    public void collectOnlyLeft() throws Exception {
+        Chunk<String> chunk0 = mockChunk(0L, 4095L);
+        doReturn(mockChunk(0L, 15L)).when(chunk0).left(15L);
+        Chunk<String> chunk1 = mockChunk(4096L, 8191L);
+        doReturn(chunk1).when(chunk1).right(4096L);
+
+        chunkList.append(chunk0);
+        chunkList.append(chunk1);
+
+        assertThat(collector.collect(15L), is(0L));
+        assertThat(collector.collect(4096L), is(4096 - 15L));
+    }
+
+    private Chunk<String> mockChunk(long begin, long end) {
+        Chunk<String> chunk0 = mock(Chunk.class);
+        when(chunk0.beginPosition()).thenReturn(begin);
+        when(chunk0.endPosition()).thenReturn(end);
+        return chunk0;
+    }
+
 }

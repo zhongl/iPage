@@ -17,12 +17,21 @@
 package com.github.zhongl.ipage;
 
 import java.io.IOException;
+import java.util.List;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class GarbageCollector<T> {
-    private volatile long lastSurvivorOffset = -1L;
+    private final long minimizeCollectLength;
+    private final ChunkList<T> chunkList;
 
-    public long collect(long survivorOffset, ChunkList<T> chunkList) throws IOException {
+    private long lastSurvivorOffset = -1L;
+
+    public GarbageCollector(ChunkList<T> chunkList, long minimizeCollectLength) {
+        this.chunkList = chunkList;
+        this.minimizeCollectLength = minimizeCollectLength;
+    }
+
+    public long collect(long survivorOffset) throws IOException {
         if (lastSurvivorOffset == survivorOffset) return 0L;
 
         long beginPosition = chunkList.first().beginPosition();
@@ -32,9 +41,47 @@ public class GarbageCollector<T> {
 
         if (firstCollection || recollectFromStart) lastSurvivorOffset = beginPosition;
 
-        long collectedLength = chunkList.garbageCollect(lastSurvivorOffset, survivorOffset);
+        long collectedLength = collect(lastSurvivorOffset, survivorOffset);
         lastSurvivorOffset = survivorOffset;
         return collectedLength;
     }
+
+    private long collect(long begin, long end) throws IOException {
+        if (end - begin < minimizeCollectLength) return 0L;
+        int indexOfBeginChunk = chunkList.indexOfChunkIn(begin);
+        int indexOfEndChunk = chunkList.indexOfChunkIn(end);
+        if (indexOfBeginChunk == indexOfEndChunk) return collectIn(indexOfBeginChunk, begin, end);
+        return collectRight(indexOfEndChunk, end) + collectLeft(indexOfBeginChunk, begin);
+    }
+
+    /** @see Chunk#right(long) */
+    private long collectRight(int indexOfEndChunk, long end) throws IOException {
+        Chunk<T> right = chunkList.get(indexOfEndChunk);
+        Chunk<T> newChunk = right.right(end);
+        if (newChunk == right) return 0L;
+        chunkList.set(indexOfEndChunk, newChunk);
+        return end - right.beginPosition();
+    }
+
+    /** @see Chunk#left(long) */
+    private long collectLeft(int indexOfBeginChunk, long begin) throws IOException {
+        Chunk<T> left = chunkList.get(indexOfBeginChunk);
+        long collectedLength = left.endPosition() + 1 - begin;
+        Chunk<T> newLeft = left.left(begin);
+        if (newLeft == null) chunkList.remove(indexOfBeginChunk);
+        else chunkList.set(indexOfBeginChunk, newLeft);
+        return collectedLength;
+    }
+
+    /** @see Chunk#split(long, long) */
+    private long collectIn(int indexOfChunk, long begin, long end) throws IOException {
+        Chunk<T> splittingChunk = chunkList.get(indexOfChunk);
+        List<? extends Chunk<T>> pieces = splittingChunk.split(begin, end);
+        if (pieces.get(0).equals(splittingChunk)) return 0L; // can't left appending chunk
+        chunkList.set(indexOfChunk, pieces.get(0));
+        chunkList.insert(indexOfChunk + 1, pieces.get(1));
+        return end - begin;
+    }
+
 
 }

@@ -14,26 +14,9 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
-
-import com.github.zhongl.util.FileBase;
-
-import java.io.IOException;
+package com.github.zhongl.builder;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class ChunkBase extends FileBase {
-    protected Chunk<String> chunk;
-
-    static void fullFill(Chunk<String> chunk) throws IOException {
-        for (int i = 0; i < 256; i++) {
-            chunk.append("0123456789ab");
-        }
-    }
-
-    @Override
-    public void tearDown() throws Exception {
-        if (chunk != null) chunk.close();
-        super.tearDown();
-    }
-
+public interface Validator {
+    void validate(Object arg) throws RuntimeException;
 }

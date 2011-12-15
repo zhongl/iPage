@@ -14,26 +14,17 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.builder;
 
-import com.github.zhongl.util.FileBase;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 
-import java.io.IOException;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class ChunkBase extends FileBase {
-    protected Chunk<String> chunk;
-
-    static void fullFill(Chunk<String> chunk) throws IOException {
-        for (int i = 0; i < 256; i++) {
-            chunk.append("0123456789ab");
-        }
-    }
-
-    @Override
-    public void tearDown() throws Exception {
-        if (chunk != null) chunk.close();
-        super.tearDown();
-    }
-
+@Retention(RUNTIME)
+@Target(METHOD)
+public @interface OptionIndex {
+    int value();
 }

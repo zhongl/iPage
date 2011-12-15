@@ -16,31 +16,13 @@
 
 package com.github.zhongl.buffer;
 
-import com.google.common.io.Files;
-
-import java.io.File;
 import java.io.IOException;
 import java.nio.MappedByteBuffer;
 
-import static java.nio.channels.FileChannel.MapMode.READ_ONLY;
-import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
-
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-class DirectBufferMapper {
-    private final File file;
-    private final int capacity;
-    private final boolean readOnly;
+public interface DirectBufferMapper {
 
-    public DirectBufferMapper(File file, int capacity, boolean readOnly) {
-        this.file = file;
-        this.capacity = capacity;
-        this.readOnly = readOnly;
-    }
+    public MappedByteBuffer map() throws IOException;
 
-    public MappedByteBuffer map() throws IOException {
-        return Files.map(file, readOnly ? READ_ONLY : READ_WRITE, capacity);
-    }
-
-    public int capacity() { return capacity; }
-
+    public long maxIdleTimeMillis();
 }

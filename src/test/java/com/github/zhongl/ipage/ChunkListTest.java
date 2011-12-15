@@ -16,120 +16,100 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.buffer.CommonAccessors;
-import com.github.zhongl.util.FileBase;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
-import java.io.IOException;
+import java.util.ArrayList;
 
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class ChunkListTest extends FileBase {
+public class ChunkListTest {
     private ChunkList<String> chunkList;
 
-    @Override
     @Before
     public void setUp() throws Exception {
-        super.setUp();
+        chunkList = new ChunkList<String>(new ArrayList<Chunk<String>>());
+    }
+
+    @Test
+    public void isEmpty() throws Exception {
+        assertThat(chunkList.isEmpty(), is(true));
+        chunkList.append(mock(Chunk.class));
+        assertThat(chunkList.isEmpty(), is(false));
+    }
+
+    @Test
+    public void close() throws Exception {
+        Chunk chunk0 = mock(Chunk.class);
+        chunkList.append(chunk0);
+
+        chunkList.close();
+        verify(chunk0).close();
     }
 
     @Test
     public void last() throws Exception {
-        dir = testDir("last");
-        dir.mkdirs();
-        newChunkList();
-        Chunk<String> chunk = chunkList.last();
-        assertThat(chunk, is(notNullValue()));
-        assertThat(chunk, is(chunkList.last()));
+        try {
+            chunkList.last();
+            fail("Should index out of bound.");
+        } catch (IndexOutOfBoundsException e) { }
+
+        Chunk chunk0 = mock(Chunk.class);
+        chunkList.append(chunk0);
+        assertThat(chunkList.last(), is(chunk0));
+
+        Chunk chunk1 = mock(Chunk.class);
+        chunkList.append(chunk1);
+        assertThat(chunkList.last(), is(chunk1));
     }
 
     @Test
-    public void garbageCollectBetweenTwo() throws Exception {
-        dir = testDir("garbageCollectBetweenTwo");
-        dir.mkdirs();
-        newChunkList();
+    public void first() throws Exception {
+        try {
+            chunkList.first();
+            fail("Should index out of bound.");
+        } catch (IndexOutOfBoundsException e) { }
 
-        ChunkBase.fullFill(chunkList.last()); // read only chunk
-        chunkList.grow();
-        ChunkBase.fullFill(chunkList.last()); // read only chunk
-        chunkList.grow();
-        ChunkBase.fullFill(chunkList.last()); // appending chunk
+        Chunk chunk0 = mock(Chunk.class);
+        chunkList.append(chunk0);
+        assertThat(chunkList.first(), is(chunk0));
 
-        assertExistFile("0");
-        assertExistFile("4096");
-
-        long collected = chunkList.garbageCollect(32L, 4096 + 64L);
-        assertThat(collected, is(4096 + 32L));
-
-        assertThat(new File(dir, "0").length(), is(32L));
-        assertNotExistFile("4096");
-        assertThat(new File(dir, "4160").length(), is(4096 - 64L));
+        Chunk chunk1 = mock(Chunk.class);
+        chunkList.append(chunk1);
+        assertThat(chunkList.first(), is(chunk0));
     }
 
     @Test
-    public void garbageCollectLeft() throws Exception {
-        dir = testDir("garbageCollectLeft");
-        dir.mkdirs();
-        newChunkList();
-
-        ChunkBase.fullFill(chunkList.last()); // read only chunk
-        chunkList.grow();
-        ChunkBase.fullFill(chunkList.last()); // read only chunk
-        chunkList.grow();
-        ChunkBase.fullFill(chunkList.last()); // appending chunk
-
-        assertExistFile("0");
-        assertExistFile("4096");
-
-        long collected = chunkList.garbageCollect(0L, 4096L);
-        assertThat(collected, is(4096L));
-
-        assertNotExistFile("0");
-        assertThat(new File(dir, "4096").length(), is(4096L));
+    public void insertAndGetAndSetAndRemove() throws Exception {
+        Chunk chunk0 = mock(Chunk.class);
+        Chunk chunk1 = mock(Chunk.class);
+        chunkList.insert(0, chunk0);
+        assertThat(chunkList.get(0), is(chunk0));
+        assertThat(chunkList.set(0, chunk1), is(chunk0));
+        assertThat(chunkList.remove(0), is(chunk1));
     }
 
     @Test
-    public void garbageCollectInAppendingChunk() throws Exception {
-        dir = testDir("garbageCollectInAppendingChunk");
-        dir.mkdirs();
-        newChunkList();
+    public void chunkIn() throws Exception {
+        Chunk chunk0 = mock(Chunk.class);
+        when(chunk0.beginPosition()).thenReturn(0L);
+        when(chunk0.endPosition()).thenReturn(15L);
+        Chunk chunk1 = mock(Chunk.class);
+        when(chunk1.beginPosition()).thenReturn(16L);
+        when(chunk1.endPosition()).thenReturn(31L);
 
-        ChunkBase.fullFill(chunkList.last()); // read only chunk
+        chunkList.append(chunk0);
+        chunkList.append(chunk1);
 
-        assertExistFile("0");
-
-        long collected = chunkList.garbageCollect(0L, 64L);
-        assertThat(collected, is(0L));
-
-    }
-
-    @Test
-    public void garbageCollectInOneChunk() throws Exception {
-        dir = testDir("garbageCollectInOneChunk");
-        dir.mkdirs();
-        newChunkList();
-
-        ChunkBase.fullFill(chunkList.last());
-        chunkList.grow();
-        ChunkBase.fullFill(chunkList.last());
-
-        assertExistFile("0");
-        assertExistFile("4096");
-
-        long collected = chunkList.garbageCollect(0L, 4080);
-        assertThat(collected, is(4080L));
-
-        assertNotExistFile("0");
-        assertThat(new File(dir, "4080").length(), is(16L));
-        assertThat(new File(dir, "4096").length(), is(4096L));
-    }
-
-    private void newChunkList() throws IOException {
-        chunkList = new ChunkList<String>(dir, 4096, CommonAccessors.STRING, 32, 1000 * 5);
+        assertThat(chunkList.chunkIn(0L), is(chunk0));
+        assertThat(chunkList.chunkIn(7L), is(chunk0));
+        assertThat(chunkList.chunkIn(15L), is(chunk0));
+        assertThat(chunkList.chunkIn(16L), is(chunk1));
+        assertThat(chunkList.chunkIn(21L), is(chunk1));
+        assertThat(chunkList.chunkIn(31L), is(chunk1));
     }
 }

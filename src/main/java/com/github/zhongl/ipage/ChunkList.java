@@ -16,136 +16,51 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.buffer.Accessor;
-import com.github.zhongl.util.FileNumberNameComparator;
-import com.github.zhongl.util.NumberFileNameFilter;
-
-import java.io.File;
 import java.io.IOException;
 import java.util.AbstractList;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.ArrayList;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class ChunkList<T> {
-    private final File baseDir;
-    private final LinkedList<Chunk<T>> chunks;
+    private final ArrayList<Chunk<T>> chunks;
     private final ChunkOffsetRangeList chunkOffsetRangeList;
-    private final int minimizeCollectLength;
-    private final int capacity;
-    private final Accessor<T> accessor;
-    private final long maxIdleTimeMillis;
 
-    public ChunkList(File baseDir, int capacity, Accessor<T> accessor, int minimizeCollectLength, long maxIdleTimeMillis) throws IOException {
-        this.baseDir = baseDir;
-        this.minimizeCollectLength = minimizeCollectLength;
-        this.accessor = accessor;
-        this.capacity = capacity;
-        this.maxIdleTimeMillis = maxIdleTimeMillis;
-        chunks = new LinkedList<Chunk<T>>();
+    public ChunkList(ArrayList<Chunk<T>> chunks) {
+        this.chunks = chunks;
         chunkOffsetRangeList = new ChunkOffsetRangeList();
-        loadExistChunks();
     }
 
-    public Chunk<T> last() throws IOException {
-        if (chunks.isEmpty()) return grow();
-        return chunks.getLast();
-    }
+    public Chunk<T> last() throws IOException { return get(lastIndex()); }
 
-    public Chunk<T> grow() throws IOException {
-        long beginPosition = chunks.isEmpty() ? 0L : last().endPosition() + 1;
-        File file = new File(baseDir, Long.toString(beginPosition));
-        Chunk<T> chunk = new AppendableChunk<T>(file, beginPosition, capacity, accessor);
-        convertLastRecentlyUsedChunkToReadOnly();
-        chunks.addLast(chunk);
-        return chunk;
-    }
+    public int lastIndex() { return chunks.size() - 1; }
 
-    public Chunk<T> chunkIn(long offset) throws IOException {
-        if (chunks.isEmpty()) grow();
-        return chunks.get(indexOfChunkIn(offset));
-    }
+    public boolean append(Chunk<T> chunk) {return chunks.add(chunk);}
 
-    private int indexOfChunkIn(long offset) {return Range.binarySearch(chunkOffsetRangeList, offset);}
+    public boolean isEmpty() {return chunks.isEmpty();}
 
-    public Chunk<T> first() throws IOException {
-        return chunks.getFirst();
-    }
+    public Chunk<T> chunkIn(long offset) throws IOException { return get(indexOfChunkIn(offset)); }
 
-    public void close() throws IOException {
-        for (Chunk<T> chunk : chunks) chunk.close();
-    }
+    public int indexOfChunkIn(long offset) {return Range.binarySearch(chunkOffsetRangeList, offset);}
 
-    private void convertLastRecentlyUsedChunkToReadOnly() throws IOException {
-        if (chunks.isEmpty()) return;
-        chunks.addLast(Chunk.asReadOnly(chunks.removeLast(), minimizeCollectLength, 0));
-    }
+    public Chunk<T> first() throws IOException { return get(firstIndex()); }
 
-    private void loadExistChunks() throws IOException {
-        File[] files = baseDir.listFiles(new NumberFileNameFilter());
-        if (files == null) return;
-        Arrays.sort(files, new FileNumberNameComparator());
+    public void close() throws IOException { for (Chunk<T> chunk : chunks) chunk.close(); }
 
-        for (int i = 0; i < files.length; i++) {
-            File file = files[i];
-            long beginPosition = Long.parseLong(file.getName());
-            Chunk<T> chunk;
-            if (i == files.length - 1) {
-                chunk = new AppendableChunk<T>(file, beginPosition, capacity, accessor);
-            } else {
-                chunk = new ReadOnlyChunk<T>(file, beginPosition, accessor, minimizeCollectLength, maxIdleTimeMillis);
-            }
-            chunks.addLast(chunk);
-        }
-    }
+    public Chunk<T> get(int index) {return chunks.get(index);}
 
-    public long garbageCollect(long begin, long end) throws IOException {
-        int indexOfBeginChunk = indexOfChunkIn(begin);
-        int indexOfEndChunk = indexOfChunkIn(end);
-        if (indexOfBeginChunk == indexOfEndChunk) { // collectIn in one chunk
-            return collectIn(indexOfBeginChunk, begin, end);
-        } else {
-            return collectRight(indexOfEndChunk, end) + collectLeft(indexOfBeginChunk, begin);
-        }
-    }
+    public Chunk<T> set(int index, Chunk<T> chunk) {return chunks.set(index, chunk);}
 
-    /** @see Chunk#right(long) */
-    private long collectRight(int indexOfEndChunk, long end) throws IOException {
-        Chunk<T> right = chunks.get(indexOfEndChunk);
-        Chunk<T> newChunk = right.right(end);
-        if (newChunk == right) return 0L;
-        chunks.remove(indexOfEndChunk);
-        chunks.add(indexOfEndChunk, newChunk);
-        return end - right.beginPosition();
-    }
+    public Chunk<T> remove(int index) {return chunks.remove(index);}
 
-    /** @see Chunk#left(long) */
-    private long collectLeft(int indexOfBeginChunk, long begin) throws IOException {
-        Chunk<T> left = chunks.remove(indexOfBeginChunk);
-        long collectedLength = left.endPosition() + 1 - begin;
-        Chunk<T> newLeft = left.left(begin);
-        if (newLeft != null) chunks.add(indexOfBeginChunk, newLeft);
-        return collectedLength;
-    }
+    public void insert(int index, Chunk<T> chunk) {chunks.add(index, chunk);}
 
-    /** @see Chunk#split(long, long) */
-    private long collectIn(int indexOfChunk, long begin, long end) throws IOException {
-        Chunk<T> splittingChunk = chunks.get(indexOfChunk);
-        List<Chunk<T>> pieces = splittingChunk.split(begin, end);
-        if (pieces.isEmpty()) return 0L; // can't left appending chunk
-        chunks.remove(indexOfChunk);
-        for (int i = 0; i < pieces.size(); i++) {
-            chunks.add(indexOfChunk + i, pieces.get(i));
-        }
-        return end - begin;
-    }
+    private int firstIndex() {return 0;}
 
     private class ChunkOffsetRangeList extends AbstractList<Range> {
 
         @Override
         public Range get(int index) {
-            Chunk<T> chunk = chunks.get(index);
+            Chunk<T> chunk = ChunkList.this.get(index);
             return new Range(chunk.beginPosition(), chunk.endPosition());
         }
 

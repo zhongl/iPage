@@ -14,26 +14,15 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
-
-import com.github.zhongl.util.FileBase;
-
-import java.io.IOException;
+package com.github.zhongl.buffer;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class ChunkBase extends FileBase {
-    protected Chunk<String> chunk;
+public interface MappedDirectBuffer {
+    <T> int writeBy(Accessor<T> accessor, int offset, T object);
 
-    static void fullFill(Chunk<String> chunk) throws IOException {
-        for (int i = 0; i < 256; i++) {
-            chunk.append("0123456789ab");
-        }
-    }
+    <T> T readBy(Accessor<T> accessor, int offset);
 
-    @Override
-    public void tearDown() throws Exception {
-        if (chunk != null) chunk.close();
-        super.tearDown();
-    }
+    void release();
 
+    void flush();
 }

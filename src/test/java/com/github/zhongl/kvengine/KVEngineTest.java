@@ -47,11 +47,6 @@ public class KVEngineTest extends FileBase {
         assertThat(engine.remove(key), is(value));
     }
 
-    private void newEngineAndStartup() throws IOException {
-        engine = new BlockingKVEngine<byte[]>(KVEngine.<byte[]>baseOn(dir).valueAccessor(CommonAccessors.BYTES).build());
-        engine.startup();
-    }
-
     @Test
     public void getAndRemoveNonExistKey() throws Exception {
         dir = testDir("getAndRemoveNonExistKey");
@@ -89,5 +84,15 @@ public class KVEngineTest extends FileBase {
     @After
     public void tearDown() throws Exception {
         if (engine != null) engine.shutdown();
+    }
+
+    private void newEngineAndStartup() throws IOException {
+        engine = new BlockingKVEngine<byte[]>(
+                KVEngine.<byte[]>baseOn(dir)
+                        .groupCommit(true)
+                        .flushElapseMilliseconds(10L)
+                        .valueAccessor(CommonAccessors.BYTES)
+                        .build());
+        engine.startup();
     }
 }

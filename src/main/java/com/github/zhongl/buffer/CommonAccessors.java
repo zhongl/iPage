@@ -49,6 +49,7 @@ public class CommonAccessors {
 
         @Override
         protected void doWrite(byte[] bytes, ByteBuffer buffer) {
+            if (bytes.length == 0) throw new IllegalArgumentException("No empty bytes");
             buffer.putInt(bytes.length);
             buffer.put(bytes);
         }
@@ -61,6 +62,7 @@ public class CommonAccessors {
         @Override
         public byte[] read(ByteBuffer buffer) {
             int length = buffer.getInt();
+            if (length == 0) throw new IllegalArgumentException();
             byte[] bytes = new byte[length];
             buffer.get(bytes);
             return bytes;
@@ -99,6 +101,7 @@ public class CommonAccessors {
         @Override
         public String read(ByteBuffer buffer) {
             int length = buffer.getInt();
+            if (length == 0) throw new IllegalArgumentException();
             byte[] bytes = new byte[length];
             buffer.get(bytes);
             return new String(bytes);
@@ -106,6 +109,7 @@ public class CommonAccessors {
 
         @Override
         protected void doWrite(String object, ByteBuffer buffer) {
+            if (object.length() == 0) throw new IllegalArgumentException("No empty string");
             buffer.putInt(object.length());
             buffer.put(object.getBytes());
         }

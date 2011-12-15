@@ -17,19 +17,17 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.buffer.Accessor;
-import com.github.zhongl.buffer.MappedBufferFile;
+import com.github.zhongl.buffer.MappedDirectBuffer;
+import com.github.zhongl.buffer.MappedDirectBuffers;
 import com.github.zhongl.integerity.ValidateOrRecover;
 
 import javax.annotation.concurrent.NotThreadSafe;
-import java.io.File;
+import java.io.Closeable;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
 import java.nio.ReadOnlyBufferException;
 import java.util.List;
-
-import static com.google.common.base.Preconditions.checkState;
 
 /**
  * {@link com.github.zhongl.ipage.Chunk}
@@ -37,54 +35,45 @@ import static com.google.common.base.Preconditions.checkState;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @NotThreadSafe
-public abstract class Chunk<T> implements ValidateOrRecover<T, IOException> {
-    public static final int DEFAULT_CAPACITY = 4096; // 4k
-
-    public static <T> Chunk<T> asReadOnly(Chunk<T> chunk, int minimizeCollectLength, long maxIdleTimeMillis) throws IOException {
-        if (chunk instanceof ReadOnlyChunk) return chunk;
-        chunk.close();
-        return new ReadOnlyChunk(chunk.file, chunk.beginPosition(), chunk.accessor, minimizeCollectLength, maxIdleTimeMillis);
-    }
-
+abstract class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> {
+    protected final MappedDirectBuffers buffers;
+    protected final FileOperator fileOperator;
     protected final Accessor<T> accessor;
-    protected final long beginPosition;
-    protected final File file;
 
-    protected Chunk(File file, long beginPosition, Accessor<T> accessor) throws IOException {
-        this.file = file;
+    protected Chunk(MappedDirectBuffers buffers, FileOperator fileOperator, Accessor<T> accessor) throws IOException {
+        this.buffers = buffers;
+        this.fileOperator = fileOperator;
         this.accessor = accessor;
-        this.beginPosition = beginPosition;
     }
 
     public abstract long append(T object) throws ReadOnlyBufferException, BufferOverflowException, IOException;
 
-    public final T get(long offset) throws IOException {
+    /** Caution: a invalid offset may not be detected, you should validate by your self. */
+    public T get(long offset) throws IOException {
         try {
             int localOffset = (int) (offset - beginPosition());
-            int length = (int) (endPosition() - offset + 1);
-            return mappedBufferFile().readBy(accessor, localOffset, length);
+            return mappedDirectBuffer().readBy(accessor, localOffset);
         } catch (BufferUnderflowException e) { // invalid offset
         } catch (IllegalArgumentException e) {} // invalid offset
         return null;
     }
 
-    public void flush() { mappedBufferFile().flush(); }
+    public void flush() throws IOException { mappedDirectBuffer().flush(); }
 
     public abstract long endPosition();
 
-    public final long beginPosition() { return beginPosition; }
+    public abstract Chunk<T> asReadOnly() throws IOException;
 
-    public final void delete() { checkState(file.delete(), "Can't delete file %s", file); }
+    public long beginPosition() { return fileOperator.beginPosition(); }
 
-    public final Cursor<T> next(Cursor<T> cursor) throws IOException {
-        if (cursor.offset() >= endPosition()) return cursor.end();
-        long offset = cursor.offset() < beginPosition() ? beginPosition() : cursor.offset();
+    public void delete() { fileOperator.delete(); }
+
+    public Cursor<T> next(Cursor<T> cursor) throws IOException {
+        long offset = cursor.offset();
         T value = get(offset);
         offset += accessor.byteLengthOf(value);
         return Cursor.cursor(offset, value);
     }
-
-    public abstract void close();
 
     /**
      * There are three split cases:
@@ -104,7 +93,7 @@ public abstract class Chunk<T> implements ValidateOrRecover<T, IOException> {
      *
      * </pre>
      */
-    public abstract List<Chunk<T>> split(long begin, long end) throws IOException;
+    public abstract List<? extends Chunk<T>> split(long begin, long end) throws IOException;
 
     /**
      * There are throe left cases:
@@ -136,15 +125,7 @@ public abstract class Chunk<T> implements ValidateOrRecover<T, IOException> {
      */
     public abstract Chunk<T> right(long offset) throws IOException;
 
-    protected abstract MappedBufferFile mappedBufferFile();
-
-    protected static void truncate(File file, long size) {
-        try {
-            RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
-            randomAccessFile.setLength(size);
-            randomAccessFile.close();
-        } catch (IOException e) {
-            throw new IllegalStateException("Can't truncate file " + file, e);
-        }
+    protected MappedDirectBuffer mappedDirectBuffer() throws IOException {
+        return buffers.getOrMapBy(fileOperator);
     }
 }

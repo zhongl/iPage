@@ -14,18 +14,15 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.util;
+package com.github.zhongl.builder;
 
-import java.io.File;
-import java.io.FilenameFilter;
-import java.util.regex.Pattern;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
+
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class NumberFileNameFilter implements FilenameFilter {
-    private static final Pattern CHUNK_NAME_PATTERN = Pattern.compile("[0-9]+");
-
-    @Override
-    public boolean accept(File dir, String name) {
-        return CHUNK_NAME_PATTERN.matcher(name).matches();
-    }
-}
+@Retention(RUNTIME)
+@Target(METHOD)
+public @interface NotNull {}

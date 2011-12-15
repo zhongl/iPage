@@ -14,26 +14,18 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.util;
 
-import com.github.zhongl.util.FileBase;
-
-import java.io.IOException;
+import java.io.File;
+import java.io.FilenameFilter;
+import java.util.regex.Pattern;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class ChunkBase extends FileBase {
-    protected Chunk<String> chunk;
-
-    static void fullFill(Chunk<String> chunk) throws IOException {
-        for (int i = 0; i < 256; i++) {
-            chunk.append("0123456789ab");
-        }
-    }
+public class NumberNameFilter implements FilenameFilter {
+    private static final Pattern CHUNK_NAME_PATTERN = Pattern.compile("[0-9]+");
 
     @Override
-    public void tearDown() throws Exception {
-        if (chunk != null) chunk.close();
-        super.tearDown();
+    public boolean accept(File dir, String name) {
+        return CHUNK_NAME_PATTERN.matcher(name).matches();
     }
-
 }

@@ -14,26 +14,22 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.builder;
 
-import com.github.zhongl.util.FileBase;
-
-import java.io.IOException;
-
-/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class ChunkBase extends FileBase {
-    protected Chunk<String> chunk;
-
-    static void fullFill(Chunk<String> chunk) throws IOException {
-        for (int i = 0; i < 256; i++) {
-            chunk.append("0123456789ab");
-        }
-    }
-
-    @Override
-    public void tearDown() throws Exception {
-        if (chunk != null) chunk.close();
-        super.tearDown();
-    }
-
-}
+/**
+ * {@link com.github.zhongl.builder.BuilderConvention} example is :
+ * <pre>
+ * class Example {
+ *     Example(int a, String b) {...}
+ * }
+ *
+ * interface ExampleBuilder extends BuilderConvention{
+ *     ExampleBuilder a(int value);
+ *     ExampleBuilder b(String value);
+ *     Example build();
+ * }
+ * </pre>
+ *
+ * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
+ */
+public interface BuilderConvention {}
