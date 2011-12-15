@@ -152,7 +152,7 @@ public class Builder<V> {
         chunkCapacity = (chunkCapacity == UNSET) ? 4096 : chunkCapacity;
         return IPage.baseOn(new File(dir, IPAGE_DIR))
                     .accessor(new EntryAccessor<V>(valueAccessor))
-                    .maxChunkCapacity(chunkCapacity)
+                    .minimizeChunkCapacity(chunkCapacity)
                     .build();
     }
 }

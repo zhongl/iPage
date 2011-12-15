@@ -141,7 +141,7 @@ public class BuildersTest {
     }
 
     @Test
-    public void build() throws Exception {
+    public void defaultIntValue() throws Exception {
         Builder builder = newInstanceOf(Builder.class);
         TestObject testObject = builder.longValue(0L)
                                        .floatValue(6.9f)
@@ -151,6 +151,42 @@ public class BuildersTest {
                                        .build();
 
         assertThat(testObject.intValue, is(7));
+        assertThat(testObject.longValue, is(0L));
+        assertThat(testObject.floatValue, is(6.9f));
+        assertThat(testObject.doubleValue, is(7.0));
+        assertThat((String) testObject.objectValue, is(""));
+        assertThat(testObject.ipAddress, is("127.0.0.1"));
+    }
+
+    @Test
+    public void setIntValue() throws Exception {
+        Builder builder = newInstanceOf(Builder.class);
+        TestObject testObject = builder.intValue(8)
+                                       .longValue(0L)
+                                       .floatValue(6.9f)
+                                       .doubleValue(7.0)
+                                       .objectValue("")
+                                       .ipAddress("127.0.0.1")
+                                       .build();
+
+        assertThat(testObject.intValue, is(8));
+        assertThat(testObject.longValue, is(0L));
+        assertThat(testObject.floatValue, is(6.9f));
+        assertThat(testObject.doubleValue, is(7.0));
+        assertThat((String) testObject.objectValue, is(""));
+        assertThat(testObject.ipAddress, is("127.0.0.1"));
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void notSetLongValue() throws Exception {
+        Builder builder = newInstanceOf(Builder.class);
+        TestObject testObject = builder.floatValue(6.9f)
+                                       .doubleValue(7.0)
+                                       .objectValue("")
+                                       .ipAddress("127.0.0.1")
+                                       .build();
+
+        assertThat(testObject.intValue, is(8));
         assertThat(testObject.longValue, is(0L));
         assertThat(testObject.floatValue, is(6.9f));
         assertThat(testObject.doubleValue, is(7.0));

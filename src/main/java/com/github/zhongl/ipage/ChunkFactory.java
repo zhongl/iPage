@@ -27,20 +27,20 @@ import java.io.IOException;
 class ChunkFactory<T> {
     private final File baseDir;
     private final Accessor<T> accessor;
-    private final int maxChunkCapacity;
+    private final int minimizeChunkCapacity;
     private final MappedDirectBuffers buffers;
     private final long maxIdleTimeMillis;
 
-    public ChunkFactory(File baseDir, Accessor<T> accessor, int maxChunkCapacity, long maxIdleTimeMillis) {
+    public ChunkFactory(File baseDir, Accessor<T> accessor, int minimizeChunkCapacity, long maxIdleTimeMillis) {
         this.baseDir = baseDir;
         this.accessor = accessor;
-        this.maxChunkCapacity = maxChunkCapacity;
+        this.minimizeChunkCapacity = minimizeChunkCapacity;
         this.maxIdleTimeMillis = maxIdleTimeMillis;
         this.buffers = new MappedDirectBuffers();
     }
 
     public Chunk<T> appendableChunkOn(File file) throws IOException {
-        return new AppendableChunk<T>(buffers, FileOperator.writeable(file, maxChunkCapacity), accessor);
+        return new AppendableChunk<T>(buffers, FileOperator.writeable(file, minimizeChunkCapacity), accessor);
     }
 
     public Chunk<T> readOnlyChunkOn(File file) throws IOException {

@@ -76,8 +76,8 @@ public class Builders {
         }
 
         public Object build() {
+            checkOrSetDefaultValue();
             try {
-                checkOrSetDefaultValue();
                 return Reflections.newInstanceOf(buildMethod.getReturnType(), optionValues);
             } catch (Exception e) {
                 throw new RuntimeException(e);

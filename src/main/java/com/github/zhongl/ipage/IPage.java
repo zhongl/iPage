@@ -17,7 +17,7 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.buffer.Accessor;
-import com.github.zhongl.builder.Builders;
+import com.github.zhongl.builder.*;
 import com.github.zhongl.integerity.ValidateOrRecover;
 import com.github.zhongl.integerity.Validator;
 import com.github.zhongl.util.FileHandler;
@@ -44,8 +44,12 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
         return builder;
     }
 
-    IPage(File baseDir, Accessor<T> accessor, int maxChunkCapacity, long minimizeCollectLength, long maxChunkIdleTimeMillis) throws IOException {
-        this.chunkFactory = new ChunkFactory<T>(baseDir, accessor, maxChunkCapacity, maxChunkIdleTimeMillis);
+    IPage(File baseDir,
+          Accessor<T> accessor,
+          int minimizeChunkCapacity,
+          long minimizeCollectLength,
+          long maxChunkIdleTimeMillis) throws IOException {
+        this.chunkFactory = new ChunkFactory<T>(baseDir, accessor, minimizeChunkCapacity, maxChunkIdleTimeMillis);
         this.chunkList = new ChunkList<T>(loadExistChunksBy(baseDir, chunkFactory));
         garbageCollector = new GarbageCollector<T>(chunkList, minimizeCollectLength);
     }
@@ -111,4 +115,27 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
     @Override
     public void close() throws IOException { chunkList.close(); }
 
+    public static interface Builder<T> extends BuilderConvention {
+
+        @NotNull
+        Builder<T> dir(File dir);
+
+        @NotNull
+        Builder<T> accessor(Accessor<T> value);
+
+        @DefaultValue("4096")
+        @GreaterThanOrEqual("4096")
+        Builder<T> minimizeChunkCapacity(int value);
+
+        @DefaultValue("4096")
+        @GreaterThanOrEqual("4096")
+        Builder<T> minimizeCollectLength(int value);
+
+        @DefaultValue("4000")
+        @GreaterThanOrEqual("1000")
+        Builder<T> maxChunkIdleTimeMillis(long value);
+
+        IPage<T> build();
+
+    }
 }
