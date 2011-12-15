@@ -14,17 +14,9 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.options;
-
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
-
-import static java.lang.annotation.ElementType.METHOD;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
+package com.github.zhongl.builder;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-@Retention(RUNTIME)
-@Target(METHOD)
-public @interface LessThanOrEqual {
-    String value();
+public interface Validator {
+    void validate(Object arg) throws RuntimeException;
 }

@@ -129,5 +129,4 @@ abstract class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> 
     protected MappedDirectBuffer mappedDirectBuffer() throws IOException {
         return buffers.getOrMapBy(fileOperator);
     }
-
 }

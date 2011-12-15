@@ -35,7 +35,7 @@ public class NumberNamedFilesLoaderTest extends FileBase {
         FileHandler<String> handler = new FileHandler<String>() {
 
             @Override
-            public String handle(File file) {
+            public String handle(File file, boolean last) {
                 return file.getName();
             }
         };

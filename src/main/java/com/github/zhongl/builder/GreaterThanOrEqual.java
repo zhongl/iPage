@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.options;
+package com.github.zhongl.builder;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
@@ -25,6 +25,6 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @Retention(RUNTIME)
 @Target(METHOD)
-public @interface LessThan {
+public @interface GreaterThanOrEqual {
     String value();
 }

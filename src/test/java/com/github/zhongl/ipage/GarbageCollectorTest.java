@@ -17,19 +17,15 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.FileBase;
-import org.junit.Test;
-
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class GarbageCollectorTest extends FileBase {
 
+    /*
     @Test
     public void collect() throws Exception {
         file = testFile("collect");
-        GarbageCollector<String> collector = new GarbageCollector<String>();
+        GarbageCollector<String> collector = new GarbageCollector<String>(chunkList, minimizeCollectLength);
         Chunk<String> chunk = mock(Chunk.class);
         when(chunk.beginPosition()).thenReturn(0L);
 
@@ -54,4 +50,87 @@ public class GarbageCollectorTest extends FileBase {
 
         verify(chunkList, never()).garbageCollect(anyLong(), anyLong());
     }
+
+    @Test
+    public void garbageCollectBetweenTwo() throws Exception {
+        dir = testDir("garbageCollectBetweenTwo");
+        dir.mkdirs();
+        newChunkList();
+
+        ChunkBase.fullFill(chunkList.last()); // read only chunk
+        chunkList.grow();
+        ChunkBase.fullFill(chunkList.last()); // read only chunk
+        chunkList.grow();
+        ChunkBase.fullFill(chunkList.last()); // appending chunk
+
+        assertExistFile("0");
+        assertExistFile("4096");
+
+        long collected = chunkList.garbageCollect(32L, 4096 + 64L);
+        assertThat(collected, is(4096 + 32L));
+
+        assertThat(new File(dir, "0").length(), is(32L));
+        assertNotExistFile("4096");
+        assertThat(new File(dir, "4160").length(), is(4096 - 64L));
+    }
+
+    @Test
+    public void garbageCollectLeft() throws Exception {
+        dir = testDir("garbageCollectLeft");
+        dir.mkdirs();
+        newChunkList();
+
+        ChunkBase.fullFill(chunkList.last()); // read only chunk
+        chunkList.grow();
+        ChunkBase.fullFill(chunkList.last()); // read only chunk
+        chunkList.grow();
+        ChunkBase.fullFill(chunkList.last()); // appending chunk
+
+        assertExistFile("0");
+        assertExistFile("4096");
+
+        long collected = chunkList.garbageCollect(0L, 4096L);
+        assertThat(collected, is(4096L));
+
+        assertNotExistFile("0");
+        assertThat(new File(dir, "4096").length(), is(4096L));
+    }
+
+    @Test
+    public void garbageCollectInAppendingChunk() throws Exception {
+        dir = testDir("garbageCollectInAppendingChunk");
+        dir.mkdirs();
+        newChunkList();
+
+        ChunkBase.fullFill(chunkList.last()); // read only chunk
+
+        assertExistFile("0");
+
+        long collected = chunkList.garbageCollect(0L, 64L);
+        assertThat(collected, is(0L));
+
+    }
+
+    @Test
+    public void garbageCollectInOneChunk() throws Exception {
+        dir = testDir("garbageCollectInOneChunk");
+        dir.mkdirs();
+        newChunkList();
+
+        ChunkBase.fullFill(chunkList.last());
+        chunkList.grow();
+        ChunkBase.fullFill(chunkList.last());
+
+        assertExistFile("0");
+        assertExistFile("4096");
+
+        long collected = chunkList.garbageCollect(0L, 4080);
+        assertThat(collected, is(4080L));
+
+        assertNotExistFile("0");
+        assertThat(new File(dir, "4080").length(), is(16L));
+        assertThat(new File(dir, "4096").length(), is(4096L));
+    }
+
+    * */
 }

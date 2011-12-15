@@ -152,7 +152,7 @@ public class IPageTest extends FileBase {
     }
 
     private void newIPage() throws IOException {
-        iPage = IPage.<String>baseOn(dir).accessor(CommonAccessors.STRING).chunkCapacity(4096).build();
+        iPage = IPage.baseOn(dir).accessor(CommonAccessors.STRING).maxChunkCapacity(4096).build();
     }
 
     private void assertAppendAndDurableBy(boolean close) throws IOException {

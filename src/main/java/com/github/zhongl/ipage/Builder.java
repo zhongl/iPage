@@ -17,60 +17,23 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.buffer.Accessor;
+import com.github.zhongl.builder.BuilderConvention;
 
 import java.io.File;
-import java.io.IOException;
-
-import static com.google.common.base.Preconditions.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public final class Builder<T> {
+public interface Builder<T> extends BuilderConvention {
 
-    private static final int UNSET = -1;
+    Builder<T> dir(File dir);
 
-    private final File baseDir;
-    private int chunkCapacity = UNSET;
-    private int minCollectLength = UNSET;
-    private Accessor<T> accessor;
-    private long maxIdleTimeMillis;
+    Builder<T> accessor(Accessor<T> value);
 
-    Builder(File dir) {
-        if (!dir.exists()) checkState(dir.mkdirs(), "Can not create directory: %s", dir);
-        checkArgument(dir.isDirectory(), "%s should be a directory.", dir);
-        baseDir = dir;
-    }
+    Builder<T> maxChunkCapacity(int value);
 
-    public Builder<T> chunkCapacity(int value) {
-        checkState(chunkCapacity == UNSET, "Chunk capacity can only set once.");
-        checkArgument(value >= 4096, "Chunk capacity should not less than %s", 4096);
-        chunkCapacity = value;
-        return this;
-    }
+    Builder<T> minimizeCollectLength(int value);
 
-    public Builder<T> maxIdleTimeMillis(long value) {
-        checkArgument(value >= 0, "maximize idle time milliseconds should not less than 0");
-        maxIdleTimeMillis = value;
-        return this;
-    }
+    Builder<T> maxChunkIdleTimeMillis(long value);
 
-    public Builder<T> minCollectLength(int value) {
-        checkArgument(value >= 0, "minimize collect length should not less than 0");
-        minCollectLength = value;
-        return this;
-    }
-
-    public Builder<T> accessor(Accessor<T> instance) {
-        checkNotNull(instance);
-        this.accessor = instance;
-        return this;
-    }
-
-    public IPage<T> build() throws IOException {
-        chunkCapacity = (chunkCapacity == UNSET) ? 4096 : chunkCapacity;
-        minCollectLength = (minCollectLength == UNSET) ? 4096 : minCollectLength;
-        maxIdleTimeMillis = (maxIdleTimeMillis == UNSET) ? 1000 * 5 : minCollectLength;
-        checkNotNull(accessor, "EntryAccessor should not be null.");
-        return new IPage<T>(new ChunkList<T>(baseDir, chunkCapacity, accessor, minCollectLength, maxIdleTimeMillis));
-    }
+    IPage<T> build();
 
 }

@@ -16,12 +16,10 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.buffer.CommonAccessors;
 import com.github.zhongl.util.FileBase;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.IOException;
 
 import static org.hamcrest.Matchers.is;
@@ -48,88 +46,8 @@ public class ChunkListTest extends FileBase {
         assertThat(chunk, is(chunkList.last()));
     }
 
-    @Test
-    public void garbageCollectBetweenTwo() throws Exception {
-        dir = testDir("garbageCollectBetweenTwo");
-        dir.mkdirs();
-        newChunkList();
-
-        ChunkBase.fullFill(chunkList.last()); // read only chunk
-        chunkList.grow();
-        ChunkBase.fullFill(chunkList.last()); // read only chunk
-        chunkList.grow();
-        ChunkBase.fullFill(chunkList.last()); // appending chunk
-
-        assertExistFile("0");
-        assertExistFile("4096");
-
-        long collected = chunkList.garbageCollect(32L, 4096 + 64L);
-        assertThat(collected, is(4096 + 32L));
-
-        assertThat(new File(dir, "0").length(), is(32L));
-        assertNotExistFile("4096");
-        assertThat(new File(dir, "4160").length(), is(4096 - 64L));
-    }
-
-    @Test
-    public void garbageCollectLeft() throws Exception {
-        dir = testDir("garbageCollectLeft");
-        dir.mkdirs();
-        newChunkList();
-
-        ChunkBase.fullFill(chunkList.last()); // read only chunk
-        chunkList.grow();
-        ChunkBase.fullFill(chunkList.last()); // read only chunk
-        chunkList.grow();
-        ChunkBase.fullFill(chunkList.last()); // appending chunk
-
-        assertExistFile("0");
-        assertExistFile("4096");
-
-        long collected = chunkList.garbageCollect(0L, 4096L);
-        assertThat(collected, is(4096L));
-
-        assertNotExistFile("0");
-        assertThat(new File(dir, "4096").length(), is(4096L));
-    }
-
-    @Test
-    public void garbageCollectInAppendingChunk() throws Exception {
-        dir = testDir("garbageCollectInAppendingChunk");
-        dir.mkdirs();
-        newChunkList();
-
-        ChunkBase.fullFill(chunkList.last()); // read only chunk
-
-        assertExistFile("0");
-
-        long collected = chunkList.garbageCollect(0L, 64L);
-        assertThat(collected, is(0L));
-
-    }
-
-    @Test
-    public void garbageCollectInOneChunk() throws Exception {
-        dir = testDir("garbageCollectInOneChunk");
-        dir.mkdirs();
-        newChunkList();
-
-        ChunkBase.fullFill(chunkList.last());
-        chunkList.grow();
-        ChunkBase.fullFill(chunkList.last());
-
-        assertExistFile("0");
-        assertExistFile("4096");
-
-        long collected = chunkList.garbageCollect(0L, 4080);
-        assertThat(collected, is(4080L));
-
-        assertNotExistFile("0");
-        assertThat(new File(dir, "4080").length(), is(16L));
-        assertThat(new File(dir, "4096").length(), is(4096L));
-    }
 
     private void newChunkList() throws IOException {
-        chunkList = new ChunkList<String>(dir, 4096, CommonAccessors.STRING, 32, 1000 * 5);
+        chunkList = null;
     }
 }

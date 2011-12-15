@@ -17,6 +17,7 @@
 package com.github.zhongl.util;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -30,11 +31,15 @@ public class NumberNamedFilesLoader<V> {
         this.handler = handler;
     }
 
-    public <T extends Collection<V>> T loadTo(T collection) {
+    public <T extends Collection<V>> T loadTo(T collection) throws IOException {
         File[] files = dir.listFiles(new NumberNameFilter());
         Arrays.sort(files, new FileNumberNameComparator());
         for (File file : files) {
-            collection.add(handler.handle(file));
+            for (int i = 0; i < files.length; i++) {
+                boolean last = i == files.length - 1;
+                collection.add(handler.handle(files[i], last));
+            }
+
         }
         return collection;
     }

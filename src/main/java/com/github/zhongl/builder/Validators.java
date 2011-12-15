@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.options;
+package com.github.zhongl.builder;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -46,7 +46,7 @@ public class Validators {
         return new Validator() {
             @Override
             public void validate(Object arg) throws IllegalArgumentException {
-                Comparable expect = comparableNumber(arg, value);
+                Comparable expect = comparableNumber(arg.getClass(), value);
                 checkArgument(expect.compareTo(arg) < 0, "Value should be greater than " + expect);
             }
         };
@@ -57,7 +57,7 @@ public class Validators {
         return new Validator() {
             @Override
             public void validate(Object arg) throws IllegalArgumentException {
-                Comparable expect = comparableNumber(arg, value);
+                Comparable expect = comparableNumber(arg.getClass(), value);
                 checkArgument(expect.compareTo(arg) <= 0, "Value should be greater than or equal " + expect);
             }
         };
@@ -68,7 +68,7 @@ public class Validators {
         return new Validator() {
             @Override
             public void validate(Object arg) throws IllegalArgumentException {
-                Comparable expect = comparableNumber(arg, value);
+                Comparable expect = comparableNumber(arg.getClass(), value);
                 checkArgument(expect.compareTo(arg) > 0, "Value should be less than " + expect);
             }
         };
@@ -79,7 +79,7 @@ public class Validators {
         return new Validator() {
             @Override
             public void validate(Object arg) throws IllegalArgumentException {
-                Comparable expect = comparableNumber(arg, value);
+                Comparable expect = comparableNumber(arg.getClass(), value);
                 checkArgument(expect.compareTo(arg) >= 0, "Value should be less than or equal " + expect);
             }
         };
@@ -104,9 +104,9 @@ public class Validators {
         };
     }
 
-    private static Comparable comparableNumber(Object arg, String value) {
+    private static Comparable comparableNumber(Class numberClass, String value) {
         try {
-            return (Comparable) arg.getClass().getMethod("valueOf", String.class).invoke(arg, value);
+            return (Comparable) Reflections.cast(value, numberClass);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

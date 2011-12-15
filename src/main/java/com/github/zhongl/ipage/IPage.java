@@ -16,47 +16,75 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.buffer.Accessor;
+import com.github.zhongl.builder.Builders;
 import com.github.zhongl.integerity.ValidateOrRecover;
 import com.github.zhongl.integerity.Validator;
+import com.github.zhongl.util.FileHandler;
+import com.github.zhongl.util.NumberNamedFilesLoader;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.BufferOverflowException;
+import java.util.ArrayList;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
 public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
 
-    private final GarbageCollector<T> garbageCollector;
     private final ChunkList<T> chunkList;
+    private final GarbageCollector<T> garbageCollector;
+    private final ChunkFactory<T> chunkFactory;
 
-
-    public static <T> Builder<T> baseOn(File dir) {
-        return new Builder<T>(dir);
+    public static Builder baseOn(File dir) {
+        Builder builder = Builders.newInstanceOf(Builder.class);
+        builder.dir(dir);
+        return builder;
     }
 
-    IPage(ChunkList<T> chunkList) {
-        this.chunkList = chunkList;
-        garbageCollector = new GarbageCollector<T>();
+    IPage(File baseDir, Accessor<T> accessor, int maxChunkCapacity, long minimizeCollectLength, long maxChunkIdleTimeMillis) throws IOException {
+        this.chunkFactory = new ChunkFactory<T>(baseDir, accessor, maxChunkCapacity, maxChunkIdleTimeMillis);
+        this.chunkList = new ChunkList<T>(loadExistChunksBy(baseDir, chunkFactory));
+        garbageCollector = new GarbageCollector<T>(chunkList, minimizeCollectLength);
+    }
+
+    private ArrayList<Chunk<T>> loadExistChunksBy(File baseDir, final ChunkFactory<T> chunkFactory) throws IOException {
+        return new NumberNamedFilesLoader<Chunk<T>>(baseDir, new FileHandler<Chunk<T>>() {
+            @Override
+            public Chunk<T> handle(File file, boolean last) throws IOException {
+                return last ? chunkFactory.appendableChunkOn(file) : chunkFactory.readOnlyChunkOn(file);
+            }
+        }).loadTo(new ArrayList<Chunk<T>>());
+    }
+
+    public Chunk<T> grow() throws IOException {
+        Chunk<T> chunk;
+        if (chunkList.isEmpty()) chunk = chunkFactory.newFirstAppendableChunk();
+        else {
+            chunk = chunkFactory.newAppendableAfter(chunkList.last());
+            convertLastRecentlyUsedChunkToReadOnly();
+        }
+        chunkList.append(chunk);
+        return chunk;
+    }
+
+    private void convertLastRecentlyUsedChunkToReadOnly() throws IOException {
+        chunkList.set(chunkList.lastIndex(), chunkList.last().asReadOnly());
     }
 
     public long append(T record) throws IOException {
         try {
             return chunkList.last().append(record);
-        } catch (BufferOverflowException e) {
-            chunkList.grow();
-            return append(record);
-        }
+        } catch (IndexOutOfBoundsException e) { // empty
+        } catch (BufferOverflowException e) { } // chunk no space for appending
+        grow();
+        return append(record);
     }
 
     public T get(long offset) throws IOException {
-        try {
-            return chunkList.chunkIn(offset).get(offset);
-        } catch (IndexOutOfBoundsException e) {
-            return null;
-        }
+        try { return chunkList.chunkIn(offset).get(offset); } catch (IndexOutOfBoundsException e) { return null; }
     }
 
     public Cursor<T> next(Cursor<T> cursor) throws IOException {
@@ -70,12 +98,10 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
     }
 
     public long garbageCollect(long survivorOffset) throws IOException {
-        return garbageCollector.collect(survivorOffset, chunkList);
+        return garbageCollector.collect(survivorOffset);
     }
 
-    public void flush() throws IOException {
-        chunkList.last().flush();
-    }
+    public void flush() throws IOException { chunkList.last().flush(); }
 
     @Override
     public boolean validateOrRecoverBy(Validator<T, IOException> validator) throws IOException {
@@ -83,12 +109,6 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
     }
 
     @Override
-    public void close() throws IOException {
-        chunkList.close();
-    }
-
-    public interface Options extends com.github.zhongl.options.Options {
-
-    }
+    public void close() throws IOException { chunkList.close(); }
 
 }

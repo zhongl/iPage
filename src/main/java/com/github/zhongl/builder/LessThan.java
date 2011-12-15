@@ -14,12 +14,17 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.util;
+package com.github.zhongl.builder;
 
-import java.io.File;
-import java.io.IOException;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
+
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface FileHandler<V> {
-    V handle(File file, boolean last) throws IOException;
+@Retention(RUNTIME)
+@Target(METHOD)
+public @interface LessThan {
+    String value();
 }

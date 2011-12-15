@@ -150,8 +150,9 @@ public class Builder<V> {
     private IPage<Entry<V>> newIPage() throws IOException {
         checkNotNull(valueAccessor, "Value accessor need to set.");
         chunkCapacity = (chunkCapacity == UNSET) ? 4096 : chunkCapacity;
-        return IPage.<Entry<V>>baseOn(new File(dir, IPAGE_DIR))
-                .accessor(new EntryAccessor<V>(valueAccessor))
-                .chunkCapacity(chunkCapacity).build();
+        return IPage.baseOn(new File(dir, IPAGE_DIR))
+                    .accessor(new EntryAccessor<V>(valueAccessor))
+                    .maxChunkCapacity(chunkCapacity)
+                    .build();
     }
 }

@@ -14,12 +14,22 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.util;
+package com.github.zhongl.builder;
 
-import java.io.File;
-import java.io.IOException;
-
-/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface FileHandler<V> {
-    V handle(File file, boolean last) throws IOException;
-}
+/**
+ * {@link com.github.zhongl.builder.BuilderConvention} example is :
+ * <pre>
+ * class Example {
+ *     Example(int a, String b) {...}
+ * }
+ *
+ * interface ExampleBuilder extends BuilderConvention{
+ *     ExampleBuilder a(int value);
+ *     ExampleBuilder b(String value);
+ *     Example build();
+ * }
+ * </pre>
+ *
+ * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
+ */
+public interface BuilderConvention {}
