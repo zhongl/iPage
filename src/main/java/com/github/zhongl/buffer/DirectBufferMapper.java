@@ -43,4 +43,7 @@ class DirectBufferMapper {
 
     public int capacity() { return capacity; }
 
+    public long maxIdleTimeMillis() {
+        return 0;  // TODO maxIdleTimeMillis
+    }
 }
