@@ -27,7 +27,7 @@ public class Validators {
 
     private static final Validator NULL_VALIDATOR = new Validator() {
         @Override
-        public void validate(Object arg) throws IllegalArgumentException { }
+        public void validate(String name, Object arg) throws IllegalArgumentException { }
     };
 
     public static Validator validator(Annotation annotation) {
@@ -45,9 +45,9 @@ public class Validators {
         final String value = annotation.value();
         return new Validator() {
             @Override
-            public void validate(Object arg) throws IllegalArgumentException {
+            public void validate(String name, Object arg) throws IllegalArgumentException {
                 Comparable expect = comparableNumber(arg.getClass(), value);
-                checkArgument(expect.compareTo(arg) < 0, "Value should be greater than " + expect);
+                checkArgument(expect.compareTo(arg) < 0, "%s should be greater than %s", name, expect);
             }
         };
     }
@@ -56,9 +56,9 @@ public class Validators {
         final String value = annotation.value();
         return new Validator() {
             @Override
-            public void validate(Object arg) throws IllegalArgumentException {
+            public void validate(String name, Object arg) throws IllegalArgumentException {
                 Comparable expect = comparableNumber(arg.getClass(), value);
-                checkArgument(expect.compareTo(arg) <= 0, "Value should be greater than or equal " + expect);
+                checkArgument(expect.compareTo(arg) <= 0, "%s should be greater than or equal %s", name, expect);
             }
         };
     }
@@ -67,9 +67,9 @@ public class Validators {
         final String value = annotation.value();
         return new Validator() {
             @Override
-            public void validate(Object arg) throws IllegalArgumentException {
+            public void validate(String name, Object arg) throws IllegalArgumentException {
                 Comparable expect = comparableNumber(arg.getClass(), value);
-                checkArgument(expect.compareTo(arg) > 0, "Value should be less than " + expect);
+                checkArgument(expect.compareTo(arg) > 0, "%s should be less than %s", name, expect);
             }
         };
     }
@@ -78,9 +78,9 @@ public class Validators {
         final String value = annotation.value();
         return new Validator() {
             @Override
-            public void validate(Object arg) throws IllegalArgumentException {
+            public void validate(String name, Object arg) throws IllegalArgumentException {
                 Comparable expect = comparableNumber(arg.getClass(), value);
-                checkArgument(expect.compareTo(arg) >= 0, "Value should be less than or equal " + expect);
+                checkArgument(expect.compareTo(arg) >= 0, "%s should be less than or equal %s", name, expect);
             }
         };
     }
@@ -89,8 +89,8 @@ public class Validators {
         final String value = annotation.value();
         return new Validator() {
             @Override
-            public void validate(Object arg) throws IllegalArgumentException {
-                checkArgument(((String) arg).matches(value), "Value should match " + value);
+            public void validate(String name, Object arg) throws IllegalArgumentException {
+                checkArgument(((String) arg).matches(value), "%s should match %s", name, value);
             }
         };
     }
@@ -98,8 +98,8 @@ public class Validators {
     private static Validator validator(NotNull annotation) {
         return new Validator() {
             @Override
-            public void validate(Object arg) throws IllegalArgumentException {
-                checkNotNull(arg, "Value should not be null");
+            public void validate(String name, Object arg) throws IllegalArgumentException {
+                checkNotNull(arg, "%s should not be null %s", name);
             }
         };
     }

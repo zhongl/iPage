@@ -92,22 +92,22 @@ class Operation<T> implements Closeable {
             @Override
             protected Cursor<Entry<T>> execute() throws Throwable {
                 Cursor<Entry<T>> next = iPage.next(entryCursor);
-                if (next.isEnd()) return next; // EOF
+                if (next.isTail()) return next; // EOF
                 Long offset = index.get(next.lastValue().key());
                 if (offset != null // existed key
                         && offset.equals(entryCursor.offset()) /*is the newest version value*/)
                     return next;
-                return Cursor.cursor(next.offset(), null); // value was deleted
+                return Cursor.<Entry<T>>head().skipTo(next.offset()); // value was deleted
             }
         };
     }
 
-    public Task<Long> garbageCollect(final long survivorOffset, FutureCallback<Long> callback) {
+    public Task<Long> garbageCollect(final long begin, final long end, FutureCallback<Long> callback) {
         return new Task<Long>(callback) {
 
             @Override
             protected Long execute() throws Throwable {
-                return iPage.garbageCollect(survivorOffset);
+                return iPage.garbageCollect(begin, end);
             }
         };
     }

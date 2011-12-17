@@ -53,8 +53,7 @@ public class Index implements Closeable, ValidateOrRecover<Slot, IOException> {
 
     public Long put(Md5Key key, Long offset) throws IOException {
         try {
-            return lastRecentlyUsedBuckets().put(key, offset);
-        } catch (IndexOutOfBoundsException e) { // empty
+            if (!fileHashTables.isEmpty()) return lastRecentlyUsedBuckets().put(key, offset);
         } catch (BufferOverflowException e) { } // chunk no space for appending
         grow();
         return put(key, offset);
@@ -153,11 +152,11 @@ public class Index implements Closeable, ValidateOrRecover<Slot, IOException> {
 
     public static interface Builder extends BuilderConvention {
 
-        @OptionIndex(0)
+        @ArgumentIndex(0)
         @NotNull
         Builder dir(File value);
 
-        @OptionIndex(1)
+        @ArgumentIndex(1)
         @GreaterThan("0")
         @DefaultValue("256")
         Builder initialBucketSize(int value);

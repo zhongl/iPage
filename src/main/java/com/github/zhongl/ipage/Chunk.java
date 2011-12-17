@@ -69,10 +69,9 @@ abstract class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> 
     public void delete() { fileOperator.delete(); }
 
     public Cursor<T> next(Cursor<T> cursor) throws IOException {
-        long offset = cursor.offset();
-        T value = get(offset);
-        offset += accessor.byteLengthOf(value);
-        return Cursor.cursor(offset, value);
+        T value = get(cursor.offset());
+        if (value == null) return cursor.tail();
+        return cursor.forword(accessor.byteLengthOf(value), value);
     }
 
     /**
@@ -124,6 +123,8 @@ abstract class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> 
      * </pre>
      */
     public abstract Chunk<T> right(long offset) throws IOException;
+
+    public abstract long length();
 
     protected MappedDirectBuffer mappedDirectBuffer() throws IOException {
         return buffers.getOrMapBy(fileOperator);

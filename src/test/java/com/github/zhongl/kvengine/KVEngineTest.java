@@ -75,7 +75,6 @@ public class KVEngineTest extends FileBase {
         engine.remove(Md5Key.generate(value1));
 
         Iterator<byte[]> iterator = engine.valueIterator();
-
         assertThat(iterator.next(), is(value2));
         assertThat(iterator.next(), is(value3));
         assertThat(iterator.hasNext(), is(false));
@@ -89,7 +88,7 @@ public class KVEngineTest extends FileBase {
     private void newEngineAndStartup() throws IOException {
         engine = new BlockingKVEngine<byte[]>(
                 KVEngine.<byte[]>baseOn(dir)
-                        .groupCommit(true)
+                        .groupCommit(false)
                         .flushElapseMilliseconds(10L)
                         .valueAccessor(CommonAccessors.BYTES)
                         .build());

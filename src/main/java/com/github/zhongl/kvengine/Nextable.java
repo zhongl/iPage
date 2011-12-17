@@ -1,6 +1,5 @@
 /*
  * Copyright 2011 zhongl
- *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -14,9 +13,12 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.builder;
+package com.github.zhongl.kvengine;
 
-/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface Validator {
-    void validate(String name, Object arg) throws RuntimeException;
+import com.github.zhongl.ipage.Cursor;
+import com.google.common.util.concurrent.FutureCallback;
+
+/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl</a> */
+public interface Nextable<T> {
+    boolean next(Cursor<T> cursor, FutureCallback<Cursor<T>> callback);
 }

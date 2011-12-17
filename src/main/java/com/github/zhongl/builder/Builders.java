@@ -56,17 +56,17 @@ public class Builders {
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
             if (method.equals(buildMethod)) return build();
 
-            validate(args[0], method.getAnnotations());
+            validate(args[0], method);
 
             set(method, args[0]);
             return proxy;
         }
 
-        private void validate(Object value, Annotation[] annotations) {
-            for (Annotation annotation : annotations) {
+        private void validate(Object value, Method method) {
+            for (Annotation annotation : method.getAnnotations()) {
                 if (annotation instanceof DefaultValue) continue;
-                if (annotation instanceof OptionIndex) continue;
-                Validators.validator(annotation).validate(value);
+                if (annotation instanceof ArgumentIndex) continue;
+                Validators.validator(annotation).validate(method.getName(), value);
             }
         }
 
@@ -101,14 +101,14 @@ public class Builders {
                     continue;
                 }
 
-                OptionIndex optionIndex = proxyMethod.getAnnotation(OptionIndex.class);
+                ArgumentIndex argumentIndex = proxyMethod.getAnnotation(ArgumentIndex.class);
 
                 DefaultValue defaultValue = proxyMethod.getAnnotation(DefaultValue.class);
                 if (defaultValue != null) {
                     Class<?> aClass = proxyMethod.getParameterTypes()[0];
-                    optionDefaultValues[optionIndex.value()] = getDefaultValueBy(defaultValue.value(), aClass);
+                    optionDefaultValues[argumentIndex.value()] = getDefaultValueBy(defaultValue.value(), aClass);
                 }
-                optionMethods[optionIndex.value()] = proxyMethod;
+                optionMethods[argumentIndex.value()] = proxyMethod;
             }
             return buildMethod;
         }

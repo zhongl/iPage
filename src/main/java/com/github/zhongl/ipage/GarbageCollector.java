@@ -31,8 +31,9 @@ public class GarbageCollector<T> {
         this.minimizeCollectLength = minimizeCollectLength;
     }
 
+    @Deprecated
     public long collect(long survivorOffset) throws IOException {
-        if (lastSurvivorOffset == survivorOffset) return 0L;
+        if (lastSurvivorOffset == survivorOffset || chunkList.isEmpty()) return 0L;
 
         long beginPosition = chunkList.first().beginPosition();
 
@@ -46,30 +47,51 @@ public class GarbageCollector<T> {
         return collectedLength;
     }
 
-    private long collect(long begin, long end) throws IOException {
-        if (end - begin < minimizeCollectLength) return 0L;
+    public long collect(long begin, long end) throws IOException {
+        if (begin == end || chunkList.isEmpty() || end - begin < minimizeCollectLength) return 0L;
+
         int indexOfBeginChunk = chunkList.indexOfChunkIn(begin);
         int indexOfEndChunk = chunkList.indexOfChunkIn(end);
+
+        indexOfBeginChunk = indexOfBeginChunk < 0 ? 0 : indexOfBeginChunk;
+        indexOfEndChunk = indexOfEndChunk < 0 ? chunkList.lastIndex() : indexOfEndChunk;
+
         if (indexOfBeginChunk == indexOfEndChunk) return collectIn(indexOfBeginChunk, begin, end);
-        return collectRight(indexOfEndChunk, end) + collectLeft(indexOfBeginChunk, begin);
+
+        /*
+         *   |   left    |  between |   right   |
+         *   |@@@@@|-----|----------|-----|@@@@@|
+         *   |      0    |    1     |     2     |
+         */
+        return collectRight(indexOfEndChunk, end) + collectBetween(indexOfEndChunk, indexOfBeginChunk) + collectLeft(indexOfBeginChunk, begin);
     }
 
     /** @see Chunk#right(long) */
-    private long collectRight(int indexOfEndChunk, long end) throws IOException {
-        Chunk<T> right = chunkList.get(indexOfEndChunk);
-        Chunk<T> newChunk = right.right(end);
+    private long collectRight(int index, long offset) throws IOException {
+        Chunk<T> right = chunkList.get(index);
+        Chunk<T> newChunk = right.right(offset);
         if (newChunk == right) return 0L;
-        chunkList.set(indexOfEndChunk, newChunk);
-        return end - right.beginPosition();
+        chunkList.set(index, newChunk);
+        return offset - right.beginPosition();
     }
 
     /** @see Chunk#left(long) */
-    private long collectLeft(int indexOfBeginChunk, long begin) throws IOException {
-        Chunk<T> left = chunkList.get(indexOfBeginChunk);
-        long collectedLength = left.endPosition() + 1 - begin;
-        Chunk<T> newLeft = left.left(begin);
-        if (newLeft == null) chunkList.remove(indexOfBeginChunk);
-        else chunkList.set(indexOfBeginChunk, newLeft);
+    private long collectLeft(int index, long offset) throws IOException {
+        Chunk<T> left = chunkList.get(index);
+        long collectedLength = left.endPosition() + 1 - offset;
+        Chunk<T> newLeft = left.left(offset);
+        if (newLeft == null) chunkList.remove(index);
+        else chunkList.set(index, newLeft);
+        return collectedLength;
+    }
+
+    private long collectBetween(int indexOfEndChunk, int indexOfBeginChunk) {
+        long collectedLength = 0L;
+        for (int i = indexOfEndChunk - 1; i > indexOfBeginChunk; i--) {
+            Chunk<T> chunk = chunkList.remove(i);
+            collectedLength += chunk.length();
+            chunk.delete();
+        }
         return collectedLength;
     }
 

@@ -1,6 +1,5 @@
 /*
  * Copyright 2011 zhongl
- *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -14,17 +13,11 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.builder;
+package com.github.zhongl.kvengine;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
-
-import static java.lang.annotation.ElementType.METHOD;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import com.google.common.util.concurrent.FutureCallback;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-@Retention(RUNTIME)
-@Target(METHOD)
-public @interface OptionIndex {
-    int value();
+public interface AutoGarbageCollectable<T> extends Nextable<T> {
+    boolean garbageCollect(long begin, long end, FutureCallback<Long> longCallback);
 }

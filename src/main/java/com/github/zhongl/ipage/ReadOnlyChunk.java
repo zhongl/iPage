@@ -50,6 +50,9 @@ class ReadOnlyChunk<T> extends Chunk<T> {
     public long endPosition() { return beginPosition() + fileOperator.length() - 1; }
 
     @Override
+    public long length() { return fileOperator.length(); }
+
+    @Override
     public Chunk<T> asReadOnly() { return this; }
 
     @Override
@@ -66,22 +69,22 @@ class ReadOnlyChunk<T> extends Chunk<T> {
     public List<? extends Chunk<T>> split(long begin, long end) throws IOException {
         T value = get(begin);
         if (end - begin < accessor.byteLengthOf(value)) return singletonList(this);    // Case 3
-        if (begin == beginPosition()) return singletonList(right(end));                 // Case 2
+        if (begin == beginPosition()) return singletonList(right(end));                // Case 2
         Chunk<T> right = right0(end); // do right first for avoiding delete by left
         Chunk<T> left = left(begin);
-        return Arrays.asList(left, right);                                              // Case 1
+        return Arrays.asList(left, right);                                             // Case 1
     }
 
     /** @see Chunk#left(long) */
     @Override
     public Chunk<T> left(long offset) throws IOException {
         close();
-        if (offset == beginPosition()) {                                                // Case 2
+        if (offset == beginPosition()) {                                               // Case 2
             delete();
             return null;
         }
         long size = offset - beginPosition();
-        return new ReadOnlyChunk(buffers, fileOperator.left(offset), accessor);     // Case 1
+        return new ReadOnlyChunk(buffers, fileOperator.left(size), accessor);          // Case 1
     }
 
     /** @see Chunk#right(long) */

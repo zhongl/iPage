@@ -28,16 +28,17 @@ import org.junit.Test;
 
 import java.util.Collection;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class BlockingKVEngineBenchmark extends FileBase {
 
-    public static final int TIMES = Integer.getInteger("blocking.kvengine.benchmark.times", 1000);
+    public static final int TIMES = Integer.getInteger("blocking.kvengine.benchmark.times", 512);
     private BlockingKVEngine<byte[]> engine;
 
     @After
     public void tearDown() throws Exception {
-        engine.shutdown();
+        if (engine != null) engine.shutdown();
     }
 
     @Override
@@ -46,14 +47,16 @@ public class BlockingKVEngineBenchmark extends FileBase {
         super.setUp();
         dir = testDir("benchmark");
         engine = new BlockingKVEngine<byte[]>(
-                KVEngine.<byte[]>baseOn(dir)
-                        .initialBucketSize(8192)
-                        .flushCount(4)
-                        .flushElapseMilliseconds(10L)
-                        .maximizeChunkCapacity(1024 * 1024 * 128)
-                        .valueAccessor(CommonAccessors.BYTES)
-                        .groupCommit(true)
-                        .build());
+            KVEngine.<byte[]>baseOn(dir)
+                .initialBucketSize(1024)
+                .flushCount(4)
+                .flushElapseMilliseconds(10L)
+                .maximizeChunkCapacity(1024 * /*1024 **/ 4)
+                .valueAccessor(CommonAccessors.BYTES)
+                .minimzieCollectLength(4096)
+                .groupCommit(true)
+                .startAutoGarbageCollectOnStartup(true)
+                .build());
         engine.startup();
     }
 
@@ -65,28 +68,28 @@ public class BlockingKVEngineBenchmark extends FileBase {
         CallableFactory removeFactory = new RemoveFactory(engine);
 
         CallableFactory concatCallableFactory = new ConcatCallableFactory(
-                new FixInstanceSizeFactory(TIMES, addFactory),
-                new FixInstanceSizeFactory(TIMES, getFactory),
-                new FixInstanceSizeFactory(TIMES, removeFactory)
+            new FixInstanceSizeFactory(TIMES, addFactory),
+            new FixInstanceSizeFactory(TIMES, getFactory),
+            new FixInstanceSizeFactory(TIMES, removeFactory)
         );
 
         Collection<Statistics> statisticses =
-                new Benchmarker(concatCallableFactory, 8, TIMES * 3).benchmark();
+            new Benchmarker(concatCallableFactory, 8, TIMES * 3).benchmark();
         for (Statistics statisticse : statisticses) {
             System.out.println(statisticse);
         }
 
-        engine.garbageCollect();
+        Thread.sleep(50L);
     }
 
     abstract static class OperationFactory implements CallableFactory {
         protected final BlockingKVEngine engine;
-        private int count;
+        private final AtomicInteger count = new AtomicInteger();
 
         public OperationFactory(BlockingKVEngine engine) {this.engine = engine;}
 
         protected byte[] generateValue() {
-            return Bytes.concat(Ints.toByteArray(count++), new byte[1020]);
+            return Bytes.concat(Ints.toByteArray(count.getAndIncrement()), new byte[1020]);
         }
     }
 

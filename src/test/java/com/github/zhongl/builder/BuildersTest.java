@@ -51,28 +51,28 @@ public class BuildersTest {
 
     public interface Builder extends BuilderConvention {
 
-        @OptionIndex(0)
+        @ArgumentIndex(0)
         @GreaterThan("0")
         @DefaultValue("7")
         Builder intValue(int value);
 
-        @OptionIndex(1)
+        @ArgumentIndex(1)
         @GreaterThanOrEqual("0")
         Builder longValue(long value);
 
-        @OptionIndex(2)
+        @ArgumentIndex(2)
         @LessThan("7")
         Builder floatValue(float value);
 
-        @OptionIndex(3)
+        @ArgumentIndex(3)
         @LessThanOrEqual("7")
         Builder doubleValue(double value);
 
-        @OptionIndex(4)
+        @ArgumentIndex(4)
         @NotNull
         Builder objectValue(Object value);
 
-        @OptionIndex(5)
+        @ArgumentIndex(5)
         @Match("(\\d{1,3}\\.){3}\\d{1,3}")
         Builder ipAddress(String value);
 
@@ -150,11 +150,11 @@ public class BuildersTest {
     public void defaultIntValue() throws Exception {
         Builder builder = newInstanceOf(Builder.class);
         A a = builder.longValue(0L)
-                     .floatValue(6.9f)
-                     .doubleValue(7.0)
-                     .objectValue("")
-                     .ipAddress("127.0.0.1")
-                     .build();
+            .floatValue(6.9f)
+            .doubleValue(7.0)
+            .objectValue("")
+            .ipAddress("127.0.0.1")
+            .build();
 
         assertThat(a.intValue, is(7));
         assertThat(a.longValue, is(0L));
@@ -168,12 +168,12 @@ public class BuildersTest {
     public void setIntValue() throws Exception {
         Builder builder = newInstanceOf(Builder.class);
         A a = builder.intValue(8)
-                     .longValue(0L)
-                     .floatValue(6.9f)
-                     .doubleValue(7.0)
-                     .objectValue("")
-                     .ipAddress("127.0.0.1")
-                     .build();
+            .longValue(0L)
+            .floatValue(6.9f)
+            .doubleValue(7.0)
+            .objectValue("")
+            .ipAddress("127.0.0.1")
+            .build();
 
         assertThat(a.intValue, is(8));
         assertThat(a.longValue, is(0L));
@@ -187,10 +187,10 @@ public class BuildersTest {
     public void notSetLongValue() throws Exception {
         Builder builder = newInstanceOf(Builder.class);
         A a = builder.floatValue(6.9f)
-                     .doubleValue(7.0)
-                     .objectValue("")
-                     .ipAddress("127.0.0.1")
-                     .build();
+            .doubleValue(7.0)
+            .objectValue("")
+            .ipAddress("127.0.0.1")
+            .build();
 
         assertThat(a.intValue, is(8));
         assertThat(a.longValue, is(0L));

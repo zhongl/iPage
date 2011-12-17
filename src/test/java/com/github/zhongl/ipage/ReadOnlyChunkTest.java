@@ -99,6 +99,17 @@ public class ReadOnlyChunkTest extends ChunkBase {
     }
 
     @Test
+    public void rightCase1WithNonZeroBeginPosition() throws Exception {
+        dir = testDir("rightCase1WithNonZeroBeginPosition");
+        newChunk(4096);
+
+        chunk = chunk.right(4128L);
+        assertThat(chunk, is(notNullValue()));
+        assertNotExistFile("4096");
+        assertThat(new File(dir, "4128").length(), is(4064L));
+    }
+
+    @Test
     public void rightCase2() throws Exception {
         dir = testDir("rightCase2");
         newChunk();
@@ -127,8 +138,13 @@ public class ReadOnlyChunkTest extends ChunkBase {
     }
 
     protected void newChunk() throws IOException {
+        newChunk(0);
+    }
+
+    private void newChunk(int beginPosition) throws IOException {
         dir.mkdirs();
-        chunk = new AppendableChunk(new MappedDirectBuffers(), FileOperator.writeable(new File(dir, "0"), 4096), STRING);
+        FileOperator operator = FileOperator.writeable(new File(dir, beginPosition + ""), 4096);
+        chunk = new AppendableChunk(new MappedDirectBuffers(), operator, STRING);
         fullFill(chunk);
         chunk = chunk.asReadOnly();
     }

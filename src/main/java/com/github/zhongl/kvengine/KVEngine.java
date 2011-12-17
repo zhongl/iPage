@@ -34,22 +34,16 @@ import java.util.concurrent.TimeUnit;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @ThreadSafe
-public class KVEngine<T> extends Engine {
+public class KVEngine<T> extends Engine implements AutoGarbageCollectable<Entry<T>> {
     static final String IPAGE_DIR = "ipage";
     static final String INDEX_DIR = "index";
 
     private static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
 
+    private final AutoGarbageCollector autoGarbageCollector = new AutoGarbageCollector(this);
     private final DataIntegerity dataIntegerity;
     private final Operation<T> operation;
-
-
-    @VisibleForTesting
-    KVEngine(long pollTimeout, int backlog, DataIntegerity dataIntegerity, Operation<T> operation) {
-        super(pollTimeout, DEFAULT_TIME_UNIT, backlog);
-        this.dataIntegerity = dataIntegerity;
-        this.operation = operation;
-    }
+    private final boolean startAutoGarbageCollectOnStartup;
 
     KVEngine(int backlog,
              File dir,
@@ -60,21 +54,25 @@ public class KVEngine<T> extends Engine {
              int initialBucketSize,
              int flushCount,
              long flushElapseMilliseconds,
-             boolean groupCommit) {
-        super(flushElapseMilliseconds / 2, DEFAULT_TIME_UNIT, backlog);
+             boolean groupCommit,
+             boolean startAutoGarbageCollectOnStartup) {
 
         // TODO refactor this method
+        super(flushElapseMilliseconds / 2, DEFAULT_TIME_UNIT, backlog);
+
+        this.startAutoGarbageCollectOnStartup = startAutoGarbageCollectOnStartup;
+
 
         boolean exists = dir.exists();
         dir.mkdirs();
         Preconditions.checkArgument(dir.isDirectory(), "%s should be a directory", dir);
 
         final IPage<Entry<T>> iPage = IPage.<Entry<T>>baseOn(new File(dir, IPAGE_DIR))
-                                           .maxChunkIdleTimeMillis(maxChunkIdleTimeMillis)
-                                           .minimizeCollectLength(minimzieCollectLength)
-                                           .accessor(new EntryAccessor<T>(valueAccessor))
-                                           .maximizeChunkCapacity(maximizeChunkCapacity)
-                                           .build();
+            .maxChunkIdleTimeMillis(maxChunkIdleTimeMillis)
+            .minimizeCollectLength(minimzieCollectLength)
+            .accessor(new EntryAccessor<T>(valueAccessor))
+            .maximizeChunkCapacity(maximizeChunkCapacity)
+            .build();
 
         final Index index = Index.baseOn(new File(dir, INDEX_DIR)).initialBucketSize(initialBucketSize).build();
 
@@ -93,11 +91,25 @@ public class KVEngine<T> extends Engine {
         });
 
         operation = new Operation<T>(iPage, index, groupCommit ? Group.newInstance() : Group.NULL, callByCountOrElapse);
+    }
 
+    @VisibleForTesting
+    KVEngine(long pollTimeout, int backlog, DataIntegerity dataIntegerity, Operation<T> operation) {
+        super(pollTimeout, DEFAULT_TIME_UNIT, backlog);
+        this.dataIntegerity = dataIntegerity;
+        this.operation = operation;
+        startAutoGarbageCollectOnStartup = false;
+    }
+
+    @Override
+    public void startup() {
+        super.startup();
+        if (startAutoGarbageCollectOnStartup) autoGarbageCollector.start();
     }
 
     @Override
     public void shutdown() throws InterruptedException {
+        autoGarbageCollector.stop();
         super.shutdown();
         try {
             operation.close();
@@ -106,7 +118,6 @@ public class KVEngine<T> extends Engine {
             throw new RuntimeException(e);
         }
     }
-
 
     public static <T> Builder<T> baseOn(File dir) {
         Builder<T> builder = Builders.newInstanceOf(Builder.class);
@@ -128,67 +139,75 @@ public class KVEngine<T> extends Engine {
         return submit(operation.remove(key, callback));
     }
 
-    public boolean next(Cursor<Entry<T>> entryCursor, FutureCallback<Cursor<Entry<T>>> callback) {
-        return submit(operation.next(entryCursor, callback));
-    }
-
-    public boolean garbageCollect(long survivorOffset, FutureCallback<Long> callback) {
-        return submit(operation.garbageCollect(survivorOffset, callback));
+    @Override
+    public boolean next(Cursor<Entry<T>> cursor, FutureCallback<Cursor<Entry<T>>> callback) {
+        return submit(operation.next(cursor, callback));
     }
 
     @Override
-    protected void hearbeat() {
-        operation.tryGroupCommitByElapse();
+    protected void hearbeat() { operation.tryGroupCommitByElapse(); }
+
+    @Override
+    public boolean garbageCollect(long begin, long end, FutureCallback<Long> longCallback) {
+        return submit(operation.garbageCollect(begin, end, longCallback));
     }
+
+    public void startAutoGarbageCollect() { autoGarbageCollector.start(); }
+
+    public void stopAutoGarbageCollect() { autoGarbageCollector.stop(); }
 
     public static interface Builder<T> extends BuilderConvention {
 
-        @OptionIndex(0)
+        @ArgumentIndex(0)
         @DefaultValue("256")
         @GreaterThan("0")
         Builder<T> backlog(int value);
 
-        @OptionIndex(1)
+        @ArgumentIndex(1)
         @NotNull
         Builder<T> dir(File value);
 
-        @OptionIndex(2)
+        @ArgumentIndex(2)
         @NotNull
         Builder<T> valueAccessor(Accessor<T> value);
 
-        @OptionIndex(3)
+        @ArgumentIndex(3)
         @DefaultValue("4000")
         @GreaterThanOrEqual("1000")
         Builder<T> maxChunkIdleTimeMillis(long value);
 
-        @OptionIndex(4)
+        @ArgumentIndex(4)
         @DefaultValue("67108864") // 64M
         @GreaterThanOrEqual("4096")
         Builder<T> maximizeChunkCapacity(int value);
 
-        @OptionIndex(5)
+        @ArgumentIndex(5)
         @DefaultValue("67108864") // 64M
         @GreaterThanOrEqual("4096")
         Builder<T> minimzieCollectLength(long value);
 
-        @OptionIndex(6)
+        @ArgumentIndex(6)
         @DefaultValue("1024")
         @GreaterThan("0")
         Builder<T> initialBucketSize(int value);
 
-        @OptionIndex(7)
+        @ArgumentIndex(7)
         @DefaultValue("10000")
         @GreaterThan("0")
         Builder<T> flushCount(int value);
 
-        @OptionIndex(8)
+        @ArgumentIndex(8)
         @DefaultValue("1000")
         @GreaterThan("0")
         Builder<T> flushElapseMilliseconds(long value);
 
-        @OptionIndex(9)
+        @ArgumentIndex(9)
         @DefaultValue("false")
         Builder<T> groupCommit(boolean value);
+
+        @ArgumentIndex(10)
+        @DefaultValue("true")
+        Builder<T> startAutoGarbageCollectOnStartup(boolean value);
 
         KVEngine<T> build();
 

@@ -143,7 +143,7 @@ public class IPageTest extends FileBase {
             iPage.append(record);
         }
 
-        Cursor<String> cursor = Cursor.begin(-1L);
+        Cursor<String> cursor = Cursor.head();
         for (int i = 0; i < 257; i++) {
             cursor = iPage.next(cursor);
             assertThat(cursor.lastValue(), is(record));

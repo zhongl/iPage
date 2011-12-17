@@ -14,21 +14,17 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.builder;
 
-import com.github.zhongl.integerity.Validator;
-import org.junit.Test;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 
-import java.io.IOException;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class IPageGarbageCollectTest {
-    IPage<String> iPage;
-
-    @Test
-    public void garbageCollect() throws Exception {
-        Validator<String, IOException> validator = null;
-        Cursor<String> survivor = Cursor.cursor(7L, "value");
-//        iPage.garbageCollectBetweenTwo(survivor);
-    }
+@Retention(RUNTIME)
+@Target(METHOD)
+public @interface ArgumentIndex {
+    int value();
 }

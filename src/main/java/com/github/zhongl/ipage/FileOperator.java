@@ -64,7 +64,10 @@ class FileOperator implements DirectBufferMapper {
 
     public void delete() { checkState(file.delete(), "Can't delete file %s", file); }
 
-    /** @return {@code this} after truncated file. */
+    /**
+     * @return {@code this} after truncated file.
+     * @see Chunk#left(long)
+     */
     public FileOperator left(long offset) throws IOException {
         RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
         randomAccessFile.setLength(offset);
@@ -72,12 +75,15 @@ class FileOperator implements DirectBufferMapper {
         return this;
     }
 
-    /** @return a new instance of {@link com.github.zhongl.ipage.FileOperator} with new file. */
+    /**
+     * @return a new instance of {@link com.github.zhongl.ipage.FileOperator} with new file.
+     * @see Chunk#right(long)
+     */
     public FileOperator right(long offset) throws IOException {
         File newFile = new File(file.getParentFile(), Long.toString(offset));
-        long length = beginPosition() + file.length() - offset;
-        offset -= beginPosition;
-        InputSupplier<InputStream> from = ByteStreams.slice(Files.newInputStreamSupplier(file), offset, length);
+        long position = offset - beginPosition();
+        long length = file.length() - position;
+        InputSupplier<InputStream> from = ByteStreams.slice(Files.newInputStreamSupplier(file), position, length);
         Files.copy(from, newFile);
         return readOnly(newFile, maxIdleTimeMillis);
     }

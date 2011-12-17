@@ -18,37 +18,42 @@ package com.github.zhongl.ipage;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class Cursor<T> {
-    private final long offset;
+
+    private final long position;
     private final T lastValue;
-    private final boolean end;
+    private final boolean tail;
 
-    private Cursor(long offset, T lastValue, boolean end) {
-        this.offset = offset;
+    protected Cursor(long position, T lastValue, boolean tail) {
+        this.position = position;
         this.lastValue = lastValue;
-        this.end = end;
+        this.tail = tail;
     }
 
-    public static <T> Cursor<T> begin(long offset) {
-        return new Cursor(offset, null, false);
+    public static <T> Cursor<T> head() {
+        return new Cursor<T>(0L, null, false);
     }
 
-    public static <T> Cursor<T> cursor(long offset, T lastValue) {
-        return new Cursor(offset, lastValue, false);
+    public Cursor<T> forword(long length, T lastValue) {
+        return new Cursor(position + length, lastValue, false);
     }
 
-    public <T> Cursor<T> end() {
-        return new Cursor(offset, null, true);
+    public Cursor<T> tail() {
+        return new Cursor(position, null, true);
     }
 
     public long offset() {
-        return offset;
+        return position;
     }
 
     public T lastValue() {
         return lastValue;
     }
 
-    public boolean isEnd() {
-        return end;
+    public boolean isTail() {
+        return tail;
+    }
+
+    public Cursor<T> skipTo(long position) {
+        return new Cursor(position, null, false);
     }
 }

@@ -30,29 +30,53 @@ class ChunkList<T> {
         chunkOffsetRangeList = new ChunkOffsetRangeList();
     }
 
-    public Chunk<T> last() throws IOException { return get(lastIndex()); }
+    public Chunk<T> last() throws IOException {
+        return get(lastIndex());
+    }
 
-    public int lastIndex() { return chunks.size() - 1; }
+    public int lastIndex() {
+        return chunks.size() - 1;
+    }
 
-    public boolean append(Chunk<T> chunk) {return chunks.add(chunk);}
+    public boolean append(Chunk<T> chunk) {
+        return chunks.add(chunk);
+    }
 
-    public boolean isEmpty() {return chunks.isEmpty();}
+    public boolean isEmpty() {
+        return chunks.isEmpty();
+    }
 
-    public Chunk<T> chunkIn(long offset) throws IOException { return get(indexOfChunkIn(offset)); }
+    public Chunk<T> chunkIn(long offset) throws IOException {
+        return get(indexOfChunkIn(offset));
+    }
 
-    public int indexOfChunkIn(long offset) {return Range.binarySearch(chunkOffsetRangeList, offset);}
+    public int indexOfChunkIn(long offset) {
+        return Range.binarySearch(chunkOffsetRangeList, offset);
+    }
 
-    public Chunk<T> first() throws IOException { return get(firstIndex()); }
+    public Chunk<T> first() throws IOException {
+        return get(firstIndex());
+    }
 
-    public void close() throws IOException { for (Chunk<T> chunk : chunks) chunk.close(); }
+    public void close() throws IOException {
+        for (Chunk<T> chunk : chunks) chunk.close();
+    }
 
-    public Chunk<T> get(int index) {return chunks.get(index);}
+    public Chunk<T> get(int index) {
+        return chunks.get(index);
+    }
 
-    public Chunk<T> set(int index, Chunk<T> chunk) {return chunks.set(index, chunk);}
+    public Chunk<T> set(int index, Chunk<T> chunk) {
+        return chunks.set(index, chunk);
+    }
 
-    public Chunk<T> remove(int index) {return chunks.remove(index);}
+    public Chunk<T> remove(int index) {
+        return chunks.remove(index);
+    }
 
-    public void insert(int index, Chunk<T> chunk) {chunks.add(index, chunk);}
+    public void insert(int index, Chunk<T> chunk) {
+        chunks.add(index, chunk);
+    }
 
     private int firstIndex() {return 0;}
 

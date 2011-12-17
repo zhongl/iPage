@@ -50,7 +50,7 @@ public class AppendableChunkTest extends ChunkBase {
             chunk.append("" + i);
         }
 
-        Cursor<String> cursor = Cursor.begin(chunk.beginPosition());
+        Cursor<String> cursor = Cursor.<String>head().skipTo(chunk.beginPosition());
         for (int i = 0; i < 10; i++) {
             cursor = chunk.next(cursor);
             assertThat(cursor.lastValue(), is(i + ""));

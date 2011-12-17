@@ -23,20 +23,20 @@ import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl</a> */
 public class ValueIterator<T> extends AbstractIterator<T> {
-    private Cursor<Entry<T>> cursor = Cursor.begin(-1L);
-    private final KVEngine<T> engine;
+    private Cursor<Entry<T>> cursor = Cursor.head();
+    private final Nextable<Entry<T>> nextable;
 
-    public ValueIterator(KVEngine<T> engine) {
-        this.engine = engine;
+    public ValueIterator(Nextable<Entry<T>> nextable) {
+        this.nextable = nextable;
     }
 
     @Override
     protected T computeNext() {
         try {
             Sync<Cursor<Entry<T>>> callback = new Sync<Cursor<Entry<T>>>();
-            checkState(engine.next(cursor, callback), "Too many tasks to submit.");
+            checkState(nextable.next(cursor, callback), "Too many tasks to submit.");
             cursor = callback.get();
-            if (cursor.isEnd()) return endOfData();
+            if (cursor.isTail()) return endOfData();
             if (cursor.lastValue() == null) return computeNext();
             return cursor.lastValue().value();
         } catch (IllegalStateException e) {

@@ -55,6 +55,7 @@ class AppendableChunk<T> extends Chunk<T> {
 
     @Override
     public Chunk<T> asReadOnly() throws IOException {
+        close();
         return new ReadOnlyChunk<T>(buffers, fileOperator.asReadOnly(), accessor);
     }
 
@@ -67,7 +68,7 @@ class AppendableChunk<T> extends Chunk<T> {
 
     @Override
     public boolean validateOrRecoverBy(Validator<T, IOException> validator) throws IOException {
-        Cursor<T> cursor = Cursor.begin(beginPosition());
+        Cursor<T> cursor = Cursor.<T>head().skipTo(beginPosition());
         while (cursor.offset() < endPosition()) {
             long lastOffset = cursor.offset();
             cursor = next(cursor);
@@ -84,9 +85,12 @@ class AppendableChunk<T> extends Chunk<T> {
     }
 
     @Override
-    public Chunk<T> left(long offset) throws IOException { return this;  /*unsupport for appending chunk*/ }
+    public Chunk<T> left(long offset) throws IOException { return this; }/*unsupport for appending chunk*/
 
     @Override
-    public Chunk<T> right(long offset) throws IOException { return this;  /*unsupport for appending chunk*/ }
+    public Chunk<T> right(long offset) throws IOException { return this; }/*unsupport for appending chunk*/
+
+    @Override
+    public long length() { return writePosition; }
 
 }
