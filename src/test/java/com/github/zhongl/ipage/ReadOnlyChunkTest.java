@@ -88,6 +88,16 @@ public class ReadOnlyChunkTest extends ChunkBase {
     }
 
     @Test
+    public void leftCase2WithOffsetLessThanChunkBeginPosition() throws Exception {
+        dir = testDir("leftCase2");
+        newChunk(4096);
+
+        chunk = chunk.left(4095L);
+        assertThat(chunk, is(nullValue()));
+        assertNotExistFile("0");
+    }
+
+    @Test
     public void rightCase1() throws Exception {
         dir = testDir("rightCase1");
         newChunk();

@@ -79,7 +79,7 @@ class ReadOnlyChunk<T> extends Chunk<T> {
     @Override
     public Chunk<T> left(long offset) throws IOException {
         close();
-        if (offset == beginPosition()) {                                               // Case 2
+        if (offset <= beginPosition()) {                                               // Case 2
             delete();
             return null;
         }

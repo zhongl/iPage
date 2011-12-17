@@ -41,23 +41,26 @@ public class GarbageCollectorTest {
     }
 
     @Test
+    public void emptyList() throws Exception {
+        assertThat(collector.collect(0L, 15L), is(0L));
+    }
+
+    @Test
     public void beginEqualEnd() throws Exception {
         chunkList.append(mockChunk(0L, 4095L));
-        assertThat(collector.collect(15L), is(0L));
-        assertThat(collector.collect(15L), is(0L));
+        assertThat(collector.collect(15L, 15L), is(0L));
     }
 
     @Test
     public void beginGreaterThanEnd() throws Exception {
         chunkList.append(mockChunk(0L, 4095L));
-        assertThat(collector.collect(15L), is(0L));
-        assertThat(collector.collect(7L), is(0L));
+        assertThat(collector.collect(15L, 7L), is(0L));
     }
 
     @Test
     public void lessThanMinimizeCollectLength() throws Exception {
         chunkList.append(mockChunk(0L, 4095L));
-        assertThat(collector.collect(15L), is(0L));
+        assertThat(collector.collect(0L, 15L), is(0L));
     }
 
     @Test
@@ -66,8 +69,7 @@ public class GarbageCollectorTest {
         List<Chunk<String>> pieces = Collections.singletonList(chunk);
         doReturn(pieces).when(chunk).split(0L, 32L);
         chunkList.append(chunk);
-        long collect = collector.collect(32L);
-        assertThat(collect, is(0L));
+        assertThat(collector.collect(0L, 32L), is(0L));
     }
 
     @Test
@@ -76,8 +78,7 @@ public class GarbageCollectorTest {
         List<Chunk<String>> pieces = Arrays.asList(mockChunk(0L, 14L), mockChunk(64L, 4095));
         doReturn(pieces).when(chunk).split(15L, 64);
         chunkList.append(chunk);
-        assertThat(collector.collect(15L), is(0L));
-        assertThat(collector.collect(64L), is(64 - 15L));
+        assertThat(collector.collect(15L, 64L), is(64 - 15L));
     }
 
     @Test
@@ -90,8 +91,7 @@ public class GarbageCollectorTest {
         chunkList.append(chunk0);
         chunkList.append(chunk1);
 
-        assertThat(collector.collect(15L), is(0L));
-        assertThat(collector.collect(4112L), is(4112 - 15L));
+        assertThat(collector.collect(15L, 4112L), is(4112 - 15L));
 
     }
 
@@ -105,7 +105,23 @@ public class GarbageCollectorTest {
         chunkList.append(chunk0);
         chunkList.append(chunk1);
 
-        assertThat(collector.collect(4112L), is(4112L));
+        assertThat(collector.collect(0L, 4112L), is(4112L));
+    }
+
+    @Test
+    public void endOffsetOutOfListHasOnlyElement() throws Exception {
+        Chunk<String> appendingChunk = mockChunk(0L, 4096L);
+        doReturn(Collections.singletonList(appendingChunk)).when(appendingChunk).split(0L, 4096L);
+        chunkList.append(appendingChunk);
+        assertThat(collector.collect(0L, 4096L), is(0L));
+    }
+
+    @Test
+    public void beginOffsetOutOfListHasOnlyElement() throws Exception {
+        Chunk<String> appendingChunk = mockChunk(16L, 4064L);
+        doReturn(Collections.singletonList(appendingChunk)).when(appendingChunk).split(0L, 4096L);
+        chunkList.append(appendingChunk);
+        assertThat(collector.collect(0L, 4096L), is(0L));
     }
 
     @Test
@@ -118,8 +134,7 @@ public class GarbageCollectorTest {
         chunkList.append(chunk0);
         chunkList.append(chunk1);
 
-        assertThat(collector.collect(15L), is(0L));
-        assertThat(collector.collect(4096L), is(4096 - 15L));
+        assertThat(collector.collect(15L, 4096L), is(4096 - 15L));
     }
 
     private Chunk<String> mockChunk(long begin, long end) {

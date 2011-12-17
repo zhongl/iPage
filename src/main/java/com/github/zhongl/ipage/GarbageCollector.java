@@ -24,27 +24,9 @@ public class GarbageCollector<T> {
     private final long minimizeCollectLength;
     private final ChunkList<T> chunkList;
 
-    private long lastSurvivorOffset = -1L;
-
     public GarbageCollector(ChunkList<T> chunkList, long minimizeCollectLength) {
         this.chunkList = chunkList;
         this.minimizeCollectLength = minimizeCollectLength;
-    }
-
-    @Deprecated
-    public long collect(long survivorOffset) throws IOException {
-        if (lastSurvivorOffset == survivorOffset || chunkList.isEmpty()) return 0L;
-
-        long beginPosition = chunkList.first().beginPosition();
-
-        boolean firstCollection = lastSurvivorOffset < beginPosition;
-        boolean recollectFromStart = lastSurvivorOffset > survivorOffset;
-
-        if (firstCollection || recollectFromStart) lastSurvivorOffset = beginPosition;
-
-        long collectedLength = collect(lastSurvivorOffset, survivorOffset);
-        lastSurvivorOffset = survivorOffset;
-        return collectedLength;
     }
 
     public long collect(long begin, long end) throws IOException {
@@ -104,6 +86,5 @@ public class GarbageCollector<T> {
         chunkList.insert(indexOfChunk + 1, pieces.get(1));
         return end - begin;
     }
-
 
 }
