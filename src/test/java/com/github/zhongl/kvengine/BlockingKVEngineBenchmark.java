@@ -55,14 +55,7 @@ public class BlockingKVEngineBenchmark extends FileBase {
     @Override
     @Before
     public void setUp() throws Exception {
-        Field[] fields = BlockingKVEngineBenchmark.class.getFields();
-        for (Field field : fields) {
-            int modifiers = field.getModifiers();
-            if (Modifier.isStatic(modifiers) && Modifier.isFinal(modifiers)) {
-                System.out.println(field.getName() + "=" + field.get(null));
-            }
-        }
-
+        printOptions();
 
         super.setUp();
         dir = testDir("benchmark");
@@ -78,6 +71,16 @@ public class BlockingKVEngineBenchmark extends FileBase {
                         .startAutoGarbageCollectOnStartup(AUTO_GC)
                         .build());
         engine.startup();
+    }
+
+    private void printOptions() throws IllegalAccessException {
+        Field[] fields = BlockingKVEngineBenchmark.class.getFields();
+        for (Field field : fields) {
+            int modifiers = field.getModifiers();
+            if (Modifier.isStatic(modifiers) && Modifier.isFinal(modifiers)) {
+                System.out.println(field.getName() + "=" + field.get(null));
+            }
+        }
     }
 
     @Test
