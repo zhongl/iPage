@@ -6,12 +6,13 @@ iPage is a light-weight java key-value store lib for message system.
 
 * Very fast write by sequence appending
 * Random reading by index
-* [A]synchronize invocation
+* \[A\]synchronize invocation
 * Flush By write count or time elpase
 * Group commit
 * Date recovery after crash
+* \[Auto\] garbage data collecting
 
-## Coming soon
+## More
 
 Please see [issues](https://github.com/zhongl/iPage/issues?sort=created&direction=desc&state=open&page=1).
 

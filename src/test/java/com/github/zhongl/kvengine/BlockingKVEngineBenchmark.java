@@ -33,7 +33,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class BlockingKVEngineBenchmark extends FileBase {
 
-    public static final int TIMES = Integer.getInteger("blocking.kvengine.benchmark.times", 512);
+    public static final String PROPERTY_PREFIX = "blocking.kvengine.benchmark";
+    public static final int TIMES = Integer.getInteger(PROPERTY_PREFIX + ".times", 1000);
+    public static final int BUCKET_SIZE = Integer.getInteger(PROPERTY_PREFIX + ".bucket.size", 1024);
+    public static final int FLUSH_COUNT = Integer.getInteger(PROPERTY_PREFIX + ".flush.count", 4);
+    public static final long FLUSH_ELAPSE = Long.getLong(PROPERTY_PREFIX + ".flush.elpase", 10L);
+    public static final int CHUNK_CAPACITY = Integer.getInteger(PROPERTY_PREFIX + ".chunk.capacity", 1024 * 1024 * 64);
+    public static final int COLLECT_LENGTH = Integer.getInteger(PROPERTY_PREFIX + ".collect.length", 4096);
+    public static final boolean GROUP_COMMIT = Boolean.getBoolean(PROPERTY_PREFIX + ".group.commit");
+    public static final boolean AUTO_GC = Boolean.getBoolean(PROPERTY_PREFIX + ".auto.gc");
+
     private BlockingKVEngine<byte[]> engine;
 
     @After
@@ -47,16 +56,16 @@ public class BlockingKVEngineBenchmark extends FileBase {
         super.setUp();
         dir = testDir("benchmark");
         engine = new BlockingKVEngine<byte[]>(
-            KVEngine.<byte[]>baseOn(dir)
-                .initialBucketSize(1024)
-                .flushCount(4)
-                .flushElapseMilliseconds(10L)
-                .maximizeChunkCapacity(1024 * /*1024 **/ 4)
-                .valueAccessor(CommonAccessors.BYTES)
-                .minimzieCollectLength(4096)
-                .groupCommit(true)
-                .startAutoGarbageCollectOnStartup(true)
-                .build());
+                KVEngine.<byte[]>baseOn(dir)
+                        .initialBucketSize(BUCKET_SIZE)
+                        .flushCount(FLUSH_COUNT)
+                        .flushElapseMilliseconds(FLUSH_ELAPSE)
+                        .maximizeChunkCapacity(CHUNK_CAPACITY)
+                        .valueAccessor(CommonAccessors.BYTES)
+                        .minimzieCollectLength(COLLECT_LENGTH)
+                        .groupCommit(GROUP_COMMIT)
+                        .startAutoGarbageCollectOnStartup(AUTO_GC)
+                        .build());
         engine.startup();
     }
 
@@ -68,13 +77,13 @@ public class BlockingKVEngineBenchmark extends FileBase {
         CallableFactory removeFactory = new RemoveFactory(engine);
 
         CallableFactory concatCallableFactory = new ConcatCallableFactory(
-            new FixInstanceSizeFactory(TIMES, addFactory),
-            new FixInstanceSizeFactory(TIMES, getFactory),
-            new FixInstanceSizeFactory(TIMES, removeFactory)
+                new FixInstanceSizeFactory(TIMES, addFactory),
+                new FixInstanceSizeFactory(TIMES, getFactory),
+                new FixInstanceSizeFactory(TIMES, removeFactory)
         );
 
         Collection<Statistics> statisticses =
-            new Benchmarker(concatCallableFactory, 8, TIMES * 3).benchmark();
+                new Benchmarker(concatCallableFactory, 8, TIMES * 3).benchmark();
         for (Statistics statisticse : statisticses) {
             System.out.println(statisticse);
         }
