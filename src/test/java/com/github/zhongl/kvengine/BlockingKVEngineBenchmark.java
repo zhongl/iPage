@@ -26,6 +26,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,7 +41,7 @@ public class BlockingKVEngineBenchmark extends FileBase {
     public static final int FLUSH_COUNT = Integer.getInteger(PROPERTY_PREFIX + ".flush.count", 4);
     public static final long FLUSH_ELAPSE = Long.getLong(PROPERTY_PREFIX + ".flush.elpase", 10L);
     public static final int CHUNK_CAPACITY = Integer.getInteger(PROPERTY_PREFIX + ".chunk.capacity", 1024 * 1024 * 64);
-    public static final int COLLECT_LENGTH = Integer.getInteger(PROPERTY_PREFIX + ".collect.length", 4096);
+    public static final int COLLECT_LENGTH = Integer.getInteger(PROPERTY_PREFIX + ".collect.length", 1024 * 1024 * 64);
     public static final boolean GROUP_COMMIT = Boolean.getBoolean(PROPERTY_PREFIX + ".group.commit");
     public static final boolean AUTO_GC = Boolean.getBoolean(PROPERTY_PREFIX + ".auto.gc");
 
@@ -53,6 +55,15 @@ public class BlockingKVEngineBenchmark extends FileBase {
     @Override
     @Before
     public void setUp() throws Exception {
+        Field[] fields = BlockingKVEngineBenchmark.class.getFields();
+        for (Field field : fields) {
+            int modifiers = field.getModifiers();
+            if (Modifier.isStatic(modifiers) && Modifier.isFinal(modifiers)) {
+                System.out.println(field.getName() + "=" + field.get(null));
+            }
+        }
+
+
         super.setUp();
         dir = testDir("benchmark");
         engine = new BlockingKVEngine<byte[]>(
