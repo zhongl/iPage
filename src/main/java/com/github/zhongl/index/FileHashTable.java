@@ -19,8 +19,8 @@ package com.github.zhongl.index;
 import com.github.zhongl.buffer.DirectBufferMapper;
 import com.github.zhongl.buffer.MappedDirectBuffer;
 import com.github.zhongl.buffer.MappedDirectBuffers;
-import com.github.zhongl.integerity.ValidateOrRecover;
-import com.github.zhongl.integerity.Validator;
+import com.github.zhongl.integrity.ValidateOrRecover;
+import com.github.zhongl.integrity.Validator;
 import com.google.common.io.Files;
 
 import javax.annotation.concurrent.NotThreadSafe;

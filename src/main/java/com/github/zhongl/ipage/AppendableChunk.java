@@ -18,7 +18,7 @@ package com.github.zhongl.ipage;
 
 import com.github.zhongl.buffer.Accessor;
 import com.github.zhongl.buffer.MappedDirectBuffers;
-import com.github.zhongl.integerity.Validator;
+import com.github.zhongl.integrity.Validator;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;

@@ -18,8 +18,8 @@ package com.github.zhongl.index;
 
 import com.github.zhongl.buffer.Accessor;
 import com.github.zhongl.buffer.MappedDirectBuffer;
-import com.github.zhongl.integerity.ValidateOrRecover;
-import com.github.zhongl.integerity.Validator;
+import com.github.zhongl.integrity.ValidateOrRecover;
+import com.github.zhongl.integrity.Validator;
 
 import java.io.IOException;
 import java.nio.BufferOverflowException;

@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.integerity;
+package com.github.zhongl.integrity;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public interface ValidateOrRecover<T, E extends Exception> {

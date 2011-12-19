@@ -19,7 +19,7 @@ package com.github.zhongl.ipage;
 import com.github.zhongl.buffer.Accessor;
 import com.github.zhongl.buffer.MappedDirectBuffer;
 import com.github.zhongl.buffer.MappedDirectBuffers;
-import com.github.zhongl.integerity.ValidateOrRecover;
+import com.github.zhongl.integrity.ValidateOrRecover;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;

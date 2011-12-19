@@ -23,38 +23,38 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class DataIntegerityTest extends FileBase {
+public class DataIntegrityTest extends FileBase {
 
-    private DataIntegerity dataIntegerity;
+    private DataIntegrity dataIntegrity;
 
 
     @Test
     public void unsafeDataState() throws Exception {
         dir = testDir("unsafeDataState");
         dir.mkdirs();
-        dataIntegerity = new DataIntegerity(dir);
-        assertThat(dataIntegerity.validate(), is(false));
+        dataIntegrity = new DataIntegrity(dir);
+        assertThat(dataIntegrity.validate(), is(false));
     }
 
     @Test
     public void safeDataState() throws Exception {
         dir = testDir("safeDataState");
         dir.mkdirs();
-        dataIntegerity = new DataIntegerity(dir);
-        dataIntegerity.safeClose();
-        assertThat(dataIntegerity.validate(), is(true));
+        dataIntegrity = new DataIntegrity(dir);
+        dataIntegrity.safeClose();
+        assertThat(dataIntegrity.validate(), is(true));
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void nonExistDir() throws Exception {
         dir = testDir("nonExistDir");
-        new DataIntegerity(dir);
+        new DataIntegrity(dir);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void invalidDir() throws Exception {
         dir = testDir("invalidDir");
         dir.createNewFile();
-        new DataIntegerity(dir);
+        new DataIntegrity(dir);
     }
 }

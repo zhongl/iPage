@@ -18,7 +18,7 @@ package com.github.zhongl.kvengine;
 
 import com.github.zhongl.index.Index;
 import com.github.zhongl.index.Slot;
-import com.github.zhongl.integerity.Validator;
+import com.github.zhongl.integrity.Validator;
 import com.github.zhongl.ipage.IPage;
 
 import javax.annotation.concurrent.NotThreadSafe;

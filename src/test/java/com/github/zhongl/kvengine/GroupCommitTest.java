@@ -46,7 +46,7 @@ public class GroupCommitTest {
     private Index index;
     private Callable flusher;
     private Group group;
-    private DataIntegerity dataIntegerity;
+    private DataIntegrity dataIntegrity;
     private CallByCountOrElapse callByCountOrElapse;
 
     @After
@@ -62,7 +62,7 @@ public class GroupCommitTest {
         index = mock(Index.class);
         flusher = mock(Callable.class);
         group = Group.newInstance();
-        dataIntegerity = mock(DataIntegerity.class);
+        dataIntegrity = mock(DataIntegrity.class);
     }
 
     @Test
@@ -110,7 +110,7 @@ public class GroupCommitTest {
 
     private void newEngineAndStartup() {
         Operation<String> operation = new Operation<String>(ipage, index, group, callByCountOrElapse);
-        engine = new BlockingKVEngine<String>(new KVEngine<String>(10L, 10, dataIntegerity, operation));
+        engine = new BlockingKVEngine<String>(new KVEngine<String>(10L, 10, dataIntegrity, operation));
         engine.startup();
     }
 

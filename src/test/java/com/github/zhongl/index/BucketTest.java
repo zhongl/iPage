@@ -19,7 +19,7 @@ package com.github.zhongl.index;
 import com.github.zhongl.buffer.DirectBufferMapper;
 import com.github.zhongl.buffer.MappedDirectBuffer;
 import com.github.zhongl.buffer.MappedDirectBuffers;
-import com.github.zhongl.integerity.Validator;
+import com.github.zhongl.integrity.Validator;
 import com.github.zhongl.util.FileBase;
 import com.google.common.io.Files;
 import com.google.common.primitives.Bytes;

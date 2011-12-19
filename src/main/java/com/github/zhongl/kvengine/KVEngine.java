@@ -41,7 +41,7 @@ public class KVEngine<T> extends Engine implements AutoGarbageCollectable<Entry<
     private static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
 
     private final AutoGarbageCollector autoGarbageCollector = new AutoGarbageCollector(this);
-    private final DataIntegerity dataIntegerity;
+    private final DataIntegrity dataIntegrity;
     private final Operation<T> operation;
     private final boolean startAutoGarbageCollectOnStartup;
 
@@ -68,17 +68,17 @@ public class KVEngine<T> extends Engine implements AutoGarbageCollectable<Entry<
         Preconditions.checkArgument(dir.isDirectory(), "%s should be a directory", dir);
 
         final IPage<Entry<T>> iPage = IPage.<Entry<T>>baseOn(new File(dir, IPAGE_DIR))
-            .maxChunkIdleTimeMillis(maxChunkIdleTimeMillis)
-            .minimizeCollectLength(minimzieCollectLength)
-            .accessor(new EntryAccessor<T>(valueAccessor))
-            .maximizeChunkCapacity(maximizeChunkCapacity)
-            .build();
+                .maxChunkIdleTimeMillis(maxChunkIdleTimeMillis)
+                .minimizeCollectLength(minimzieCollectLength)
+                .accessor(new EntryAccessor<T>(valueAccessor))
+                .maximizeChunkCapacity(maximizeChunkCapacity)
+                .build();
 
         final Index index = Index.baseOn(new File(dir, INDEX_DIR)).initialBucketSize(initialBucketSize).build();
 
-        dataIntegerity = new DataIntegerity(dir);
+        dataIntegrity = new DataIntegrity(dir);
 
-        if (exists && !dataIntegerity.validate()) new Recovery(index, iPage).run();
+        if (exists && !dataIntegrity.validate()) new Recovery(index, iPage).run();
 
         CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(flushCount, flushElapseMilliseconds, new Callable<Object>() {
 
@@ -94,9 +94,9 @@ public class KVEngine<T> extends Engine implements AutoGarbageCollectable<Entry<
     }
 
     @VisibleForTesting
-    KVEngine(long pollTimeout, int backlog, DataIntegerity dataIntegerity, Operation<T> operation) {
+    KVEngine(long pollTimeout, int backlog, DataIntegrity dataIntegrity, Operation<T> operation) {
         super(pollTimeout, DEFAULT_TIME_UNIT, backlog);
-        this.dataIntegerity = dataIntegerity;
+        this.dataIntegrity = dataIntegrity;
         this.operation = operation;
         startAutoGarbageCollectOnStartup = false;
     }
@@ -113,7 +113,7 @@ public class KVEngine<T> extends Engine implements AutoGarbageCollectable<Entry<
         super.shutdown();
         try {
             operation.close();
-            dataIntegerity.safeClose();
+            dataIntegrity.safeClose();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

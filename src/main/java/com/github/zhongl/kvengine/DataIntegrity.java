@@ -25,12 +25,12 @@ import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-class DataIntegerity {
+class DataIntegrity {
 
     private static final String SAFE = ".safe";
     private final File dir;
 
-    public DataIntegerity(File dir) {
+    public DataIntegrity(File dir) {
         checkArgument(dir.exists() && dir.isDirectory(), "%s should be an existed directory", dir);
         this.dir = dir;
     }
