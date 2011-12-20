@@ -1,6 +1,6 @@
 # What is it?
 
-iPage is a light-weight java key-value store lib for message system.
+iPage is a key-value store library for java (or any others base on JVM).
 
 # Features
 
@@ -46,7 +46,7 @@ Please see [issues](https://github.com/zhongl/iPage/issues?sort=created&directio
 * Memory 24GB
 * SCSI 1TB
 
-# Get started
+# Getting started
 
 ## Preconditions
 
@@ -73,8 +73,9 @@ iPage need it to run benchmark:
 
     > mvn clean test -Dtest=BlockingKVEngineBenchmark -Dblocking.kvengine.benchmark.times=1000
 
-## Use KVEngine
+more about `-D` options you can find in [BlockingKVEngineBenchmark.java](https://github.com/zhongl/iPage/blob/master/src/test/java/com/github/zhongl/kvengine/BlockingKVEngineBenchmark.java).
 
-TODO
 
-More usage please see <https://github.com/zhongl/iPage/tree/master/src/test/java/com/github/zhongl/ipage> .
+# Documents
+
+Please see the [wiki](http://https://github.com/zhongl/iPage/wiki).
