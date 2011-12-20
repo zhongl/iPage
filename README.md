@@ -78,4 +78,4 @@ more about `-D` options you can find in [BlockingKVEngineBenchmark.java](https:/
 
 # Documents
 
-Please see the [wiki](http://https://github.com/zhongl/iPage/wiki).
+Please see the [wiki](https://github.com/zhongl/iPage/wiki).
