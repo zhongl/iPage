@@ -206,7 +206,7 @@ public class KVEngine<T> extends Engine implements AutoGarbageCollectable<Entry<
         Builder<T> groupCommit(boolean value);
 
         @ArgumentIndex(10)
-        @DefaultValue("true")
+        @DefaultValue("false")
         Builder<T> startAutoGarbageCollectOnStartup(boolean value);
 
         KVEngine<T> build();

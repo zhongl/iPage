@@ -39,6 +39,7 @@ public class GarbageCollectTest extends FileBase {
                         .flushElapseMilliseconds(10L)
                         .minimzieCollectLength(4096)
                         .maximizeChunkCapacity(4096)
+                        .startAutoGarbageCollectOnStartup(true)
                         .build()
         );
         engine.startup();

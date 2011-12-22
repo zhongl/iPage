@@ -23,6 +23,7 @@ import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl</a> */
 public class ValueIterator<T> extends AbstractIterator<T> {
+    private static final Entry DELETED = null;
     private Cursor<Entry<T>> cursor = Cursor.head();
     private final Nextable<Entry<T>> nextable;
 
@@ -33,11 +34,12 @@ public class ValueIterator<T> extends AbstractIterator<T> {
     @Override
     protected T computeNext() {
         try {
-            Sync<Cursor<Entry<T>>> callback = new Sync<Cursor<Entry<T>>>();
-            checkState(nextable.next(cursor, callback), "Too many tasks to submit.");
-            cursor = callback.get();
-            if (cursor.isTail()) return endOfData();
-            if (cursor.lastValue() == null) return computeNext();
+            do {
+                Sync<Cursor<Entry<T>>> callback = new Sync<Cursor<Entry<T>>>();
+                checkState(nextable.next(cursor, callback), "Too many tasks to submit.");
+                cursor = callback.get();
+                if (cursor.isTail()) return endOfData();
+            } while (cursor.lastValue() == DELETED);
             return cursor.lastValue().value();
         } catch (IllegalStateException e) {
             throw e;
