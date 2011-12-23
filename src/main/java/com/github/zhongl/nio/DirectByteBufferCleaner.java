@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.buffer;
+package com.github.zhongl.nio;
 
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;

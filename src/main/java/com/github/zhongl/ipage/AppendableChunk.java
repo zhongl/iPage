@@ -16,8 +16,8 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.buffer.Accessor;
-import com.github.zhongl.buffer.MappedDirectBuffers;
+import com.github.zhongl.nio.Accessor;
+import com.github.zhongl.nio.Stores;
 import com.github.zhongl.integrity.Validator;
 
 import javax.annotation.concurrent.NotThreadSafe;
@@ -35,15 +35,17 @@ import java.util.List;
 @NotThreadSafe
 class AppendableChunk<T> extends Chunk<T> {
     private volatile int writePosition = 0;
+    private final FileOperator fileOperator;
 
-    public AppendableChunk(MappedDirectBuffers buffers, FileOperator fileOperator, Accessor<T> accessor) throws IOException {
+    public AppendableChunk(Stores buffers, FileOperator fileOperator, Accessor<T> accessor) throws IOException {
         super(buffers, fileOperator, accessor);
+        this.fileOperator = fileOperator;
     }
 
     @Override
     public long append(T object) throws ReadOnlyBufferException, BufferOverflowException, IOException {
         long iPageOffset = writePosition + beginPosition();
-        writePosition += mappedDirectBuffer().writeBy(accessor, writePosition, object);
+        writePosition += store().writeBy(accessor, writePosition, object);
         return iPageOffset;
     }
 
@@ -62,7 +64,7 @@ class AppendableChunk<T> extends Chunk<T> {
     @Override
     public void close() throws IOException {
         flush();
-        mappedDirectBuffer().release();
+        store().release();
         fileOperator.left(writePosition);
     }
 

@@ -15,8 +15,8 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.buffer.Accessor;
-import com.github.zhongl.buffer.MappedDirectBuffers;
+import com.github.zhongl.nio.Accessor;
+import com.github.zhongl.nio.Stores;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,7 +25,7 @@ class ChunkFactory<T> {
     private final File baseDir;
     private final Accessor<T> accessor;
     private final int maximizeChunkCapacity;
-    private final MappedDirectBuffers buffers;
+    private final Stores buffers;
     private final long maxIdleTimeMillis;
 
     public ChunkFactory(File baseDir, Accessor<T> accessor, int maximizeChunkCapacity, long maxIdleTimeMillis) {
@@ -33,7 +33,7 @@ class ChunkFactory<T> {
         this.accessor = accessor;
         this.maximizeChunkCapacity = maximizeChunkCapacity;
         this.maxIdleTimeMillis = maxIdleTimeMillis;
-        this.buffers = new MappedDirectBuffers();
+        this.buffers = new Stores();
     }
 
     public Chunk<T> appendableChunkOn(File file) throws IOException {

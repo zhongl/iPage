@@ -16,8 +16,8 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.buffer.Accessor;
-import com.github.zhongl.buffer.MappedDirectBuffers;
+import com.github.zhongl.nio.Accessor;
+import com.github.zhongl.nio.Stores;
 import com.github.zhongl.integrity.Validator;
 
 import javax.annotation.concurrent.NotThreadSafe;
@@ -37,7 +37,7 @@ import static java.util.Collections.singletonList;
 @NotThreadSafe
 class ReadOnlyChunk<T> extends Chunk<T> {
 
-    public ReadOnlyChunk(MappedDirectBuffers buffers, FileOperator fileOperator, Accessor<T> accessor) throws IOException {
+    public ReadOnlyChunk(Stores buffers, FileOperator fileOperator, Accessor<T> accessor) throws IOException {
         super(buffers, fileOperator, accessor);
     }
 
@@ -56,7 +56,7 @@ class ReadOnlyChunk<T> extends Chunk<T> {
     public Chunk<T> asReadOnly() { return this; }
 
     @Override
-    public void close() throws IOException { mappedDirectBuffer().release(); }
+    public void close() throws IOException { store().release(); }
 
     @Override
     @Deprecated

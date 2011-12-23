@@ -14,15 +14,17 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.buffer;
+package com.github.zhongl.nio;
 
 import java.io.IOException;
-import java.nio.MappedByteBuffer;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface DirectBufferMapper {
+public interface Store {
+    <T> int writeBy(Accessor<T> accessor, int offset, T object) throws IOException;
 
-    public MappedByteBuffer map() throws IOException;
+    <T> T readBy(Accessor<T> accessor, int offset) throws IOException;
 
-    public long maxIdleTimeMillis();
+    void release() throws IOException;
+
+    void flush() throws IOException;
 }

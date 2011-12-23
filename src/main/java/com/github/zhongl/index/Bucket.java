@@ -16,17 +16,17 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.buffer.Accessor;
-import com.github.zhongl.buffer.MappedDirectBuffer;
 import com.github.zhongl.integrity.ValidateOrRecover;
 import com.github.zhongl.integrity.Validator;
+import com.github.zhongl.nio.Accessor;
+import com.github.zhongl.nio.Store;
 
 import java.io.IOException;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.zip.CRC32;
 
-import static com.github.zhongl.buffer.CommonAccessors.LONG;
+import static com.github.zhongl.nio.CommonAccessors.LONG;
 
 /**
  * {@link Bucket}
@@ -39,11 +39,11 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
     private static final int CRC_OFFSET = LENGTH - 8;
 
     private final int beginPosition;
-    private final MappedDirectBuffer buffer;
+    private final Store store;
 
-    Bucket(int beginPosition, MappedDirectBuffer buffer) {
+    Bucket(int beginPosition, Store store) {
         this.beginPosition = beginPosition;
-        this.buffer = buffer;
+        this.store = store;
     }
 
     public Long put(Md5Key key, Long offset) throws IOException {
@@ -86,7 +86,7 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
     }
 
     public void updateCRC() throws IOException {
-        buffer.writeBy(LONG, CRC_OFFSET, calculateCRC());
+        store.writeBy(LONG, CRC_OFFSET, calculateCRC());
     }
 
     public boolean checkCRC() throws IOException {
@@ -119,12 +119,12 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
     private int amountOfSlots() {return LENGTH / Slot.LENGTH;}
 
     private Slot slots(int index) {
-        return new Slot(index * Slot.LENGTH + beginPosition, buffer);
+        return new Slot(index * Slot.LENGTH + beginPosition, store);
     }
 
     private long calculateCRC() throws IOException {
         final int length = Slot.LENGTH * amountOfSlots();
-        byte[] allSlotBytes = buffer.readBy(new Accessor<byte[]>() {
+        byte[] allSlotBytes = store.readBy(new Accessor<byte[]>() {
             @Override
             public int byteLengthOf(byte[] object) { throw new UnsupportedOperationException(); }
 
@@ -145,7 +145,7 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
     }
 
     private long readCRC() throws IOException {
-        return buffer.readBy(LONG, CRC_OFFSET);
+        return store.readBy(LONG, CRC_OFFSET);
     }
 
 

@@ -16,14 +16,14 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.buffer.MappedDirectBuffers;
+import com.github.zhongl.nio.Stores;
 import com.github.zhongl.integrity.Validator;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
 
-import static com.github.zhongl.buffer.CommonAccessors.STRING;
+import static com.github.zhongl.nio.CommonAccessors.STRING;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
@@ -110,6 +110,6 @@ public class AppendableChunkTest extends ChunkBase {
 
     protected void newChunk() throws IOException {
         dir.mkdirs();
-        chunk = new AppendableChunk(new MappedDirectBuffers(), FileOperator.writeable(new File(dir, "0"), 4096), STRING);
+        chunk = new AppendableChunk(new Stores(), FileOperator.writeable(new File(dir, "0"), 4096), STRING);
     }
 }

@@ -16,8 +16,8 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.buffer.AbstractAccessor;
-import com.github.zhongl.buffer.Accessor;
+import com.github.zhongl.nio.AbstractAccessor;
+import com.github.zhongl.nio.Accessor;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.nio.ByteBuffer;

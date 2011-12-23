@@ -16,20 +16,19 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.buffer.DirectBufferMapper;
-import com.github.zhongl.buffer.MappedDirectBuffer;
-import com.github.zhongl.buffer.MappedDirectBuffers;
+import com.github.zhongl.nio.FileChannelFactory;
+import com.github.zhongl.nio.FileChannels;
+import com.github.zhongl.nio.Store;
+import com.github.zhongl.nio.Stores;
 import com.github.zhongl.integrity.Validator;
 import com.github.zhongl.util.FileBase;
-import com.google.common.io.Files;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 
-import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
@@ -53,10 +52,10 @@ public class BucketTest extends FileBase {
                 brokenCRC
         );
 
-        MappedDirectBuffer buffer = new MappedDirectBuffers().getOrMapBy(new DirectBufferMapper() {
+        Store buffer = new Stores().getOrCreateBy(new FileChannelFactory() {
             @Override
-            public MappedByteBuffer map() throws IOException {
-                return Files.map(file, READ_WRITE, brokenBucketContent.length);
+            public FileChannel create() throws IOException {
+                return FileChannels.channel(file, brokenBucketContent.length);
             }
 
             @Override

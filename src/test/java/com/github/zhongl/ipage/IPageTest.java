@@ -16,7 +16,7 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.buffer.CommonAccessors;
+import com.github.zhongl.nio.CommonAccessors;
 import com.github.zhongl.integrity.Validator;
 import com.github.zhongl.util.FileBase;
 import com.github.zhongl.util.FileContentAsserter;

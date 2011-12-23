@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.buffer;
+package com.github.zhongl.nio;
 
 import java.nio.ByteBuffer;
 
@@ -41,7 +41,7 @@ public class CommonAccessors {
 
         @Override
         public Byte read(ByteBuffer buffer) {
-            return buffer.get();
+            return buffer.get(0);
         }
     }
 

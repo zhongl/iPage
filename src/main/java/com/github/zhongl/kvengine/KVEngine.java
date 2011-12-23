@@ -16,7 +16,7 @@
 
 package com.github.zhongl.kvengine;
 
-import com.github.zhongl.buffer.Accessor;
+import com.github.zhongl.nio.Accessor;
 import com.github.zhongl.builder.*;
 import com.github.zhongl.index.Index;
 import com.github.zhongl.index.Md5Key;
