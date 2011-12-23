@@ -16,7 +16,7 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.buffer.Accessor;
+import com.github.zhongl.nio.Accessor;
 import com.github.zhongl.builder.*;
 import com.github.zhongl.integrity.ValidateOrRecover;
 import com.github.zhongl.integrity.Validator;

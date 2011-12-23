@@ -16,7 +16,7 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.buffer.MappedDirectBuffers;
+import com.github.zhongl.nio.Stores;
 import org.junit.Test;
 
 import java.io.File;
@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.nio.ReadOnlyBufferException;
 import java.util.List;
 
-import static com.github.zhongl.buffer.CommonAccessors.STRING;
+import static com.github.zhongl.nio.CommonAccessors.STRING;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 
@@ -154,7 +154,7 @@ public class ReadOnlyChunkTest extends ChunkBase {
     private void newChunk(int beginPosition) throws IOException {
         dir.mkdirs();
         FileOperator operator = FileOperator.writeable(new File(dir, beginPosition + ""), 4096);
-        chunk = new AppendableChunk(new MappedDirectBuffers(), operator, STRING);
+        chunk = new AppendableChunk(new Stores(), operator, STRING);
         fullFill(chunk);
         chunk = chunk.asReadOnly();
     }

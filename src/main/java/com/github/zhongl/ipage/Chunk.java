@@ -16,9 +16,9 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.buffer.Accessor;
-import com.github.zhongl.buffer.MappedDirectBuffer;
-import com.github.zhongl.buffer.MappedDirectBuffers;
+import com.github.zhongl.nio.Accessor;
+import com.github.zhongl.nio.Store;
+import com.github.zhongl.nio.Stores;
 import com.github.zhongl.integrity.ValidateOrRecover;
 
 import javax.annotation.concurrent.NotThreadSafe;
@@ -36,11 +36,11 @@ import java.util.List;
  */
 @NotThreadSafe
 abstract class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> {
-    protected final MappedDirectBuffers buffers;
+    protected final Stores buffers;
     protected final FileOperator fileOperator;
     protected final Accessor<T> accessor;
 
-    protected Chunk(MappedDirectBuffers buffers, FileOperator fileOperator, Accessor<T> accessor) throws IOException {
+    protected Chunk(Stores buffers, FileOperator fileOperator, Accessor<T> accessor) throws IOException {
         this.buffers = buffers;
         this.fileOperator = fileOperator;
         this.accessor = accessor;
@@ -52,13 +52,13 @@ abstract class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> 
     public T get(long offset) throws IOException {
         try {
             int localOffset = (int) (offset - beginPosition());
-            return mappedDirectBuffer().readBy(accessor, localOffset);
+            return store().readBy(accessor, localOffset);
         } catch (BufferUnderflowException e) { // invalid offset
         } catch (IllegalArgumentException e) {} // invalid offset
         return null;
     }
 
-    public void flush() throws IOException { mappedDirectBuffer().flush(); }
+    public void flush() throws IOException { store().flush(); }
 
     public abstract long endPosition();
 
@@ -126,7 +126,7 @@ abstract class Chunk<T> implements Closeable, ValidateOrRecover<T, IOException> 
 
     public abstract long length();
 
-    protected MappedDirectBuffer mappedDirectBuffer() throws IOException {
-        return buffers.getOrMapBy(fileOperator);
+    protected Store store() throws IOException {
+        return buffers.getOrCreateBy(fileOperator);
     }
 }

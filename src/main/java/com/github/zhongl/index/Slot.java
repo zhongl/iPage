@@ -16,12 +16,12 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.buffer.CommonAccessors;
-import com.github.zhongl.buffer.MappedDirectBuffer;
+import com.github.zhongl.nio.CommonAccessors;
+import com.github.zhongl.nio.Store;
 
 import java.io.IOException;
 
-import static com.github.zhongl.buffer.CommonAccessors.LONG;
+import static com.github.zhongl.nio.CommonAccessors.LONG;
 
 
 /**
@@ -34,9 +34,9 @@ public class Slot {
     public static final int LENGTH = 1 + Md5Key.BYTE_LENGTH + LONG.byteLengthOf(0L);
 
     private final int beginPosition;
-    private final MappedDirectBuffer buffer;
+    private final Store buffer;
 
-    public Slot(int beginPosition, MappedDirectBuffer buffer) {
+    public Slot(int beginPosition, Store buffer) {
         this.beginPosition = beginPosition;
         this.buffer = buffer;
     }
@@ -78,11 +78,11 @@ public class Slot {
     enum State {
         EMPTY, OCCUPIED, RELEASED;
 
-        public void writeTo(MappedDirectBuffer buffer, int offset) throws IOException {
+        public void writeTo(Store buffer, int offset) throws IOException {
             buffer.writeBy(CommonAccessors.BYTE, offset, (byte) ordinal());
         }
 
-        public static State readFrom(MappedDirectBuffer buffer, int offset) throws IOException {
+        public static State readFrom(Store buffer, int offset) throws IOException {
             Byte b = buffer.readBy(CommonAccessors.BYTE, offset);
             if (EMPTY.ordinal() == b) return EMPTY;
             if (OCCUPIED.ordinal() == b) return OCCUPIED;

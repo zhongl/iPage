@@ -16,7 +16,8 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.buffer.DirectBufferMapper;
+import com.github.zhongl.nio.FileChannelFactory;
+import com.github.zhongl.nio.FileChannels;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.io.InputSupplier;
@@ -26,10 +27,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
-import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 
 import static com.google.common.base.Preconditions.checkState;
-import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 
 /**
  * {@link com.github.zhongl.ipage.FileOperator}
@@ -37,22 +37,22 @@ import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @NotThreadSafe
-class FileOperator implements DirectBufferMapper {
+class FileOperator implements FileChannelFactory {
     private final File file;
-    private final long capacity;
+    private final int capacity;
     private final boolean readOnly;
     private final long maxIdleTimeMillis;
     private final long beginPosition;
 
     public static FileOperator readOnly(File file, long maxIdleTimeMillis) throws IOException {
-        return new FileOperator(file, file.length(), true, maxIdleTimeMillis);
+        return new FileOperator(file, (int) file.length(), true, maxIdleTimeMillis);
     }
 
     public static FileOperator writeable(File file, int capacity) throws IOException {
         return new FileOperator(file, capacity, false, Long.MAX_VALUE);
     }
 
-    FileOperator(File file, long capacity, boolean readOnly, long maxIdleTimeMillis) throws IOException {
+    FileOperator(File file, int capacity, boolean readOnly, long maxIdleTimeMillis) throws IOException {
         this.file = file;
         this.capacity = capacity;
         this.readOnly = readOnly;
@@ -89,8 +89,8 @@ class FileOperator implements DirectBufferMapper {
     }
 
     @Override
-    public MappedByteBuffer map() throws IOException {
-        return readOnly ? Files.map(file) : Files.map(file, READ_WRITE, capacity);
+    public FileChannel create() throws IOException {
+        return readOnly ? FileChannels.channel(file) : FileChannels.channel(file, capacity);
     }
 
     @Override

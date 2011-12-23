@@ -14,15 +14,15 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.buffer;
+package com.github.zhongl.nio;
+
+import java.io.IOException;
+import java.nio.channels.FileChannel;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface MappedDirectBuffer {
-    <T> int writeBy(Accessor<T> accessor, int offset, T object);
+public interface FileChannelFactory {
 
-    <T> T readBy(Accessor<T> accessor, int offset);
+    public FileChannel create() throws IOException;
 
-    void release();
-
-    void flush();
+    public long maxIdleTimeMillis();
 }

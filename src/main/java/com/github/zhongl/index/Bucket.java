@@ -16,8 +16,8 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.buffer.Accessor;
-import com.github.zhongl.buffer.MappedDirectBuffer;
+import com.github.zhongl.nio.Accessor;
+import com.github.zhongl.nio.Store;
 import com.github.zhongl.integrity.ValidateOrRecover;
 import com.github.zhongl.integrity.Validator;
 
@@ -26,7 +26,7 @@ import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.util.zip.CRC32;
 
-import static com.github.zhongl.buffer.CommonAccessors.LONG;
+import static com.github.zhongl.nio.CommonAccessors.LONG;
 
 /**
  * {@link Bucket}
@@ -39,9 +39,9 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
     private static final int CRC_OFFSET = LENGTH - 8;
 
     private final int beginPosition;
-    private final MappedDirectBuffer buffer;
+    private final Store buffer;
 
-    Bucket(int beginPosition, MappedDirectBuffer buffer) {
+    Bucket(int beginPosition, Store buffer) {
         this.beginPosition = beginPosition;
         this.buffer = buffer;
     }
