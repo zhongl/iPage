@@ -23,7 +23,7 @@
 
     <groupId>com.github.zhongl</groupId>
     <artifactId>iPage</artifactId>
-    <version>0.1</version>
+    <version>0.4</version>
     <build>
         <plugins>
             <plugin>
@@ -35,22 +35,8 @@
                     <target>1.6</target>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>cobertura-maven-plugin</artifactId>
-                <version>2.5.1</version>
-                <configuration>
-                    <instrumentation>
-                        <excludes>
-                            <exclude>com/github/zhongl/util/*</exclude>
-                        </excludes>
-                    </instrumentation>
-                    <check/>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
-
 
     <dependencies>
         <dependency>
