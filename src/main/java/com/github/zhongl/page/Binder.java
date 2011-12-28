@@ -47,16 +47,18 @@ public class Binder<T> implements Closeable, Flushable {
         // TODO return a singlton pages at least if it has nothing to load.
     }
 
-    public Cursor append(T record) throws OverflowException {
+    public Cursor append(T record) throws OverflowException, IOException {
         try {
             return pages.getLast().append(record);
-        } catch (OverflowException e) { // grow for retry one time
+        } catch (IllegalStateException e) { // grow for retry one time
             pages.addLast(pages.getLast().multiply());
             return pages.getLast().append(record);
         }
     }
 
     public T get(Cursor cursor) throws UnderflowException {
+        if (pages.getLast().compareTo(cursor) < 0) throw new UnderflowException();
+        if (pages.getFirst().compareTo(cursor) > 0) return null; // non-existed cursor
         return pages.get(indexOf(cursor)).get(cursor);
     }
 

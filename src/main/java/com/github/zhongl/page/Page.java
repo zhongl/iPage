@@ -21,6 +21,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.Flushable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
@@ -30,6 +31,7 @@ public class Page<T> implements Comparable<Cursor>, Closeable, Flushable {
     private final long begin;
     private final int capacity;
     private final Recorder<T> recorder;
+    private final ByteBuffer length = ByteBuffer.allocate(4);
 
     private volatile int position;
 
@@ -41,11 +43,16 @@ public class Page<T> implements Comparable<Cursor>, Closeable, Flushable {
         position = 0;
     }
 
-    public Cursor append(T record) throws OverflowException {
+    public Cursor append(T record) throws OverflowException, IOException {
         Recorder.Writer writer = recorder.writer(record);
-        Cursor cursor = new Cursor(begin() + position);
-        // TODO append
-        return null;
+        int recordLength = writer.valueByteLength();
+
+        if (position + recordLength > capacity) throw new OverflowException();
+
+        Cursor cursor = new Cursor(begin + position);
+        channel().write(length.putInt(0, recordLength)); // put length
+        writer.writeTo(channel()); // put record
+        return cursor;
     }
 
     private FileChannel channel() {
@@ -56,8 +63,16 @@ public class Page<T> implements Comparable<Cursor>, Closeable, Flushable {
         return null;  // TODO multiply
     }
 
-    public T get(Cursor cursor) throws UnderflowException {
-        return null;  // TODO get
+    public T get(Cursor cursor) throws IOException {
+        int offset = (int) (cursor.offset - begin);
+        return recorder.reader(getRecordLength(offset)).readFrom(channel());
+    }
+
+    private int getRecordLength(int offset) throws IOException {
+        channel().position(offset);
+        length.rewind();
+        channel().read(length);
+        return length.getInt();
     }
 
     public T remove(Cursor cursor) {
@@ -70,13 +85,9 @@ public class Page<T> implements Comparable<Cursor>, Closeable, Flushable {
 
     @Override
     public int compareTo(Cursor cursor) {
-        if (cursor.offset < begin()) return 1;
-        if (cursor.offset > end()) return -1;
+        if (cursor.offset < begin) return 1;
+        if (cursor.offset > position) return -1;
         return 0;
-    }
-
-    private long begin() {
-        return 0;  // TODO begin
     }
 
     private long end() {

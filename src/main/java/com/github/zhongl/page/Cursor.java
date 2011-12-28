@@ -16,11 +16,17 @@
 
 package com.github.zhongl.page;
 
+import javax.annotation.concurrent.ThreadSafe;
+
+import static com.google.common.base.Preconditions.checkArgument;
+
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+@ThreadSafe
 public class Cursor implements Comparable<Cursor> {
     final long offset;
 
     Cursor(long offset) {
+        checkArgument(offset >= 0);
         this.offset = offset;
     }
 
