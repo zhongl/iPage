@@ -16,25 +16,38 @@
 
 package com.github.zhongl.page;
 
+import com.google.common.io.Files;
+import com.google.common.primitives.Bytes;
+import com.google.common.primitives.Ints;
 import org.junit.Assert;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class FileAsserter {
+    private final File file;
+
+    private FileAsserter(File file) {
+        this.file = file;
+    }
+
     public static FileAsserter assertExist(File file) {
-        return null;  // TODO assertExist
+        return new FileAsserter(file);
     }
 
     public static byte[] string(String value) {
-        return new byte[0];  // TODO string
+        return value.getBytes();
     }
 
     public static byte[] length(int value) {
-        return new byte[0];  // TODO length
+        return Ints.toByteArray(value);
     }
 
-    public void contentIs(byte[]... bytesArray) {
-        Assert.fail("No implement.");
+    public void contentIs(byte[]... bytesArray) throws IOException {
+        byte[] expect = Bytes.concat(bytesArray);
+        byte[] actual = Arrays.copyOf(Files.toByteArray(file), expect.length);
+        Assert.assertArrayEquals(actual, expect);
     }
 }

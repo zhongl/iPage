@@ -16,6 +16,8 @@
 
 package com.github.zhongl.page;
 
+import com.github.zhongl.nio.FileChannels;
+
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
 import java.io.File;
@@ -27,13 +29,16 @@ import java.nio.channels.FileChannel;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
 public class Page<T> implements Comparable<Cursor>, Closeable, Flushable {
+    private static final int FOUR_BYTES = 4;
+
     private final File file;
     private final long begin;
     private final int capacity;
     private final Recorder<T> recorder;
-    private final ByteBuffer length = ByteBuffer.allocate(4);
+    private final ByteBuffer length = ByteBuffer.allocate(FOUR_BYTES);
 
     private volatile int position;
+    private FileChannel channel;
 
     Page(File file, int capacity, Recorder<T> recorder) {
         this.file = file;
@@ -52,11 +57,13 @@ public class Page<T> implements Comparable<Cursor>, Closeable, Flushable {
         Cursor cursor = new Cursor(begin + position);
         channel().write(length.putInt(0, recordLength)); // put length
         writer.writeTo(channel()); // put record
+        position += recordLength + FOUR_BYTES;
         return cursor;
     }
 
-    private FileChannel channel() {
-        return null;  // TODO channel
+    private FileChannel channel() throws IOException {
+        if (channel == null) channel = FileChannels.channel(this.file, this.capacity);
+        return channel;
     }
 
     public Page<T> multiply() {
@@ -65,13 +72,15 @@ public class Page<T> implements Comparable<Cursor>, Closeable, Flushable {
 
     public T get(Cursor cursor) throws IOException {
         int offset = (int) (cursor.offset - begin);
-        return recorder.reader(getRecordLength(offset)).readFrom(channel());
+        int recordLength = getRecordLength(offset);
+        return recorder.reader(recordLength).readFrom(channel());
     }
 
     private int getRecordLength(int offset) throws IOException {
         channel().position(offset);
         length.rewind();
         channel().read(length);
+        length.flip();
         return length.getInt();
     }
 
@@ -91,16 +100,21 @@ public class Page<T> implements Comparable<Cursor>, Closeable, Flushable {
     }
 
     private long end() {
-        return 0;  // TODO end
+        return position;
     }
 
     @Override
     public void close() throws IOException {
-        // TODO close
+        channel().truncate(position);
+        channel().close();
     }
 
     @Override
     public void flush() throws IOException {
-        // TODO flush
+        channel().force(true);
+    }
+
+    public void tryRecover() {
+        // TODO tryRecover
     }
 }

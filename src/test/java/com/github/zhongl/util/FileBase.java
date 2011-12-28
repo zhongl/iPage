@@ -52,6 +52,7 @@ public abstract class FileBase {
     protected File testDir(String name) throws IOException {
         File file = new File(BASE_ROOT, Joiner.on('.').join(getClass().getSimpleName(), name));
         if (file.exists()) delete(file);
+        file.mkdirs();
         return file;
     }
 

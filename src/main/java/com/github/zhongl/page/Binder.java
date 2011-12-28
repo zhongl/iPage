@@ -16,10 +16,9 @@
 
 package com.github.zhongl.page;
 
-import com.github.zhongl.builder.ArgumentIndex;
-import com.github.zhongl.builder.BuilderConvention;
-import com.github.zhongl.builder.Builders;
-import com.github.zhongl.builder.NotNull;
+import com.github.zhongl.builder.*;
+import com.github.zhongl.util.FileHandler;
+import com.github.zhongl.util.NumberNamedFilesLoader;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
@@ -33,18 +32,26 @@ import java.util.LinkedList;
 public class Binder<T> implements Closeable, Flushable {
 
     private final LinkedList<Page<T>> pages;
-    private final File dir;
-    private final Recorder<T> recorder;
 
-    Binder(File dir, Recorder<T> recorder) {
-        this.dir = dir;
-        this.recorder = recorder;
-        pages = tryLoadAndRecoverPages();
+    Binder(File dir, int pageCapacity, Recorder<T> recorder) throws IOException {
+        pages = tryLoadAndRecoverPages(dir, pageCapacity, recorder);
     }
 
-    private LinkedList<Page<T>> tryLoadAndRecoverPages() {
-        return null;  // TODO tryLoadAndRecoverPages
-        // TODO return a singlton pages at least if it has nothing to load.
+    private LinkedList<Page<T>> tryLoadAndRecoverPages(File dir, int pageCapacity, Recorder<T> recorder) throws IOException {
+        LinkedList<Page<T>> list = new NumberNamedFilesLoader<Page<T>>(dir, new FileHandler<Page<T>>() {
+            @Override
+            public Page<T> handle(File file, boolean last) throws IOException {
+                return null;
+            }
+        }).loadTo(new LinkedList<Page<T>>());
+
+        if (list.isEmpty()) {
+            list.addLast(new Page<T>(new File(dir, "0"), pageCapacity, recorder));
+            return list;
+        } else {
+            list.getLast().tryRecover();
+            return list;
+        }
     }
 
     public Cursor append(T record) throws OverflowException, IOException {
@@ -56,7 +63,7 @@ public class Binder<T> implements Closeable, Flushable {
         }
     }
 
-    public T get(Cursor cursor) throws UnderflowException {
+    public T get(Cursor cursor) throws UnderflowException, IOException {
         if (pages.getLast().compareTo(cursor) < 0) throw new UnderflowException();
         if (pages.getFirst().compareTo(cursor) > 0) return null; // non-existed cursor
         return pages.get(indexOf(cursor)).get(cursor);
@@ -103,6 +110,11 @@ public class Binder<T> implements Closeable, Flushable {
         public Builder dir(File value);
 
         @ArgumentIndex(1)
+        @DefaultValue("4096")
+        @GreaterThanOrEqual("4096")
+        public Builder pageCapacity(int value);
+
+        @ArgumentIndex(2)
         @NotNull
         public Builder recorder(Recorder value);
 

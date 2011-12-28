@@ -17,7 +17,10 @@
 package com.github.zhongl.page;
 
 import com.github.zhongl.util.FileBase;
+import org.junit.After;
 import org.junit.Test;
+
+import java.io.File;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
@@ -29,14 +32,22 @@ public class PageTest extends FileBase {
 
     @Test
     public void appendAndGet() throws Exception {
-        file = testFile("appendAndGet");
+        dir = testDir("appendAndGet");
+        dir.mkdirs();
         int capacity = 4096;
         Recorder<String> recorder = Recorders.STRING;
-        page = new Page<String>(file, capacity, recorder);
+        page = new Page<String>(new File(dir, "0"), capacity, recorder);
 
         String record = "record";
         Cursor cursor = page.append(record);
         assertThat(page.get(cursor), is(record));
         // TODO appendAndGet
+    }
+
+    @Override
+    @After
+    public void tearDown() throws Exception {
+        page.close();
+        super.tearDown();
     }
 }

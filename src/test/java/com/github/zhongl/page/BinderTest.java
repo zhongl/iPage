@@ -17,11 +17,9 @@
 package com.github.zhongl.page;
 
 import com.github.zhongl.util.FileBase;
+import org.junit.After;
 import org.junit.Test;
 
-import java.io.File;
-
-import static com.github.zhongl.page.FileAsserter.*;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
@@ -38,7 +36,12 @@ public class BinderTest extends FileBase {
         Cursor cursor = binder.append(record);
         assertThat(cursor, is(new Cursor(0L)));
         assertThat(binder.get(cursor), is(record));
-        assertExist(new File(dir, "0")).contentIs(length(record.length()), string(record));
     }
 
+    @Override
+    @After
+    public void tearDown() throws Exception {
+        binder.close();
+        super.tearDown();
+    }
 }
