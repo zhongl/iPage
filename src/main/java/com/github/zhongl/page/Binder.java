@@ -37,21 +37,20 @@ public class Binder<T> implements Closeable, Flushable {
         pages = tryLoadAndRecoverPages(dir, pageCapacity, recorder);
     }
 
-    private LinkedList<Page<T>> tryLoadAndRecoverPages(File dir, int pageCapacity, Recorder<T> recorder) throws IOException {
+    private LinkedList<Page<T>> tryLoadAndRecoverPages(File dir, final int pageCapacity, final Recorder<T> recorder) throws IOException {
         LinkedList<Page<T>> list = new NumberNamedFilesLoader<Page<T>>(dir, new FileHandler<Page<T>>() {
             @Override
             public Page<T> handle(File file, boolean last) throws IOException {
-                return null;
+                return new Page<T>(file, last ? pageCapacity : (int) file.length(), recorder);
             }
         }).loadTo(new LinkedList<Page<T>>());
 
         if (list.isEmpty()) {
             list.addLast(new Page<T>(new File(dir, "0"), pageCapacity, recorder));
-            return list;
         } else {
             list.getLast().tryRecover();
-            return list;
         }
+        return list;
     }
 
     public Cursor append(T record) throws OverflowException, IOException {
@@ -69,8 +68,8 @@ public class Binder<T> implements Closeable, Flushable {
         return pages.get(indexOf(cursor)).get(cursor);
     }
 
-    public T remove(Cursor cursor) {
-        return pages.get(indexOf(cursor)).remove(cursor);
+    public void remove(Cursor cursor) {
+        // TODO remove
     }
 
     public Cursor next(Cursor cursor) {

@@ -45,7 +45,7 @@ public class Page<T> implements Comparable<Cursor>, Closeable, Flushable {
         this.begin = Long.parseLong(file.getName());
         this.capacity = capacity;
         this.recorder = recorder;
-        position = 0;
+        position = (int) file.length();
     }
 
     public Cursor append(T record) throws OverflowException, IOException {
@@ -84,10 +84,6 @@ public class Page<T> implements Comparable<Cursor>, Closeable, Flushable {
         return length.getInt();
     }
 
-    public T remove(Cursor cursor) {
-        return null;  // TODO remove
-    }
-
     public Cursor next(Cursor cursor) {
         return null;  // TODO next
     }
@@ -97,10 +93,6 @@ public class Page<T> implements Comparable<Cursor>, Closeable, Flushable {
         if (cursor.offset < begin) return 1;
         if (cursor.offset > position) return -1;
         return 0;
-    }
-
-    private long end() {
-        return position;
     }
 
     @Override
