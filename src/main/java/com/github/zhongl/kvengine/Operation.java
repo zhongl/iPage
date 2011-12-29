@@ -16,6 +16,7 @@
 
 package com.github.zhongl.kvengine;
 
+import com.github.zhongl.engine.Task;
 import com.github.zhongl.index.Index;
 import com.github.zhongl.index.Md5Key;
 import com.github.zhongl.ipage.Cursor;

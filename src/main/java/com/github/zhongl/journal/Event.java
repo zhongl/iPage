@@ -1,5 +1,6 @@
 /*
  * Copyright 2011 zhongl
+ *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -13,27 +14,11 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.kvengine;
+package com.github.zhongl.journal;
 
-import com.google.common.util.concurrent.FutureCallback;
+/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+public interface Event extends Comparable<Event> {
+    void onCommit();
 
-/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl</a> */
-public abstract class Task<T> implements Runnable {
-    protected final FutureCallback<T> callback;
-
-    public Task(FutureCallback<T> callback) {
-        this.callback = callback;
-    }
-
-    @Override
-    public final void run() {
-        try {
-            T result = execute();
-            callback.onSuccess(result);
-        } catch (Throwable t) {
-            callback.onFailure(t);
-        }
-    }
-
-    protected abstract T execute() throws Throwable;
+    void onError(Throwable t);
 }

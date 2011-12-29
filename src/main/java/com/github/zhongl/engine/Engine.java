@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.kvengine;
+package com.github.zhongl.engine;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.concurrent.BlockingQueue;
@@ -27,9 +27,9 @@ import java.util.concurrent.TimeUnit;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @ThreadSafe
-public abstract class Engine {
+public class Engine {
 
-    public static final Runnable SHUTDOWN = new Runnable() {
+    private static final Runnable SHUTDOWN = new Runnable() {
         public void run() {}
     };
 
@@ -39,9 +39,13 @@ public abstract class Engine {
     private final Core core;
 
     public Engine(long timeout, TimeUnit unit, int backlog) {
+        this(timeout, unit, new LinkedBlockingQueue<Runnable>(backlog));
+    }
+
+    public Engine(long timeout, TimeUnit timeUnit, BlockingQueue<Runnable> tasks) {
         this.timeout = timeout;
-        this.timeUnit = unit;
-        this.tasks = new LinkedBlockingQueue<Runnable>(backlog);
+        this.timeUnit = timeUnit;
+        this.tasks = tasks;
         core = new Core(getClass().getSimpleName());
     }
 
@@ -49,10 +53,15 @@ public abstract class Engine {
         core.start();
     }
 
-    public void shutdown() throws InterruptedException {
+    public void shutdown() {
         if (!core.isAlive()) return;
-        tasks.put(SHUTDOWN);
-        core.join();
+        try {
+            tasks.put(SHUTDOWN);
+            core.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+        }
     }
 
     protected final boolean submit(Task<?> task) {

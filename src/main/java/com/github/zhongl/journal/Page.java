@@ -14,22 +14,12 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.page;
-
-import org.junit.Test;
-
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
+package com.github.zhongl.journal;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class JournalTest {
+public interface Page {
 
-    @Test
-    public void main() throws Exception {
-        Journal journal = new Journal();
-        String event = "add";
-        journal.append(event);
-        assertThat(journal.remove(), is(event));
-    }
+    void add(Event event);
 
+    void fix();
 }

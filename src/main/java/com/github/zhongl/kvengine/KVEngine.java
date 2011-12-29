@@ -16,12 +16,13 @@
 
 package com.github.zhongl.kvengine;
 
-import com.github.zhongl.nio.Accessor;
 import com.github.zhongl.builder.*;
+import com.github.zhongl.engine.Engine;
 import com.github.zhongl.index.Index;
 import com.github.zhongl.index.Md5Key;
 import com.github.zhongl.ipage.Cursor;
 import com.github.zhongl.ipage.IPage;
+import com.github.zhongl.nio.Accessor;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.FutureCallback;
@@ -68,11 +69,11 @@ public class KVEngine<T> extends Engine implements AutoGarbageCollectable<Entry<
         Preconditions.checkArgument(dir.isDirectory(), "%s should be a directory", dir);
 
         final IPage<Entry<T>> iPage = IPage.<Entry<T>>baseOn(new File(dir, IPAGE_DIR))
-                .maxChunkIdleTimeMillis(maxChunkIdleTimeMillis)
-                .minimizeCollectLength(minimzieCollectLength)
-                .accessor(new EntryAccessor<T>(valueAccessor))
-                .maximizeChunkCapacity(maximizeChunkCapacity)
-                .build();
+                                           .maxChunkIdleTimeMillis(maxChunkIdleTimeMillis)
+                                           .minimizeCollectLength(minimzieCollectLength)
+                                           .accessor(new EntryAccessor<T>(valueAccessor))
+                                           .maximizeChunkCapacity(maximizeChunkCapacity)
+                                           .build();
 
         final Index index = Index.baseOn(new File(dir, INDEX_DIR)).initialBucketSize(initialBucketSize).build();
 
@@ -108,7 +109,7 @@ public class KVEngine<T> extends Engine implements AutoGarbageCollectable<Entry<
     }
 
     @Override
-    public void shutdown() throws InterruptedException {
+    public void shutdown() {
         autoGarbageCollector.stop();
         super.shutdown();
         try {

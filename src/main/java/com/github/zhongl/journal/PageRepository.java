@@ -14,22 +14,17 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.page;
+package com.github.zhongl.journal;
 
-import javax.annotation.concurrent.NotThreadSafe;
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.List;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-@NotThreadSafe
-public class Journal {
-    private final Queue<String> events = new LinkedList<String>();
-
-    public void append(String event) {
-        events.add(event);
+public class PageRepository {
+    public Page create() {
+        return null;  // TODO create
     }
 
-    public String remove() {
-        return events.remove();
+    public List<Page> unappliedPages() {
+        return null;  // TODO unappliedPages
     }
 }
