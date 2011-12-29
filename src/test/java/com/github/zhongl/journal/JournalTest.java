@@ -16,6 +16,7 @@
 
 package com.github.zhongl.journal;
 
+import com.github.zhongl.cache.Cache;
 import com.github.zhongl.durable.DurableEngine;
 import org.junit.Test;
 
@@ -42,7 +43,9 @@ public class JournalTest {
         doReturn(Collections.emptyList()).when(pageRepository).unappliedPages();
         doReturn(page).when(pageRepository).create();
 
-        journal = new Journal(pageRepository, durableEngine, flushCount, flushElapseMilliseconds, groupCommit);
+        Cache cache = mock(Cache.class);
+
+        journal = new Journal(pageRepository, durableEngine, cache, flushCount, flushElapseMilliseconds, groupCommit);
         verify(pageRepository, times(1)).create();
 
         journal.open();
@@ -52,6 +55,7 @@ public class JournalTest {
         journal.append(event);
         event.await();
 
+        verify(cache, times(1)).apply(page);
         verify(page, times(1)).fix();
         verify(durableEngine).apply(page);
         verify(pageRepository, times(2)).create();

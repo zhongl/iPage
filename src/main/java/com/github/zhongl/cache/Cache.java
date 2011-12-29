@@ -14,22 +14,14 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.journal;
+package com.github.zhongl.cache;
 
-import java.nio.channels.FileChannel;
+import com.github.zhongl.journal.Page;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class Page {
+public class Cache {
 
-    public Page(FileChannel file, int minimizeLength) {
-        // TODO Page
-    }
-
-    public void add(Event event) {
-        // TODO add
-    }
-
-    public void fix() {
-        // TODO fix
+    public void apply(Page page) {
+        // TODO apply
     }
 }

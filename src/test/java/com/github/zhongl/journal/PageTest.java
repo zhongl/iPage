@@ -16,20 +16,25 @@
 
 package com.github.zhongl.journal;
 
+import org.junit.Test;
+
 import java.nio.channels.FileChannel;
 
+import static org.mockito.Mockito.mock;
+
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class Page {
+public class PageTest {
 
-    public Page(FileChannel file, int minimizeLength) {
-        // TODO Page
+
+    @Test
+    public void addAndFix() throws Exception {
+        FileChannel fileChannel = mock(FileChannel.class);
+        int minimizeLength = 10;
+        Page page = new Page(fileChannel, minimizeLength);
+
+        Event mock = mock(Event.class);
+        page.add(mock);
+        // TODO addAndFix 
     }
 
-    public void add(Event event) {
-        // TODO add
-    }
-
-    public void fix() {
-        // TODO fix
-    }
 }

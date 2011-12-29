@@ -16,6 +16,7 @@
 
 package com.github.zhongl.journal;
 
+import com.github.zhongl.cache.Cache;
 import com.github.zhongl.durable.DurableEngine;
 import com.github.zhongl.engine.Engine;
 import com.github.zhongl.engine.Task;
@@ -37,12 +38,14 @@ public class Journal {
     private final InnerEngine engine;
     private final Group group;
     private final DurableEngine durableEngine;
+    private final Cache cache;
     private final CallByCountOrElapse callByCountOrElapse;
 
     private final Callable<?> flusher = new Callable<Object>() {
         @Override
         public Object call() throws Exception {
             currentPage.fix();
+            cache.apply(currentPage);
             durableEngine.apply(currentPage);
             currentPage = pageRepository.create();
             return null;
@@ -54,12 +57,14 @@ public class Journal {
     public Journal(
             PageRepository pageRepository,
             DurableEngine durableEngine,
+            Cache cache,
             int flushCount,
             long flushElapseMilliseconds,
             boolean groupCommit
     ) {
         this.pageRepository = pageRepository;
         this.durableEngine = durableEngine;
+        this.cache = cache;
         this.callByCountOrElapse = new CallByCountOrElapse(flushCount, flushElapseMilliseconds, flusher);
         this.group = groupCommit ? Group.newInstance() : Group.NULL;
         this.engine = new InnerEngine(flushElapseMilliseconds / 2, TIME_UNIT, new PriorityBlockingQueue<Runnable>(1024));
@@ -68,7 +73,10 @@ public class Journal {
     }
 
     public void open() {
-        for (Page page : pageRepository.unappliedPages()) durableEngine.apply(page);
+        for (Page page : pageRepository.unappliedPages()) {
+            cache.apply(page);
+            durableEngine.apply(page);
+        }
         engine.startup();
     }
 
@@ -95,7 +103,7 @@ public class Journal {
             protected Void execute() throws Throwable {
                 currentPage.add(event);
                 tryGroupCommitByCount();
-                return null;  // TODO execute
+                return null;
             }
         };
     }

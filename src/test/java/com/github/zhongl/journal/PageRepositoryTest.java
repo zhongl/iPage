@@ -16,20 +16,6 @@
 
 package com.github.zhongl.journal;
 
-import java.nio.channels.FileChannel;
-
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class Page {
-
-    public Page(FileChannel file, int minimizeLength) {
-        // TODO Page
-    }
-
-    public void add(Event event) {
-        // TODO add
-    }
-
-    public void fix() {
-        // TODO fix
-    }
+public class PageRepositoryTest {
 }
