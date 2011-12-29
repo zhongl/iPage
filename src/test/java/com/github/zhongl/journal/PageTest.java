@@ -16,25 +16,39 @@
 
 package com.github.zhongl.journal;
 
+import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 
+import java.io.FileOutputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class PageTest {
+public class PageTest extends FileBase {
 
 
     @Test
     public void addAndFix() throws Exception {
-        FileChannel fileChannel = mock(FileChannel.class);
-        int minimizeLength = 10;
-        Page page = new Page(fileChannel, minimizeLength);
+        file = testFile("addAndFix");
 
-        Event mock = mock(Event.class);
-        page.add(mock);
-        // TODO addAndFix 
+        FileChannel fileChannel = (FileChannel) spy(Channels.newChannel(new FileOutputStream(file)));
+
+        Page page = new Page(fileChannel);
+
+        Event event = mock(Event.class);
+        ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
+        doReturn(byteBuffer).when(event).toByteBuffer();
+
+        page.add(event);
+
+        verify(fileChannel).write(byteBuffer);
+
+        page.fix();
+
+        verify(fileChannel).close();
     }
 
 }

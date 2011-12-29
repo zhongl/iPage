@@ -23,6 +23,7 @@ import com.github.zhongl.engine.Task;
 import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.concurrent.ThreadSafe;
+import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -68,11 +69,10 @@ public class Journal {
         this.callByCountOrElapse = new CallByCountOrElapse(flushCount, flushElapseMilliseconds, flusher);
         this.group = groupCommit ? Group.newInstance() : Group.NULL;
         this.engine = new InnerEngine(flushElapseMilliseconds / 2, TIME_UNIT, new PriorityBlockingQueue<Runnable>(1024));
-        this.currentPage = pageRepository.create();
-
     }
 
     public void open() {
+        this.currentPage = pageRepository.create();
         for (Page page : pageRepository.unappliedPages()) {
             cache.apply(page);
             durableEngine.apply(page);
@@ -80,7 +80,7 @@ public class Journal {
         engine.startup();
     }
 
-    public void close() {
+    public void close() throws IOException {
         currentPage.fix();
         engine.shutdown();
     }

@@ -16,20 +16,24 @@
 
 package com.github.zhongl.journal;
 
+import java.io.IOException;
 import java.nio.channels.FileChannel;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class Page {
 
-    public Page(FileChannel file, int minimizeLength) {
-        // TODO Page
+    private final FileChannel channel;
+
+    public Page(FileChannel channel) {
+        this.channel = channel;
     }
 
-    public void add(Event event) {
+    public void add(Event event) throws IOException {
         // TODO add
+        channel.write(event.toByteBuffer());
     }
 
-    public void fix() {
-        // TODO fix
+    public void fix() throws IOException {
+        channel.close();
     }
 }

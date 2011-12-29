@@ -20,6 +20,7 @@ import com.github.zhongl.cache.Cache;
 import com.github.zhongl.durable.DurableEngine;
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 
@@ -46,9 +47,9 @@ public class JournalTest {
         Cache cache = mock(Cache.class);
 
         journal = new Journal(pageRepository, durableEngine, cache, flushCount, flushElapseMilliseconds, groupCommit);
-        verify(pageRepository, times(1)).create();
 
         journal.open();
+        verify(pageRepository, times(1)).create();
         verify(pageRepository, times(1)).unappliedPages();
 
         MockEvent event = new MockEvent();
@@ -75,6 +76,11 @@ public class JournalTest {
         @Override
         public void onError(Throwable t) {
             fail(t.toString());
+        }
+
+        @Override
+        public ByteBuffer toByteBuffer() {
+            return null;  // TODO toByteBuffer
         }
 
         @Override
