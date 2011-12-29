@@ -16,27 +16,26 @@
 
 package com.github.zhongl.journal;
 
+import com.github.zhongl.durable.File;
 import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 
-import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
 
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class PageTest extends FileBase {
 
-
     @Test
-    public void addAndFix() throws Exception {
-        file = testFile("addAndFix");
+    public void main() throws Exception {
+        file = testFile("main");
 
-        FileChannel fileChannel = (FileChannel) spy(Channels.newChannel(new FileOutputStream(file)));
+        File file = mock(File.class);
 
-        Page page = new Page(fileChannel);
+        Page page = new Page(file);
 
         Event event = mock(Event.class);
         ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
@@ -44,11 +43,17 @@ public class PageTest extends FileBase {
 
         page.add(event);
 
-        verify(fileChannel).write(byteBuffer);
+        verify(file).writeFully(byteBuffer);
 
         page.fix();
 
-        verify(fileChannel).close();
+        verify(file).fix();
+
+        assertThat(page.iterator().next(), is(event));
+
+        page.clear();
+
+        verify(file).delete();
     }
 
 }

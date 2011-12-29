@@ -16,24 +16,39 @@
 
 package com.github.zhongl.journal;
 
+import com.github.zhongl.durable.File;
+
 import java.io.IOException;
-import java.nio.channels.FileChannel;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class Page {
+public class Page implements Iterable<Event> {
 
-    private final FileChannel channel;
+    private final File file;
+    private final List<Event> list;
 
-    public Page(FileChannel channel) {
-        this.channel = channel;
+    public Page(File file) {
+        this.file = file;
+        list = new LinkedList<Event>();
     }
 
     public void add(Event event) throws IOException {
-        // TODO add
-        channel.write(event.toByteBuffer());
+        list.add(event);
+        file.writeFully(event.toByteBuffer());
     }
 
     public void fix() throws IOException {
-        channel.close();
+        file.fix();
+    }
+
+    @Override
+    public Iterator<Event> iterator() {
+        return list.iterator();
+    }
+
+    public void clear() {
+        file.delete();
     }
 }

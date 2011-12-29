@@ -16,24 +16,19 @@
 
 package com.github.zhongl.durable;
 
-import com.github.zhongl.engine.Engine;
-import com.github.zhongl.journal.Event;
-import com.github.zhongl.journal.Page;
-
-import java.util.concurrent.TimeUnit;
+import java.nio.ByteBuffer;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class DurableEngine extends Engine {
-    public DurableEngine(long timeout, TimeUnit unit, int backlog) {
-        super(timeout, unit, backlog);
+public class File {
+    public void writeFully(ByteBuffer byteBuffer) {
+        // TODO writeFully
     }
 
-    public void apply(Page page) {
-        for (Event event : page) apply(event);
-        page.clear();
+    public void fix() {
+        // TODO fix
     }
 
-    private void apply(Event event) {
-        // TODO apply
+    public void delete() {
+        // TODO delete
     }
 }
