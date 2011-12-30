@@ -16,12 +16,11 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.nio.CommonAccessors;
-import com.github.zhongl.nio.Store;
-
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 
-import static com.github.zhongl.nio.CommonAccessors.LONG;
+import static com.github.zhongl.page.Accessors.LONG;
 
 
 /**
@@ -31,32 +30,34 @@ import static com.github.zhongl.nio.CommonAccessors.LONG;
  */
 public class Slot {
 
-    public static final int LENGTH = 1 + Md5Key.BYTE_LENGTH + LONG.byteLengthOf(0L);
+    public static final int LENGTH = 1 + Md5Key.BYTE_LENGTH + 8;
 
     private final int beginPosition;
-    private final Store buffer;
+    private final FileChannel channel;
 
-    public Slot(int beginPosition, Store buffer) {
+    public Slot(int beginPosition, FileChannel channel) {
         this.beginPosition = beginPosition;
-        this.buffer = buffer;
+        this.channel = channel;
     }
 
     public State state() throws IOException {
-        return State.readFrom(buffer, beginPosition);
+        return State.readFrom(channel, beginPosition);
     }
 
     public Md5Key key() throws IOException {
-        return buffer.readBy(Md5Key.ACCESSOR, beginPositionOfKey());
+        channel.position(beginPositionOfKey());
+        return Md5Key.ACCESSOR.reader().readFrom(channel);
     }
 
     public Long offset() throws IOException {
-        return buffer.readBy(LONG, beginPositionOfOffset());
+        channel.position(beginPositionOfOffset());
+        return LONG.reader().readFrom(channel);
     }
 
     Long add(Md5Key key, Long offset) throws IOException {
-        State.OCCUPIED.writeTo(buffer, beginPosition);
-        buffer.writeBy(Md5Key.ACCESSOR, beginPositionOfKey(), key);
-        buffer.writeBy(LONG, beginPositionOfOffset(), offset);
+        State.OCCUPIED.writeTo(channel, beginPosition);
+        Md5Key.ACCESSOR.writer(key).writeTo(channel);
+        LONG.writer(offset).writeTo(channel);
         return null;
     }
 
@@ -71,23 +72,26 @@ public class Slot {
     }
 
     Long release() throws IOException {
-        State.RELEASED.writeTo(buffer, beginPosition);
+        State.RELEASED.writeTo(channel, beginPosition);
         return offset();
     }
 
     enum State {
         EMPTY, OCCUPIED, RELEASED;
 
-        public void writeTo(Store buffer, int offset) throws IOException {
-            buffer.writeBy(CommonAccessors.BYTE, offset, (byte) ordinal());
+        public void writeTo(FileChannel channel, int offset) throws IOException {
+            channel.position(offset);
+            channel.write(ByteBuffer.wrap(new byte[] {(byte) ordinal()}));
         }
 
-        public static State readFrom(Store buffer, int offset) throws IOException {
-            Byte b = buffer.readBy(CommonAccessors.BYTE, offset);
-            if (EMPTY.ordinal() == b) return EMPTY;
-            if (OCCUPIED.ordinal() == b) return OCCUPIED;
-            if (RELEASED.ordinal() == b) return RELEASED;
-            throw new IllegalStateException("Unknown slot state: " + b);
+        public static State readFrom(FileChannel channel, int offset) throws IOException {
+            channel.position(offset);
+            byte[] bytes = new byte[1];
+            channel.read(ByteBuffer.wrap(bytes));
+            if (EMPTY.ordinal() == bytes[0]) return EMPTY;
+            if (OCCUPIED.ordinal() == bytes[0]) return OCCUPIED;
+            if (RELEASED.ordinal() == bytes[0]) return RELEASED;
+            throw new IllegalStateException("Unknown slot state: " + bytes[0]);
         }
     }
 

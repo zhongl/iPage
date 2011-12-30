@@ -70,10 +70,10 @@ public class KVEngine<T> extends Engine implements AutoGarbageCollectable<Entry<
 
         final IPage<Entry<T>> iPage = IPage.<Entry<T>>baseOn(new File(dir, IPAGE_DIR))
                                            .maxChunkIdleTimeMillis(maxChunkIdleTimeMillis)
-                                           .minimizeCollectLength(minimzieCollectLength)
-                                           .accessor(new EntryAccessor<T>(valueAccessor))
-                                           .maximizeChunkCapacity(maximizeChunkCapacity)
-                                           .build();
+                .minimizeCollectLength(minimzieCollectLength)
+//                                           .accessor(new EntryAccessor<T>(valueAccessor))
+                .maximizeChunkCapacity(maximizeChunkCapacity)
+                .build();
 
         final Index index = Index.baseOn(new File(dir, INDEX_DIR)).initialBucketSize(initialBucketSize).build();
 

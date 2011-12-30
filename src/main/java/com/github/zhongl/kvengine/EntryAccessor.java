@@ -16,34 +16,50 @@
 
 package com.github.zhongl.kvengine;
 
-import com.github.zhongl.nio.AbstractAccessor;
-import com.github.zhongl.nio.Accessor;
 import com.github.zhongl.index.Md5Key;
+import com.github.zhongl.page.Accessor;
 
-import java.nio.ByteBuffer;
+import java.io.IOException;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-final class EntryAccessor<V> extends AbstractAccessor<Entry<V>> {
+final class EntryAccessor<V> implements Accessor<Entry<V>> {
 
     private final Accessor<V> vAccessor;
 
     public EntryAccessor(Accessor<V> vAccessor) {this.vAccessor = vAccessor;}
 
     @Override
-    protected void doWrite(Entry<V> entry, ByteBuffer buffer) {
-        Md5Key.ACCESSOR.write(entry.key(), buffer);
-        vAccessor.write(entry.value(), buffer);
+    public Writer writer(Entry<V> value) {
+        final Writer kWriter = Md5Key.ACCESSOR.writer(value.key());
+        final Writer vWriter = vAccessor.writer(value.value());
+        return new Writer() {
+
+            @Override
+            public int valueByteLength() {
+                return kWriter.valueByteLength() + vWriter.valueByteLength();
+            }
+
+            @Override
+            public int writeTo(WritableByteChannel channel) throws IOException {
+                return kWriter.writeTo(channel) + vWriter.writeTo(channel);
+            }
+        };
     }
 
     @Override
-    public int byteLengthOf(Entry<V> entry) {
-        return Md5Key.ACCESSOR.byteLengthOf(entry.key()) + vAccessor.byteLengthOf(entry.value());
-    }
+    public Reader<Entry<V>> reader() {
+        final Reader<Md5Key> kReader = Md5Key.ACCESSOR.reader();
+        final Reader<V> vReader = vAccessor.reader();
+        return new Reader<Entry<V>>() {
 
-    @Override
-    public Entry<V> read(ByteBuffer buffer) {
-        Md5Key key = Md5Key.ACCESSOR.read(buffer);
-        V value = vAccessor.read(buffer);
-        return new Entry<V>(key, value);
+            @Override
+            public Entry<V> readFrom(ReadableByteChannel channel) throws IOException {
+                Md5Key md5Key = kReader.readFrom(channel);
+                V value = vReader.readFrom(channel);
+                return new Entry<V>(md5Key, value);
+            }
+        };
     }
 }

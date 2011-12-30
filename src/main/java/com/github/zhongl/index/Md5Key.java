@@ -16,11 +16,13 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.nio.AbstractAccessor;
-import com.github.zhongl.nio.Accessor;
+import com.github.zhongl.page.Accessor;
 
 import javax.annotation.concurrent.ThreadSafe;
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -67,23 +69,34 @@ public class Md5Key {
         return Arrays.hashCode(md5Bytes);
     }
 
-    private static class InnerAccessor extends AbstractAccessor<Md5Key> {
+    private static class InnerAccessor implements Accessor<Md5Key> {
+
 
         @Override
-        public int byteLengthOf(Md5Key object) {
-            return BYTE_LENGTH;
+        public Writer writer(final Md5Key value) {
+            return new Writer() {
+                @Override
+                public int valueByteLength() {
+                    return BYTE_LENGTH;
+                }
+
+                @Override
+                public int writeTo(WritableByteChannel channel) throws IOException {
+                    return channel.write(ByteBuffer.wrap(value.md5Bytes));
+                }
+            };
         }
 
         @Override
-        public Md5Key read(ByteBuffer buffer) {
-            byte[] bytes = new byte[BYTE_LENGTH];
-            buffer.get(bytes);
-            return new Md5Key(bytes);
-        }
-
-        @Override
-        protected void doWrite(Md5Key object, ByteBuffer buffer) {
-            buffer.put(object.md5Bytes);
+        public Reader<Md5Key> reader() {
+            return new Reader<Md5Key>() {
+                @Override
+                public Md5Key readFrom(ReadableByteChannel channel) throws IOException {
+                    byte[] bytes = new byte[BYTE_LENGTH];
+                    channel.read(ByteBuffer.wrap(bytes));
+                    return new Md5Key(bytes);
+                }
+            };
         }
     }
 }

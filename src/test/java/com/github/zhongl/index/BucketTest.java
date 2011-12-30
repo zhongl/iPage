@@ -16,10 +16,6 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.nio.FileChannelFactory;
-import com.github.zhongl.nio.FileChannels;
-import com.github.zhongl.nio.Store;
-import com.github.zhongl.nio.Stores;
 import com.github.zhongl.integrity.Validator;
 import com.github.zhongl.util.FileBase;
 import com.google.common.primitives.Bytes;
@@ -27,6 +23,7 @@ import com.google.common.primitives.Longs;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 
 import static org.hamcrest.Matchers.is;
@@ -52,18 +49,10 @@ public class BucketTest extends FileBase {
                 brokenCRC
         );
 
-        Store buffer = new Stores().getOrCreateBy(new FileChannelFactory() {
-            @Override
-            public FileChannel create() throws IOException {
-                return FileChannels.channel(file, brokenBucketContent.length);
-            }
-
-            @Override
-            public long maxIdleTimeMillis() {
-                return 0;  // TODO maxIdleTimeMillis
-            }
-        });
-        Bucket bucket = new Bucket(0, buffer);// mock broken fileHashTable file.
+        RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
+        randomAccessFile.setLength(brokenBucketContent.length);
+        FileChannel channel = randomAccessFile.getChannel();
+        Bucket bucket = new Bucket(0, channel);// mock broken fileHashTable file.
 
         Validator<Slot, IOException> validator = new Validator<Slot, IOException>() {
             @Override

@@ -16,16 +16,13 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.nio.FileChannelFactory;
-import com.github.zhongl.nio.FileChannels;
-import com.github.zhongl.nio.Stores;
-import com.github.zhongl.nio.Store;
 import com.github.zhongl.integrity.ValidateOrRecover;
 import com.github.zhongl.integrity.Validator;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -49,12 +46,14 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
     private final File file;
 
     private volatile int occupiedSlots;
-    private final Store stores;
+    private final FileChannel channel;
 
     public FileHashTable(File file, int buckets) throws IOException {
         this.file = file;
         amountOfBuckets = buckets > 0 ? buckets : DEFAULT_SIZE;
-        stores = new Stores().getOrCreateBy(new InnerFileChannelFactory(file));
+        RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
+        randomAccessFile.setLength(amountOfBuckets * Bucket.LENGTH);
+        channel = randomAccessFile.getChannel();
         calculateOccupiedSlots();
     }
 
@@ -89,8 +88,7 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
     }
 
     public void close() throws IOException {
-        flush();
-        stores.release();
+        channel.close();
     }
 
     private int hashAndMod(Md5Key key) {
@@ -104,11 +102,11 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
     }
 
     private Bucket buckets(int i) {
-        return new Bucket(i * Bucket.LENGTH, stores);
+        return new Bucket(i * Bucket.LENGTH, channel);
     }
 
     public void flush() throws IOException {
-        stores.flush();
+        channel.force(true);
     }
 
     public boolean isEmpty() {
@@ -135,19 +133,4 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
         return true;
     }
 
-    private class InnerFileChannelFactory implements FileChannelFactory {
-        private final File file;
-
-        public InnerFileChannelFactory(File file) {this.file = file;}
-
-        @Override
-        public FileChannel create() throws IOException {
-            return FileChannels.channel(file, amountOfBuckets * Bucket.LENGTH);
-        }
-
-        @Override
-        public long maxIdleTimeMillis() {
-            return Long.MAX_VALUE;
-        }
-    }
 }

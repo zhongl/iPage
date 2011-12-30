@@ -16,17 +16,16 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.nio.Accessor;
-import com.github.zhongl.nio.Store;
 import com.github.zhongl.integrity.ValidateOrRecover;
 import com.github.zhongl.integrity.Validator;
 
 import java.io.IOException;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.zip.CRC32;
 
-import static com.github.zhongl.nio.CommonAccessors.LONG;
+import static com.github.zhongl.page.Accessors.LONG;
 
 /**
  * {@link Bucket}
@@ -39,11 +38,11 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
     private static final int CRC_OFFSET = LENGTH - 8;
 
     private final int beginPosition;
-    private final Store buffer;
+    private final FileChannel channel;
 
-    Bucket(int beginPosition, Store buffer) {
+    Bucket(int beginPosition, FileChannel channel) {
         this.beginPosition = beginPosition;
-        this.buffer = buffer;
+        this.channel = channel;
     }
 
     public Long put(Md5Key key, Long offset) throws IOException {
@@ -86,7 +85,9 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
     }
 
     public void updateCRC() throws IOException {
-        buffer.writeBy(LONG, CRC_OFFSET, calculateCRC());
+        long checksum = calculateCRC();
+        channel.position(CRC_OFFSET);
+        LONG.writer(checksum).writeTo(channel);
     }
 
     public boolean checkCRC() throws IOException {
@@ -119,33 +120,22 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
     private int amountOfSlots() {return LENGTH / Slot.LENGTH;}
 
     private Slot slots(int index) {
-        return new Slot(index * Slot.LENGTH + beginPosition, buffer);
+        return new Slot(index * Slot.LENGTH + beginPosition, channel);
     }
 
     private long calculateCRC() throws IOException {
         final int length = Slot.LENGTH * amountOfSlots();
-        byte[] allSlotBytes = buffer.readBy(new Accessor<byte[]>() {
-            @Override
-            public int byteLengthOf(byte[] object) { throw new UnsupportedOperationException(); }
-
-            @Override
-            public int write(byte[] object, ByteBuffer buffer) { throw new UnsupportedOperationException(); }
-
-            @Override
-            public byte[] read(ByteBuffer buffer) {
-                byte[] bytes = new byte[length];
-                buffer.get(bytes);
-                return bytes;
-            }
-        }, beginPosition);
-
+        byte[] bytes = new byte[length];
+        channel.position(beginPosition);
+        channel.read(ByteBuffer.wrap(bytes));
         CRC32 crc32 = new CRC32();
-        crc32.update(allSlotBytes);
+        crc32.update(bytes);
         return crc32.getValue();
     }
 
     private long readCRC() throws IOException {
-        return buffer.readBy(LONG, CRC_OFFSET);
+        channel.position(CRC_OFFSET);
+        return LONG.reader().readFrom(channel);
     }
 
 
