@@ -16,6 +16,7 @@
 
 package com.github.zhongl.journal;
 
+import com.github.zhongl.page.Accessor;
 import com.github.zhongl.util.FileHandler;
 import com.github.zhongl.util.NumberNamedFilesLoader;
 
@@ -27,40 +28,40 @@ import java.util.List;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-public class PageFactory {
+public class EventPageFactory {
     private final File dir;
     private final Accessor<Event> accessor;
 
     private long lastIndex;
-    private final List<Page> pages;
+    private final List<EventPage> eventPages;
 
-    public PageFactory(File dir, Accessor<Event> accessor) throws IOException {
+    public EventPageFactory(File dir, Accessor<Event> accessor) throws IOException {
         this.dir = dir;
         this.accessor = accessor;
-        pages = loadUnappliedPages();
+        eventPages = loadUnappliedPages();
     }
 
-    public Page create() throws IOException {
-        return new Page(new File(dir, Long.toString(lastIndex++)), accessor);
+    public EventPage create() throws IOException {
+        return new EventPage(new File(dir, Long.toString(lastIndex++)), accessor);
     }
 
-    public List<Page> unappliedPages() {
-        return pages;
+    public List<EventPage> unappliedPages() {
+        return eventPages;
     }
 
-    private List<Page> loadUnappliedPages() throws IOException {
-        return new NumberNamedFilesLoader<Page>(dir, new FileHandler<Page>() {
+    private List<EventPage> loadUnappliedPages() throws IOException {
+        return new NumberNamedFilesLoader<EventPage>(dir, new FileHandler<EventPage>() {
             @Override
-            public Page handle(File file, boolean last) throws IOException {
+            public EventPage handle(File file, boolean last) throws IOException {
                 try {
-                    Page page = new Page(file, accessor);
+                    EventPage eventPage = new EventPage(file, accessor);
                     lastIndex = Long.parseLong(file.getName()) + 1;
-                    return page;
+                    return eventPage;
                 } catch (IllegalStateException e) {
                     file.delete();
                     return null;
                 }
             }
-        }).loadTo(new LinkedList<Page>());
+        }).loadTo(new LinkedList<EventPage>());
     }
 }

@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.journal;
+package com.github.zhongl.page;
 
 import com.google.common.primitives.Longs;
 
@@ -28,13 +28,13 @@ import java.nio.channels.WritableByteChannel;
 import java.util.zip.CRC32;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-class CRC32WritableByteChannel implements WritableByteChannel {
+public class CRC32WriteOnlyChannel implements WritableByteChannel {
 
     private final CRC32 crc32 = new CRC32();
     private final FileChannel channel;
 
-    public CRC32WritableByteChannel(File file) throws FileNotFoundException {
-        channel = new FileOutputStream(file).getChannel();
+    public CRC32WriteOnlyChannel(File file) throws FileNotFoundException {
+        channel = new FileOutputStream(file, true).getChannel();
     }
 
     @Override
@@ -50,9 +50,13 @@ class CRC32WritableByteChannel implements WritableByteChannel {
 
     @Override
     public void close() throws IOException {
+        writeCRC32();
+        channel.close();
+    }
+
+    private void writeCRC32() throws IOException {
         ByteBuffer crc32Buffer = ByteBuffer.wrap(Longs.toByteArray(crc32.getValue()));
         channel.write(crc32Buffer);
-        channel.close();
     }
 
     private void updateCRC32By(ByteBuffer buffer) {

@@ -14,24 +14,20 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.journal;
+package com.github.zhongl.page;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class LengthReader<T> implements Accessor.Reader<T> {
+public abstract class LengthWriter implements Accessor.Writer {
+
     @Override
-    public final T readFrom(ReadableByteChannel channel) throws IOException {
-        ByteBuffer buffer = ByteBuffer.allocate(4);
-        buffer.rewind();
-        channel.read(buffer);
-        buffer.flip();
-        int length = buffer.getInt();
-        return readBodyFrom(channel, length);
+    public final int writeTo(WritableByteChannel channel) throws IOException {
+        channel.write(ByteBuffer.allocate(4).putInt(0, valueByteLength()));
+        return writeBodyTo(channel) + 4;
     }
 
-    protected abstract T readBodyFrom(ReadableByteChannel channel, int length) throws IOException;
-
+    protected abstract int writeBodyTo(WritableByteChannel channel) throws IOException;
 }

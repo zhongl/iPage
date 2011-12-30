@@ -14,7 +14,20 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.page;
+package com.github.zhongl.journal;
+
+import com.github.zhongl.page.Accessor;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class OverflowException extends Exception {}
+public interface Events<K, V> extends Accessor<Event> {
+    Event add(K key, V value);
+
+    Event delete(K key);
+
+    K getKey(Event event);
+
+    V getValue(Event event);
+
+    boolean isAdd(Event event);
+
+}

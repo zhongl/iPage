@@ -31,19 +31,19 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class PageTest extends FileBase {
+public class EventPageTest extends FileBase {
 
     @Test
     public void main() throws Exception {
         file = testFile("main");
 
-        Page page = new Page(file, new EventAccessor());
+        EventPage eventPage = new EventPage(file, new EventAccessor());
 
         Event event = new StringEvent("event");
 
-        page.add(event);
+        eventPage.add(event);
 
-        page.fix();
+        eventPage.fix();
 
         byte[] content = Bytes.concat(Ints.toByteArray(5), "event".getBytes());
         CRC32 crc32 = new CRC32();
@@ -51,19 +51,19 @@ public class PageTest extends FileBase {
 
         assertExist(file).contentIs(content, Longs.toByteArray(crc32.getValue()));
 
-        assertThat(page.iterator().next(), is(event));
+        assertThat(eventPage.iterator().next(), is(event));
 
         try {
-            page.add(new StringEvent(""));
+            eventPage.add(new StringEvent(""));
             fail("Should throw exception");
         } catch (IllegalStateException e) {
         }
 
-        page.clear();
+        eventPage.clear();
 
         assertThat(file.exists(), is(false));
 
-        assertThat(page.iterator().hasNext(), is(false));
+        assertThat(eventPage.iterator().hasNext(), is(false));
     }
 
     @Test
@@ -75,12 +75,12 @@ public class PageTest extends FileBase {
         byte[] crc32Bytes = Longs.toByteArray(crc32.getValue());
         Files.write(Bytes.concat(content, crc32Bytes), file);
 
-        Page page = new Page(file, new EventAccessor());
-        StringEvent event = (StringEvent) page.iterator().next();
+        EventPage eventPage = new EventPage(file, new EventAccessor());
+        StringEvent event = (StringEvent) eventPage.iterator().next();
         assertThat(event.value, is("event"));
 
         try {
-            page.add(new StringEvent(""));
+            eventPage.add(new StringEvent(""));
             fail("Should throw exception");
         } catch (IllegalStateException e) {
         }
@@ -90,7 +90,7 @@ public class PageTest extends FileBase {
     public void loadInvalidExist() throws Exception {
         file = testFile("loadInvalidExist");
         Files.write(Bytes.concat(Ints.toByteArray(5), "event".getBytes(), Longs.toByteArray(4L)), file);
-        new Page(file, new EventAccessor());
+        new EventPage(file, new EventAccessor());
     }
 
 }

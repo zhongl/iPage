@@ -14,34 +14,39 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.page;
+package com.github.zhongl.sequence;
 
+import com.github.zhongl.page.Accessors;
 import com.github.zhongl.util.FileBase;
 import org.junit.After;
 import org.junit.Test;
+
+import java.util.LinkedList;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class BinderTest extends FileBase {
+public class SequenceTest extends FileBase {
 
-    Binder<String> binder;
+    Sequence<String> sequence;
 
     @Test
-    public void appendAndGet() throws Exception {
-        dir = testDir("appendAndGet");
-        binder = Binder.baseOn(dir).recorder(Recorders.STRING).build();
-        String record = "hi";
-        Cursor cursor = binder.append(record);
+    public void main() throws Exception {
+        dir = testDir("main");
+        LinkedList<LinkedPage<String>> linkedPages = new LinkedPageLoader<String>(dir, Accessors.STRING, 16).load();
+        sequence = new Sequence<String>(linkedPages);
+        String record = "record";
+        Cursor cursor = sequence.append(record);
         assertThat(cursor, is(new Cursor(0L)));
-        assertThat(binder.get(cursor), is(record));
+        assertThat(sequence.get(cursor), is(record));
+        assertThat(sequence.next(cursor), is(new Cursor(10L)));
     }
 
     @Override
     @After
     public void tearDown() throws Exception {
-        binder.close();
+        sequence.close();
         super.tearDown();
     }
 }

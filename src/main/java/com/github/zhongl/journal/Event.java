@@ -16,10 +16,7 @@
 
 package com.github.zhongl.journal;
 
+import com.google.common.util.concurrent.FutureCallback;
+
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface Event {
-    void onCommit();
-
-    void onError(Throwable t);
-
-}
+public interface Event extends FutureCallback<Void> {}

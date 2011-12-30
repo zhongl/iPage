@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.page;
+package com.github.zhongl.sequence;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class UnderflowException extends Exception {}

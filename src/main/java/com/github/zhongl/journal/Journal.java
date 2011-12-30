@@ -18,9 +18,10 @@ package com.github.zhongl.journal;
 
 import com.github.zhongl.cache.Cache;
 import com.github.zhongl.durable.DurableEngine;
+import com.github.zhongl.engine.CallByCountOrElapse;
 import com.github.zhongl.engine.Engine;
+import com.github.zhongl.engine.Group;
 import com.github.zhongl.engine.Task;
-import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
@@ -34,7 +35,7 @@ public class Journal {
     private static final int BACKLOG = Integer.getInteger("jounal.backlog", 256);
     private final static TimeUnit TIME_UNIT = TimeUnit.MILLISECONDS;
 
-    private final PageFactory pageFactory;
+    private final EventPageFactory eventPageFactory;
     private final InnerEngine engine;
     private final Group group;
     private final DurableEngine durableEngine;
@@ -44,25 +45,25 @@ public class Journal {
     private final Callable<?> flusher = new Callable<Void>() {
         @Override
         public Void call() throws Exception {
-            currentPage.fix();
-            if (isGroupCommit()) cache.apply(currentPage);
-            durableEngine.apply(currentPage);
-            currentPage = pageFactory.create();
+            currentEventPage.fix();
+            if (isGroupCommit()) cache.apply(currentEventPage);
+            durableEngine.apply(currentEventPage);
+            currentEventPage = eventPageFactory.create();
             return null;
         }
     };
 
-    private volatile Page currentPage;
+    private volatile EventPage currentEventPage;
 
     public Journal(
-            PageFactory pageFactory,
+            EventPageFactory eventPageFactory,
             DurableEngine durableEngine,
             Cache cache,
             int flushCount,
             long flushElapseMilliseconds,
             boolean groupCommit
     ) {
-        this.pageFactory = pageFactory;
+        this.eventPageFactory = eventPageFactory;
         this.durableEngine = durableEngine;
         this.cache = cache;
         this.callByCountOrElapse = new CallByCountOrElapse(flushCount, flushElapseMilliseconds, flusher);
@@ -71,16 +72,16 @@ public class Journal {
     }
 
     public void open() throws IOException {
-        this.currentPage = pageFactory.create();
-        for (Page page : pageFactory.unappliedPages()) {
-            cache.apply(page);
-            durableEngine.apply(page);
+        this.currentEventPage = eventPageFactory.create();
+        for (EventPage eventPage : eventPageFactory.unappliedPages()) {
+            cache.apply(eventPage);
+            durableEngine.apply(eventPage);
         }
         engine.startup();
     }
 
     public void close() throws IOException {
-        currentPage.fix();
+        currentEventPage.fix();
         engine.shutdown();
     }
 
@@ -89,18 +90,10 @@ public class Journal {
     }
 
     private Task<Void> task(final Event event) {
-        FutureCallback<Void> callback = new FutureCallback<Void>() {
-            @Override
-            public void onSuccess(Void result) { event.onCommit(); }
-
-            @Override
-            public void onFailure(Throwable t) { event.onError(t); }
-        };
-
-        return new Task<Void>(group.decorate(callback)) {
+        return new Task<Void>(group.decorate(event)) {
             @Override
             protected Void execute() throws Throwable {
-                currentPage.add(event);
+                currentEventPage.add(event);
                 if (!isGroupCommit()) cache.apply(event);
                 tryGroupCommitByCount();
                 return null;

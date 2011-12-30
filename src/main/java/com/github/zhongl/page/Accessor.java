@@ -14,13 +14,25 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.cache;
+package com.github.zhongl.page;
 
-import com.github.zhongl.journal.Event;
+import java.io.IOException;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class EventToKeyValue<K, V> {
-    public abstract K getKey(Event event);
+public interface Accessor<T> {
+    Writer writer(T value);
 
-    public abstract V getValue(Event event);
+    Reader<T> reader();
+
+    public interface Writer {
+        int valueByteLength();
+
+        int writeTo(WritableByteChannel channel) throws IOException;
+    }
+
+    public interface Reader<T> {
+        T readFrom(ReadableByteChannel channel) throws IOException;
+    }
 }

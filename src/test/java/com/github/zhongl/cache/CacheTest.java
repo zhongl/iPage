@@ -17,6 +17,7 @@
 package com.github.zhongl.cache;
 
 import com.github.zhongl.journal.Event;
+import com.github.zhongl.journal.Events;
 import org.junit.Test;
 
 import static org.hamcrest.Matchers.is;
@@ -30,17 +31,18 @@ public class CacheTest {
     @Test
     public void main() throws Exception {
         Event event = mock(Event.class);
-        EventToKeyValue<String, String> eventToKeyValue = mock(EventToKeyValue.class);
+        Events events = mock(Events.class);
+        doReturn(true).when(events).isAdd(event);
 
         String key = "key";
         String value = "value";
-        doReturn(key).when(eventToKeyValue).getKey(event);
-        doReturn(value).when(eventToKeyValue).getValue(event);
+        doReturn(key).when(events).getKey(event);
+        doReturn(value).when(events).getValue(event);
 
         Durable<String, String> durable = mock(Durable.class);
         long durationMilliseconds = 10L;
 
-        Cache<String, String> cache = new Cache<String, String>(eventToKeyValue, durable, 16, durationMilliseconds);
+        Cache<String, String> cache = new Cache<String, String>(events, durable, 16, durationMilliseconds);
         cache.apply(event);
         assertThat(cache.get(key), is(value));
 

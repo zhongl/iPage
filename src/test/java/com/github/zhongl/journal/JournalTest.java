@@ -38,47 +38,47 @@ public class JournalTest {
         int flushCount = 1;
         DurableEngine durableEngine = mock(DurableEngine.class);
 
-        Page page = mock(Page.class);
-        PageFactory pageFactory = mock(PageFactory.class);
-        doReturn(Collections.emptyList()).when(pageFactory).unappliedPages();
-        doReturn(page).when(pageFactory).create();
+        EventPage eventPage = mock(EventPage.class);
+        EventPageFactory eventPageFactory = mock(EventPageFactory.class);
+        doReturn(Collections.emptyList()).when(eventPageFactory).unappliedPages();
+        doReturn(eventPage).when(eventPageFactory).create();
 
         Cache cache = mock(Cache.class);
 
-        journal = new Journal(pageFactory, durableEngine, cache, flushCount, flushElapseMilliseconds, groupCommit);
+        journal = new Journal(eventPageFactory, durableEngine, cache, flushCount, flushElapseMilliseconds, groupCommit);
 
         journal.open();
-        verify(pageFactory, times(1)).create();
-        verify(pageFactory, times(1)).unappliedPages();
+        verify(eventPageFactory, times(1)).create();
+        verify(eventPageFactory, times(1)).unappliedPages();
 
         MockEvent event = new MockEvent();
         journal.append(event);
         event.await();
 
         verify(cache, times(1)).apply(event);
-        verify(page, times(1)).fix();
-        verify(durableEngine).apply(page);
-        verify(pageFactory, times(2)).create();
+        verify(eventPage, times(1)).fix();
+        verify(durableEngine).apply(eventPage);
+        verify(eventPageFactory, times(2)).create();
 
         journal.close();
-        verify(page, times(2)).fix();
+        verify(eventPage, times(2)).fix();
     }
 
     private static class MockEvent implements Event {
         private final CountDownLatch latch = new CountDownLatch(1);
 
+        public void await() throws InterruptedException {
+            latch.await();
+        }
+
         @Override
-        public void onCommit() {
+        public void onSuccess(Void result) {
             latch.countDown();
         }
 
         @Override
-        public void onError(Throwable t) {
+        public void onFailure(Throwable t) {
             fail(t.toString());
-        }
-
-        public void await() throws InterruptedException {
-            latch.await();
         }
     }
 }

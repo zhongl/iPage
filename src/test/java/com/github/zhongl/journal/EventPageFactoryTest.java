@@ -26,13 +26,13 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class PageFactoryTest extends FileBase {
+public class EventPageFactoryTest extends FileBase {
 
     @Test
     public void create() throws Exception {
         dir = testDir("create");
-        PageFactory factory = new PageFactory(dir, new EventAccessor());
-        factory.create();
+        EventPageFactory factoryEvent = new EventPageFactory(dir, new EventAccessor());
+        factoryEvent.create();
         assertThat(new File(dir, "0").exists(), is(true));
     }
 
@@ -40,14 +40,14 @@ public class PageFactoryTest extends FileBase {
     public void load() throws Exception {
         dir = testDir("load");
         EventAccessor accessor = new EventAccessor();
-        new Page(new File(dir, "0"), accessor).fix();
+        new EventPage(new File(dir, "0"), accessor).fix();
         new File(dir, "1").createNewFile();
 
-        PageFactory factory = new PageFactory(dir, accessor);
-        List<Page> pages = factory.unappliedPages();
+        EventPageFactory factoryEvent = new EventPageFactory(dir, accessor);
+        List<EventPage> eventPages = factoryEvent.unappliedPages();
         assertThat(new File(dir, "1").exists(), is(false));
-        assertThat(pages.size(), is(1));
-        factory.create();
+        assertThat(eventPages.size(), is(1));
+        factoryEvent.create();
         assertThat(new File(dir, "1").exists(), is(true));
     }
 }

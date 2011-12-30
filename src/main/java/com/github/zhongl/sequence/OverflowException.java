@@ -14,25 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.page;
-
-import java.io.IOException;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
+package com.github.zhongl.sequence;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface Recorder<T> {
-    Writer writer(T value);
-
-    Reader<T> reader(int length);
-
-    public interface Writer {
-        int valueByteLength();
-
-        int writeTo(WritableByteChannel channel) throws IOException;
-    }
-
-    public interface Reader<T> {
-        T readFrom(ReadableByteChannel channel) throws IOException;
-    }
-}
+public class OverflowException extends Exception {}

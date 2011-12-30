@@ -26,9 +26,12 @@ class StringEvent implements Event {
     }
 
     @Override
-    public void onCommit() { }
+    public void onSuccess(Void result) {
+        // TODO onSuccess
+    }
 
     @Override
-    public void onError(Throwable t) { }
-
+    public void onFailure(Throwable t) {
+        // TODO onFailure
+    }
 }

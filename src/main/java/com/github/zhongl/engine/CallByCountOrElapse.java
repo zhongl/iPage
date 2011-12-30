@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.journal;
+package com.github.zhongl.engine;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.concurrent.Callable;
@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-class CallByCountOrElapse {
+public class CallByCountOrElapse {
 
     private final ByCount byCount;
     private final ByElapse byElapse;

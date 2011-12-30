@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.journal;
+package com.github.zhongl.engine;
 
 import com.google.common.util.concurrent.FutureCallback;
 
@@ -28,7 +28,7 @@ import java.util.Queue;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @NotThreadSafe
-abstract class Group {
+public abstract class Group {
 
     public static final Group NULL = new Group() {
         @Override

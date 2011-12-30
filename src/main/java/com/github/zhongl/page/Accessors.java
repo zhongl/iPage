@@ -22,35 +22,36 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class Recorders {
-    public static final Recorder STRING = new StringRecorder();
+public class Accessors {
+    public static final Accessor<String> STRING = new StringAccessor();
 
-    private static class StringRecorder implements Recorder<String> {
+    private static class StringAccessor implements Accessor<String> {
         @Override
         public Writer writer(final String value) {
-            return new Writer() {
+            return new LengthWriter() {
                 @Override
                 public int valueByteLength() {
                     return value.length();
                 }
 
                 @Override
-                public int writeTo(WritableByteChannel channel) throws IOException {
+                public int writeBodyTo(WritableByteChannel channel) throws IOException {
                     return channel.write(ByteBuffer.wrap(value.getBytes()));
                 }
             };
         }
 
         @Override
-        public Reader<String> reader(final int length) {
-            return new Reader<String>() {
+        public Reader<String> reader() {
+            return new LengthReader<String>() {
                 @Override
-                public String readFrom(ReadableByteChannel channel) throws IOException {
+                protected String readBodyFrom(ReadableByteChannel channel, int length) throws IOException {
                     byte[] bytes = new byte[length];
                     channel.read(ByteBuffer.wrap(bytes));
                     return new String(bytes);
                 }
             };
         }
+
     }
 }

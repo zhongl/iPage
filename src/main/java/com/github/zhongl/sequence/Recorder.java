@@ -14,17 +14,17 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.journal;
+package com.github.zhongl.sequence;
 
 import java.io.IOException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface Accessor<T> {
+public interface Recorder<T> {
     Writer writer(T value);
 
-    Reader<T> reader();
+    Reader<T> reader(int length);
 
     public interface Writer {
         int valueByteLength();

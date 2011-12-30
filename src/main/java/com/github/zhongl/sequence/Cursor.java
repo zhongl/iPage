@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.page;
+package com.github.zhongl.sequence;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -46,5 +46,9 @@ public class Cursor implements Comparable<Cursor> {
     @Override
     public int compareTo(Cursor that) {
         return (int) (this.offset - that.offset);
+    }
+
+    public Cursor forword(int length) {
+        return new Cursor(offset + length);
     }
 }

@@ -16,97 +16,63 @@
 
 package com.github.zhongl.page;
 
-import com.github.zhongl.nio.FileChannels;
-
 import javax.annotation.concurrent.NotThreadSafe;
-import java.io.Closeable;
-import java.io.File;
-import java.io.Flushable;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
+import java.io.*;
+import java.nio.channels.WritableByteChannel;
+import java.util.Iterator;
+import java.util.zip.CRC32;
+
+import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-public class Page<T> implements Comparable<Cursor>, Closeable, Flushable {
-    private static final int FOUR_BYTES = 4;
+public abstract class Page<T> implements Iterable<T> {
+    protected static final int CRC32_LENGTH = 8;
 
-    private final File file;
-    private final long begin;
-    private final int capacity;
-    private final Recorder<T> recorder;
-    private final ByteBuffer length = ByteBuffer.allocate(FOUR_BYTES);
+    protected final File file;
+    protected final Accessor<T> accessor;
+    protected final WritableByteChannel writeOnlychannel;
 
-    private volatile int position;
-    private FileChannel channel;
-
-    Page(File file, int capacity, Recorder<T> recorder) {
+    public Page(File file, Accessor<T> accessor) throws IOException {
+        if (file.exists()) validateCheckSum(file);
         this.file = file;
-        this.begin = Long.parseLong(file.getName());
-        this.capacity = capacity;
-        this.recorder = recorder;
-        position = (int) file.length();
+        this.accessor = accessor;
+        this.writeOnlychannel = new CRC32WriteOnlyChannel(file);
     }
 
-    public Cursor append(T record) throws OverflowException, IOException {
-        Recorder.Writer writer = recorder.writer(record);
-        int recordLength = writer.valueByteLength();
-
-        if (position + recordLength > capacity) throw new OverflowException();
-
-        Cursor cursor = new Cursor(begin + position);
-        channel().write(length.putInt(0, recordLength)); // put length
-        writer.writeTo(channel()); // put record
-        position += recordLength + FOUR_BYTES;
-        return cursor;
+    private void validateCheckSum(File file) throws IOException {
+        long offset = file.length() - CRC32_LENGTH;
+        FileInputStream stream = new FileInputStream(file);
+        try {
+            checkState(offset >= 0 && validateCheckSum(stream, offset));
+        } finally {
+            stream.close();
+        }
     }
 
-    private FileChannel channel() throws IOException {
-        if (channel == null) channel = FileChannels.channel(this.file, this.capacity);
-        return channel;
+    public int add(T object) throws IOException {
+        checkState(writeOnlychannel.isOpen(), "Fixed page can't add %s", object.getClass());
+        return accessor.writer(object).writeTo(writeOnlychannel);
     }
 
-    public Page<T> multiply() {
-        return null;  // TODO multiply
-    }
 
-    public T get(Cursor cursor) throws IOException {
-        int offset = (int) (cursor.offset - begin);
-        int recordLength = getRecordLength(offset);
-        return recorder.reader(recordLength).readFrom(channel());
-    }
-
-    private int getRecordLength(int offset) throws IOException {
-        channel().position(offset);
-        length.rewind();
-        channel().read(length);
-        length.flip();
-        return length.getInt();
-    }
-
-    public Cursor next(Cursor cursor) {
-        return null;  // TODO next
+    public void fix() throws IOException {
+        writeOnlychannel.close();
     }
 
     @Override
-    public int compareTo(Cursor cursor) {
-        if (cursor.offset < begin) return 1;
-        if (cursor.offset > position) return -1;
-        return 0;
+    public abstract Iterator<T> iterator();
+
+    public void clear() {
+        checkState(file.delete(), "Can't delete page %s", file);
     }
 
-    @Override
-    public void close() throws IOException {
-        channel().truncate(position);
-        channel().close();
-    }
-
-    @Override
-    public void flush() throws IOException {
-        channel().force(true);
-    }
-
-    public void tryRecover() {
-        // TODO tryRecover
+    private static boolean validateCheckSum(FileInputStream fileInputStream, long offset) throws IOException {
+        DataInputStream stream = new DataInputStream(new BufferedInputStream(fileInputStream));
+        CRC32 crc32 = new CRC32();
+        for (long i = 0; i < offset; i++) {
+            crc32.update(stream.read());
+        }
+        return crc32.getValue() == stream.readLong();
     }
 }

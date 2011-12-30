@@ -18,17 +18,17 @@ package com.github.zhongl.durable;
 
 import com.github.zhongl.engine.Engine;
 import com.github.zhongl.journal.Event;
-import com.github.zhongl.journal.Page;
+import com.github.zhongl.page.Page;
 
 import java.util.concurrent.TimeUnit;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class DurableEngine extends Engine {
-    public DurableEngine(long timeout, TimeUnit unit, int backlog) {
-        super(timeout, unit, backlog);
+    public DurableEngine(long flushElapse, TimeUnit unit, int backlog) {
+        super(flushElapse / 2, unit, backlog);
     }
 
-    public void apply(Page page) {
+    public void apply(Page<Event> page) {
         for (Event event : page) apply(event);
         page.clear();
     }

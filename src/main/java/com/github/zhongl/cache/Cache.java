@@ -17,7 +17,8 @@
 package com.github.zhongl.cache;
 
 import com.github.zhongl.journal.Event;
-import com.github.zhongl.journal.Page;
+import com.github.zhongl.journal.Events;
+import com.github.zhongl.page.Page;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 
@@ -27,17 +28,17 @@ import java.util.concurrent.TimeUnit;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class Cache<K, V> {
-    private final EventToKeyValue<K, V> eventToKeyValue;
+    private final Events<K, V> events;
     private final com.google.common.cache.Cache<K, V> gCache;
     private final Map<K, V> fresh;
 
     public Cache(
-            EventToKeyValue<K, V> eventToKeyValue,
+            Events<K, V> events,
             final Durable<K, V> durable,
             int capacity,
             long durationMilliseconds
     ) {
-        this.eventToKeyValue = eventToKeyValue;
+        this.events = events;
         int concurrentLevel = Runtime.getRuntime().availableProcessors() * 2;
         fresh = new ConcurrentHashMap<K, V>(16, 0.75f, concurrentLevel);
         gCache = CacheBuilder.newBuilder()
@@ -56,12 +57,18 @@ public class Cache<K, V> {
                              });
     }
 
-    public void apply(Page page) {
+    public void apply(Page<Event> page) {
         for (Event event : page) apply(event);
     }
 
     public void apply(Event event) {
-        fresh.put(eventToKeyValue.getKey(event), eventToKeyValue.getValue(event));
+        if (events.isAdd(event)) {
+            fresh.put(events.getKey(event), events.getValue(event));
+        } else {
+            K key = events.getKey(event);
+            fresh.remove(key);
+            gCache.invalidate(key);
+        }
     }
 
     public V get(K key) {
