@@ -39,17 +39,17 @@ public class JournalTest {
         DurableEngine durableEngine = mock(DurableEngine.class);
 
         Page page = mock(Page.class);
-        PageRepository pageRepository = mock(PageRepository.class);
-        doReturn(Collections.emptyList()).when(pageRepository).unappliedPages();
-        doReturn(page).when(pageRepository).create();
+        PageFactory pageFactory = mock(PageFactory.class);
+        doReturn(Collections.emptyList()).when(pageFactory).unappliedPages();
+        doReturn(page).when(pageFactory).create();
 
         Cache cache = mock(Cache.class);
 
-        journal = new Journal(pageRepository, durableEngine, cache, flushCount, flushElapseMilliseconds, groupCommit);
+        journal = new Journal(pageFactory, durableEngine, cache, flushCount, flushElapseMilliseconds, groupCommit);
 
         journal.open();
-        verify(pageRepository, times(1)).create();
-        verify(pageRepository, times(1)).unappliedPages();
+        verify(pageFactory, times(1)).create();
+        verify(pageFactory, times(1)).unappliedPages();
 
         MockEvent event = new MockEvent();
         journal.append(event);
@@ -58,7 +58,7 @@ public class JournalTest {
         verify(cache, times(1)).apply(event);
         verify(page, times(1)).fix();
         verify(durableEngine).apply(page);
-        verify(pageRepository, times(2)).create();
+        verify(pageFactory, times(2)).create();
 
         journal.close();
         verify(page, times(2)).fix();

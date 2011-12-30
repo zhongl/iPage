@@ -47,7 +47,7 @@ public class Page implements Iterable<Event> {
         FileInputStream stream = new FileInputStream(file);
         try {
             long offset = file.length() - CRC32_LENGTH;
-            checkState(validateCheckSum(stream, offset), "Invalid page %s", file);
+            checkState(offset >= 0 && validateCheckSum(stream, offset));
             return loadEvents(stream, offset);
         } finally {
             stream.close();
@@ -89,7 +89,7 @@ public class Page implements Iterable<Event> {
     }
 
     public void clear() {
+        list.clear();
         checkState(file.delete(), "Can't delete page %s", file);
     }
-
 }

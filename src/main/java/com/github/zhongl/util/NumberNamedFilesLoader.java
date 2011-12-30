@@ -35,12 +35,10 @@ public class NumberNamedFilesLoader<V> {
         File[] files = dir.listFiles(new NumberNameFilter());
         if (files == null) return collection;
         Arrays.sort(files, new FileNumberNameComparator());
-        for (File file : files) {
-            for (int i = 0; i < files.length; i++) {
-                boolean last = i == files.length - 1;
-                collection.add(handler.handle(files[i], last));
-            }
-
+        for (int i = 0; i < files.length; i++) {
+            boolean last = i == files.length - 1;
+            V e = handler.handle(files[i], last);
+            if (e != null) collection.add(e);
         }
         return collection;
     }

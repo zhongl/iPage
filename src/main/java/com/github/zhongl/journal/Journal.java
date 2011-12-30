@@ -34,20 +34,20 @@ public class Journal {
     private static final int BACKLOG = Integer.getInteger("jounal.backlog", 256);
     private final static TimeUnit TIME_UNIT = TimeUnit.MILLISECONDS;
 
-    private final PageRepository pageRepository;
+    private final PageFactory pageFactory;
     private final InnerEngine engine;
     private final Group group;
     private final DurableEngine durableEngine;
     private final Cache cache;
     private final CallByCountOrElapse callByCountOrElapse;
 
-    private final Callable<?> flusher = new Callable<Object>() {
+    private final Callable<?> flusher = new Callable<Void>() {
         @Override
-        public Object call() throws Exception {
+        public Void call() throws Exception {
             currentPage.fix();
             if (isGroupCommit()) cache.apply(currentPage);
             durableEngine.apply(currentPage);
-            currentPage = pageRepository.create();
+            currentPage = pageFactory.create();
             return null;
         }
     };
@@ -55,14 +55,14 @@ public class Journal {
     private volatile Page currentPage;
 
     public Journal(
-            PageRepository pageRepository,
+            PageFactory pageFactory,
             DurableEngine durableEngine,
             Cache cache,
             int flushCount,
             long flushElapseMilliseconds,
             boolean groupCommit
     ) {
-        this.pageRepository = pageRepository;
+        this.pageFactory = pageFactory;
         this.durableEngine = durableEngine;
         this.cache = cache;
         this.callByCountOrElapse = new CallByCountOrElapse(flushCount, flushElapseMilliseconds, flusher);
@@ -70,9 +70,9 @@ public class Journal {
         this.engine = new InnerEngine(flushElapseMilliseconds / 2, TIME_UNIT, BACKLOG);
     }
 
-    public void open() {
-        this.currentPage = pageRepository.create();
-        for (Page page : pageRepository.unappliedPages()) {
+    public void open() throws IOException {
+        this.currentPage = pageFactory.create();
+        for (Page page : pageFactory.unappliedPages()) {
             cache.apply(page);
             durableEngine.apply(page);
         }

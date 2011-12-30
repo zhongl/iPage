@@ -16,15 +16,19 @@
 
 package com.github.zhongl.journal;
 
-import java.util.List;
-
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class PageRepository {
-    public Page create() {
-        return null;  // TODO create
+class StringEvent implements Event {
+
+    final String value;
+
+    public StringEvent(String value) {
+        this.value = value;
     }
 
-    public List<Page> unappliedPages() {
-        return null;  // TODO unappliedPages
-    }
+    @Override
+    public void onCommit() { }
+
+    @Override
+    public void onError(Throwable t) { }
+
 }

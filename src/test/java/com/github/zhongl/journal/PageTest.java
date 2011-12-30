@@ -23,10 +23,6 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
 import java.util.zip.CRC32;
 
 import static com.github.zhongl.util.FileAsserter.assertExist;
@@ -66,6 +62,8 @@ public class PageTest extends FileBase {
         page.clear();
 
         assertThat(file.exists(), is(false));
+
+        assertThat(page.iterator().hasNext(), is(false));
     }
 
     @Test
@@ -95,49 +93,4 @@ public class PageTest extends FileBase {
         new Page(file, new EventAccessor());
     }
 
-    private static class StringEvent implements Event {
-
-        private final String value;
-
-        public StringEvent(String value) {
-            this.value = value;
-        }
-
-        @Override
-        public void onCommit() { }
-
-        @Override
-        public void onError(Throwable t) { }
-
-    }
-
-    private static class EventAccessor implements Accessor<Event> {
-
-        @Override
-        public Writer writer(Event value) {
-            final StringEvent event = (StringEvent) value;
-            return new LengthWriter() {
-                @Override
-                public int valueByteLength() {
-                    return event.value.length();
-                }
-
-                protected int writeBodyTo(WritableByteChannel channel) throws IOException {
-                    return channel.write(ByteBuffer.wrap(event.value.getBytes()));
-                }
-            };
-        }
-
-        @Override
-        public Reader<Event> reader() {
-            return new LengthReader<Event>() {
-
-                protected Event readBodyFrom(ReadableByteChannel channel, int length) throws IOException {
-                    byte[] bytes = new byte[length];
-                    channel.read(ByteBuffer.wrap(bytes));
-                    return new StringEvent(new String(bytes));
-                }
-            };
-        }
-    }
 }
