@@ -20,7 +20,6 @@ import com.github.zhongl.cache.Cache;
 import com.github.zhongl.durable.DurableEngine;
 import org.junit.Test;
 
-import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 
@@ -56,7 +55,7 @@ public class JournalTest {
         journal.append(event);
         event.await();
 
-        verify(cache, times(1)).apply(page);
+        verify(cache, times(1)).apply(event);
         verify(page, times(1)).fix();
         verify(durableEngine).apply(page);
         verify(pageRepository, times(2)).create();
@@ -76,16 +75,6 @@ public class JournalTest {
         @Override
         public void onError(Throwable t) {
             fail(t.toString());
-        }
-
-        @Override
-        public ByteBuffer toByteBuffer() {
-            return null;  // TODO toByteBuffer
-        }
-
-        @Override
-        public int compareTo(Event o) {
-            return 0;
         }
 
         public void await() throws InterruptedException {

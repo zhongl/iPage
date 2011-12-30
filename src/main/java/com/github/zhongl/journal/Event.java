@@ -16,13 +16,10 @@
 
 package com.github.zhongl.journal;
 
-import java.nio.ByteBuffer;
-
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface Event extends Comparable<Event> {
+public interface Event {
     void onCommit();
 
     void onError(Throwable t);
 
-    ByteBuffer toByteBuffer();
 }

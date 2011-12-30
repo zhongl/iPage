@@ -16,15 +16,21 @@
 
 package com.github.zhongl.journal;
 
-import com.github.zhongl.durable.File;
+import com.github.zhongl.util.FileAsserter;
 import com.github.zhongl.util.FileBase;
+import com.google.common.primitives.Bytes;
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
+import java.util.zip.CRC32;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class PageTest extends FileBase {
@@ -33,27 +39,71 @@ public class PageTest extends FileBase {
     public void main() throws Exception {
         file = testFile("main");
 
-        File file = mock(File.class);
+        ChannelAccessor<Event> channelAccessor = new EventChannelAccessor();
+        Page page = new Page(file, channelAccessor);
 
-        Page page = new Page(file);
-
-        Event event = mock(Event.class);
-        ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
-        doReturn(byteBuffer).when(event).toByteBuffer();
+        Event event = new StringEvent("event");
 
         page.add(event);
 
-        verify(file).writeFully(byteBuffer);
-
         page.fix();
 
-        verify(file).fix();
+        byte[] content = Bytes.concat(Ints.toByteArray(5), "event".getBytes());
+        CRC32 crc32 = new CRC32();
+        crc32.update(content);
+
+        FileAsserter.assertExist(file).contentIs(content, Longs.toByteArray(crc32.getValue()));
 
         assertThat(page.iterator().next(), is(event));
 
         page.clear();
 
-        verify(file).delete();
+        assertThat(file.exists(), is(false));
     }
 
+    private static class StringEvent implements Event {
+
+        private final String value;
+
+        public StringEvent(String value) {
+            this.value = value;
+        }
+
+        @Override
+        public void onCommit() { }
+
+        @Override
+        public void onError(Throwable t) { }
+
+    }
+
+    private static class EventChannelAccessor implements ChannelAccessor<Event> {
+        @Override
+        public Writer writer(Event value) {
+            final StringEvent event = (StringEvent) value;
+            return new Writer() {
+                @Override
+                public int valueByteLength() {
+                    return event.value.length();
+                }
+
+                @Override
+                public int writeTo(WritableByteChannel channel) throws IOException {
+                    return channel.write(ByteBuffer.wrap(event.value.getBytes()));
+                }
+            };
+        }
+
+        @Override
+        public Reader<Event> reader(final int length) {
+            return new Reader<Event>() {
+                @Override
+                public Event readFrom(ReadableByteChannel channel) throws IOException {
+                    byte[] bytes = new byte[length];
+                    channel.read(ByteBuffer.wrap(bytes));
+                    return new StringEvent(new String(bytes));
+                }
+            };
+        }
+    }
 }

@@ -16,12 +16,17 @@
 
 package com.github.zhongl.cache;
 
+import com.github.zhongl.journal.Event;
 import com.github.zhongl.journal.Page;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class Cache {
 
     public void apply(Page page) {
+        for (Event event : page) apply(event);
+    }
+
+    public void apply(Event event) {
         // TODO apply
     }
 }

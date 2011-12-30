@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.page;
+package com.github.zhongl.util;
 
 import com.google.common.io.Files;
 import com.google.common.primitives.Bytes;
@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-class FileAsserter {
+public class FileAsserter {
     private final File file;
 
     private FileAsserter(File file) {

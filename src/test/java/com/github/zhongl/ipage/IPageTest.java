@@ -16,10 +16,10 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.nio.CommonAccessors;
 import com.github.zhongl.integrity.Validator;
+import com.github.zhongl.nio.CommonAccessors;
+import com.github.zhongl.util.FileAsserter;
 import com.github.zhongl.util.FileBase;
-import com.github.zhongl.util.FileContentAsserter;
 import org.junit.After;
 import org.junit.Test;
 
@@ -164,7 +164,7 @@ public class IPageTest extends FileBase {
             iPage.flush();
         }
         byte[] expect = ChunkContentUtils.concatToChunkContentWith("item1".getBytes(), "item2".getBytes());
-        FileContentAsserter.of(new File(dir, "0")).assertIs(expect);
+        FileAsserter.assertExist(new File(dir, "0")).contentIs(expect);
     }
 
 }

@@ -14,21 +14,25 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.durable;
+package com.github.zhongl.journal;
 
-import java.nio.ByteBuffer;
+import java.io.IOException;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class File {
-    public void writeFully(ByteBuffer byteBuffer) {
-        // TODO writeFully
+public interface ChannelAccessor<T> {
+    Writer writer(T value);
+
+    Reader<T> reader(int length);
+
+    public interface Writer {
+        int valueByteLength();
+
+        int writeTo(WritableByteChannel channel) throws IOException;
     }
 
-    public void fix() {
-        // TODO fix
-    }
-
-    public void delete() {
-        // TODO delete
+    public interface Reader<T> {
+        T readFrom(ReadableByteChannel channel) throws IOException;
     }
 }

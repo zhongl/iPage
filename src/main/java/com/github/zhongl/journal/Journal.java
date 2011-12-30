@@ -24,15 +24,14 @@ import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @ThreadSafe
 public class Journal {
 
+    private static final int BACKLOG = Integer.getInteger("jounal.backlog", 256);
     private final static TimeUnit TIME_UNIT = TimeUnit.MILLISECONDS;
 
     private final PageRepository pageRepository;
@@ -46,7 +45,7 @@ public class Journal {
         @Override
         public Object call() throws Exception {
             currentPage.fix();
-            cache.apply(currentPage);
+            if (isGroupCommit()) cache.apply(currentPage);
             durableEngine.apply(currentPage);
             currentPage = pageRepository.create();
             return null;
@@ -68,7 +67,7 @@ public class Journal {
         this.cache = cache;
         this.callByCountOrElapse = new CallByCountOrElapse(flushCount, flushElapseMilliseconds, flusher);
         this.group = groupCommit ? Group.newInstance() : Group.NULL;
-        this.engine = new InnerEngine(flushElapseMilliseconds / 2, TIME_UNIT, new PriorityBlockingQueue<Runnable>(1024));
+        this.engine = new InnerEngine(flushElapseMilliseconds / 2, TIME_UNIT, BACKLOG);
     }
 
     public void open() {
@@ -102,18 +101,20 @@ public class Journal {
             @Override
             protected Void execute() throws Throwable {
                 currentPage.add(event);
+                if (!isGroupCommit()) cache.apply(event);
                 tryGroupCommitByCount();
                 return null;
             }
         };
     }
 
+    private boolean isGroupCommit() {return Group.NULL != group;}
+
     private void tryGroupCommitByCount() {
         try {
             if (callByCountOrElapse.tryCallByCount()) group.commit();
         } catch (Throwable t) {
             group.rollback(t);
-            t.printStackTrace();  // TODO log
         }
     }
 
@@ -122,14 +123,13 @@ public class Journal {
             if (callByCountOrElapse.tryCallByElapse()) group.commit();
         } catch (Throwable t) {
             group.rollback(t);
-            t.printStackTrace();  // TODO log
         }
     }
 
     private class InnerEngine extends Engine {
 
-        public InnerEngine(long timeout, TimeUnit unit, BlockingQueue<Runnable> tasks) {
-            super(timeout, unit, tasks);
+        public InnerEngine(long timeout, TimeUnit unit, int backlog) {
+            super(timeout, unit, backlog);
         }
 
         @Override
