@@ -35,7 +35,7 @@ public class SequenceTest extends FileBase {
     public void main() throws Exception {
         dir = testDir("main");
         LinkedList<LinkedPage<String>> linkedPages = new LinkedPageLoader<String>(dir, Accessors.STRING, 16).load();
-        sequence = new Sequence<String>(linkedPages);
+        sequence = new Sequence<String>(linkedPages, 0L);
         String record = "record";
         Cursor cursor = sequence.append(record);
         assertThat(cursor, is(new Cursor(0L)));

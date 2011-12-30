@@ -19,13 +19,18 @@ package com.github.zhongl.sequence;
 import com.github.zhongl.page.Accessor;
 import com.github.zhongl.page.Page;
 import com.github.zhongl.page.ReadOnlyChannels;
+import com.google.common.io.ByteStreams;
+import com.google.common.io.Files;
+import com.google.common.io.InputSupplier;
 
 import javax.annotation.concurrent.NotThreadSafe;
-import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.channels.FileChannel;
+import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
+
+import static java.util.Collections.singletonList;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
@@ -86,7 +91,7 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
     @Override
     public int compareTo(Cursor cursor) {
         if (cursor.offset < begin) return 1;
-        if (cursor.offset >= position) return -1;
+        if (cursor.offset >= begin + position) return -1;
         return 0;
     }
 
@@ -94,6 +99,100 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
     public void close() throws IOException {
         page.fix();
         readOnlyChannels.close(file);
+    }
+
+    public long begin() {
+        return begin;
+    }
+
+    public long length() {
+        return position;
+    }
+
+    public void clear() {
+        page.clear();
+    }
+
+    /**
+     * There are three split cases:
+     * <p/>
+     * <pre>
+     * Case 1: split to three pieces and keep left and right.
+     *         begin                 end
+     *    |@@@@@@|--------------------|@@@@@@@@|
+     *
+     * Case 2: split to two pieces and keep right
+     *  begin                   end
+     *    |----------------------|@@@@@@@@@@@@@|
+     *
+     * Case 3: too small interval to split
+     *  begin end
+     *    |@@@@|@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+     *
+     * </pre>
+     */
+    public List<LinkedPage<T>> split(Cursor begin, Cursor end) throws IOException {
+        T value = get(begin);
+        if (end.offset - begin.offset < accessor.writer(value).valueByteLength())
+            return singletonList(this);    // Case 3
+        if (begin.offset == begin()) return singletonList(right(end));                                     // Case 2
+        LinkedPage<T> right = right0(end); // do right first for avoiding delete by left
+        LinkedPage<T> left = left(begin);
+        return Arrays.asList(left, right);                                                          // Case 1
+    }
+
+    /**
+     * There are two right cases:
+     * <pre>
+     * Case 1: keep right and abandon left.
+     *         cursor
+     *    |------|@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+     *
+     * Case 2: keep all because cursor is begin or too small interval
+     *  cursor
+     *    |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+     * </pre>
+     */
+    public LinkedPage<T> right(Cursor cursor) throws IOException {
+        if (cursor.offset == begin()) return this;        // Case 2
+        LinkedPage<T> chunk = right0(cursor);
+        clear();                                    // Case 1
+        return chunk;
+    }
+
+    /**
+     * There are throe left cases:
+     * <pre>
+     * Case 1: keep left and abandon right.
+     *         cursor
+     *    |@@@@@@|-----------------------------|
+     *
+     * Case 2: abandon all
+     *  cursor
+     *    |------------------------------------|
+     *
+     * </pre>
+     */
+    public LinkedPage<T> left(Cursor cursor) throws IOException {
+        close();
+        if (cursor.offset <= begin()) {                                               // Case 2
+            clear();
+            return null;
+        }
+        long size = cursor.offset - begin();
+        RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
+        randomAccessFile.setLength(size);
+        randomAccessFile.close();
+        return new LinkedPage(file, accessor, readOnlyChannels);          // Case 1
+    }
+
+    private LinkedPage<T> right0(Cursor cursor) throws IOException {
+        File newFile = new File(file.getParentFile(), Long.toString(cursor.offset));
+        long position = cursor.offset - begin();
+        long length = file.length() - position;
+        InputSupplier<InputStream> from = ByteStreams.slice(Files.newInputStreamSupplier(file), position, length);
+        Files.copy(from, newFile);
+        return new LinkedPage(file, accessor, readOnlyChannels);
     }
 
     private class InnerPage extends Page<T> {
