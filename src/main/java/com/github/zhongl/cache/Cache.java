@@ -18,15 +18,68 @@ package com.github.zhongl.cache;
 
 import com.github.zhongl.journal.Event;
 import com.github.zhongl.journal.Page;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class Cache {
+public class Cache<K, V> {
+    private final EventToKeyValue<K, V> eventToKeyValue;
+    private final com.google.common.cache.Cache<K, V> gCache;
+    private final Map<K, V> fresh;
+
+    public Cache(
+            EventToKeyValue<K, V> eventToKeyValue,
+            final Durable<K, V> durable,
+            int capacity,
+            long durationMilliseconds
+    ) {
+        this.eventToKeyValue = eventToKeyValue;
+        int concurrentLevel = Runtime.getRuntime().availableProcessors() * 2;
+        fresh = new ConcurrentHashMap<K, V>(16, 0.75f, concurrentLevel);
+        gCache = CacheBuilder.newBuilder()
+                             .maximumSize(capacity)
+                             .weakKeys()
+                             .weakValues()
+                             .concurrencyLevel(concurrentLevel)
+                             .expireAfterWrite(durationMilliseconds, TimeUnit.MILLISECONDS)
+                             .build(new CacheLoader<K, V>() {
+                                 @Override
+                                 public V load(K key) throws Exception {
+                                     V value = fresh.get(key);
+                                     if (value != null) return value;
+                                     return durable.load(key);
+                                 }
+                             });
+    }
 
     public void apply(Page page) {
         for (Event event : page) apply(event);
     }
 
     public void apply(Event event) {
-        // TODO apply
+        fresh.put(eventToKeyValue.getKey(event), eventToKeyValue.getValue(event));
+    }
+
+    public V get(K key) {
+        try {
+            return gCache.get(key);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public void weak(K key) {
+        fresh.remove(key);
+    }
+
+    public long size() {return gCache.size();}
+
+    public void cleanUp() {
+        fresh.clear();
+        gCache.invalidateAll();
     }
 }
