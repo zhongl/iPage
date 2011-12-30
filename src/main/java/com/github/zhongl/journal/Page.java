@@ -37,11 +37,11 @@ public class Page implements Iterable<Event> {
     private final WritableByteChannel channel;
     private final ChannelAccessor<Event> channelAccessor;
 
-    public Page(File file, ChannelAccessor<Event> channelAccessor) throws IOException {
+    Page(File file, ChannelAccessor<Event> channelAccessor) throws IOException {
         this.file = file;
         this.channelAccessor = channelAccessor;
         this.list = tryLoadEventsFromExistFile();
-        this.channel = new CRC32WritableByteChannel(file);
+        this.channel = list.isEmpty() ? new CRC32WritableByteChannel(file) : null;
     }
 
     private List<Event> tryLoadEventsFromExistFile() throws IOException {
@@ -49,7 +49,7 @@ public class Page implements Iterable<Event> {
         FileInputStream stream = new FileInputStream(file);
         try {
             long offset = file.length() - CRC32_LENGTH;
-            checkState(validateCheckSum(stream, offset), "Invalid page file: %s", file);
+            checkState(validateCheckSum(stream, offset), "Invalid page %s", file);
             return loadEvents(stream, offset);
         } finally {
             stream.close();
@@ -60,9 +60,10 @@ public class Page implements Iterable<Event> {
         FileChannel channel = stream.getChannel();
         LinkedList<Event> events = new LinkedList<Event>();
         ByteBuffer buffer = ByteBuffer.allocate(LENGTH_BYTES);
+        channel.position(0L);
         while (channel.position() < offset) {
             buffer.rewind();
-            checkState(channel.read(buffer) == LENGTH_BYTES, "Invalid event length.");
+            channel.read(buffer);
             buffer.flip();
             int length = buffer.getInt();
             Event event = channelAccessor.reader(length).readFrom(channel);
@@ -81,10 +82,11 @@ public class Page implements Iterable<Event> {
     }
 
     public void add(Event event) throws IOException {
-        list.add(event);
+        checkState(channel != null && channel.isOpen(), "Fixed page can't add event");
         ChannelAccessor.Writer writer = channelAccessor.writer(event);
         channel.write(lengthBuffer(writer.valueByteLength()));
         writer.writeTo(channel);
+        list.add(event);
     }
 
     private static ByteBuffer lengthBuffer(int value) {
@@ -101,7 +103,7 @@ public class Page implements Iterable<Event> {
     }
 
     public void clear() {
-        file.delete();
+        checkState(file.delete(), "Can't delete page %s", file);
     }
 
 }

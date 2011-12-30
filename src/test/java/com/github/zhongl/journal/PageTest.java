@@ -16,8 +16,8 @@
 
 package com.github.zhongl.journal;
 
-import com.github.zhongl.util.FileAsserter;
 import com.github.zhongl.util.FileBase;
+import com.google.common.io.Files;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -29,8 +29,10 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.zip.CRC32;
 
+import static com.github.zhongl.util.FileAsserter.assertExist;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class PageTest extends FileBase {
@@ -39,8 +41,7 @@ public class PageTest extends FileBase {
     public void main() throws Exception {
         file = testFile("main");
 
-        ChannelAccessor<Event> channelAccessor = new EventChannelAccessor();
-        Page page = new Page(file, channelAccessor);
+        Page page = new Page(file, new EventChannelAccessor());
 
         Event event = new StringEvent("event");
 
@@ -52,13 +53,46 @@ public class PageTest extends FileBase {
         CRC32 crc32 = new CRC32();
         crc32.update(content);
 
-        FileAsserter.assertExist(file).contentIs(content, Longs.toByteArray(crc32.getValue()));
+        assertExist(file).contentIs(content, Longs.toByteArray(crc32.getValue()));
 
         assertThat(page.iterator().next(), is(event));
+
+        try {
+            page.add(new StringEvent(""));
+            fail("Should throw exception");
+        } catch (IllegalStateException e) {
+        }
 
         page.clear();
 
         assertThat(file.exists(), is(false));
+    }
+
+    @Test
+    public void loadExist() throws Exception {
+        file = testFile("loadExist");
+        byte[] content = Bytes.concat(Ints.toByteArray(5), "event".getBytes());
+        CRC32 crc32 = new CRC32();
+        crc32.update(content);
+        byte[] crc32Bytes = Longs.toByteArray(crc32.getValue());
+        Files.write(Bytes.concat(content, crc32Bytes), file);
+
+        Page page = new Page(file, new EventChannelAccessor());
+        StringEvent event = (StringEvent) page.iterator().next();
+        assertThat(event.value, is("event"));
+
+        try {
+            page.add(new StringEvent(""));
+            fail("Should throw exception");
+        } catch (IllegalStateException e) {
+        }
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void loadInvalidExist() throws Exception {
+        file = testFile("loadInvalidExist");
+        Files.write(Bytes.concat(Ints.toByteArray(5), "event".getBytes(), Longs.toByteArray(4L)), file);
+        new Page(file, new EventChannelAccessor());
     }
 
     private static class StringEvent implements Event {

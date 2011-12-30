@@ -19,11 +19,13 @@ package com.github.zhongl.util;
 import com.google.common.io.Files;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
-import org.junit.Assert;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class FileAsserter {
@@ -48,6 +50,6 @@ public class FileAsserter {
     public void contentIs(byte[]... bytesArray) throws IOException {
         byte[] expect = Bytes.concat(bytesArray);
         byte[] actual = Arrays.copyOf(Files.toByteArray(file), expect.length);
-        Assert.assertArrayEquals(actual, expect);
+        assertThat(actual, is(expect));
     }
 }
