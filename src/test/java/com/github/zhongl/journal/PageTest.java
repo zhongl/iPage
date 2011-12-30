@@ -41,7 +41,7 @@ public class PageTest extends FileBase {
     public void main() throws Exception {
         file = testFile("main");
 
-        Page page = new Page(file, new EventChannelAccessor());
+        Page page = new Page(file, new EventAccessor());
 
         Event event = new StringEvent("event");
 
@@ -77,7 +77,7 @@ public class PageTest extends FileBase {
         byte[] crc32Bytes = Longs.toByteArray(crc32.getValue());
         Files.write(Bytes.concat(content, crc32Bytes), file);
 
-        Page page = new Page(file, new EventChannelAccessor());
+        Page page = new Page(file, new EventAccessor());
         StringEvent event = (StringEvent) page.iterator().next();
         assertThat(event.value, is("event"));
 
@@ -92,7 +92,7 @@ public class PageTest extends FileBase {
     public void loadInvalidExist() throws Exception {
         file = testFile("loadInvalidExist");
         Files.write(Bytes.concat(Ints.toByteArray(5), "event".getBytes(), Longs.toByteArray(4L)), file);
-        new Page(file, new EventChannelAccessor());
+        new Page(file, new EventAccessor());
     }
 
     private static class StringEvent implements Event {
@@ -111,28 +111,28 @@ public class PageTest extends FileBase {
 
     }
 
-    private static class EventChannelAccessor implements ChannelAccessor<Event> {
+    private static class EventAccessor implements Accessor<Event> {
+
         @Override
         public Writer writer(Event value) {
             final StringEvent event = (StringEvent) value;
-            return new Writer() {
+            return new LengthWriter() {
                 @Override
                 public int valueByteLength() {
                     return event.value.length();
                 }
 
-                @Override
-                public int writeTo(WritableByteChannel channel) throws IOException {
+                protected int writeBodyTo(WritableByteChannel channel) throws IOException {
                     return channel.write(ByteBuffer.wrap(event.value.getBytes()));
                 }
             };
         }
 
         @Override
-        public Reader<Event> reader(final int length) {
-            return new Reader<Event>() {
-                @Override
-                public Event readFrom(ReadableByteChannel channel) throws IOException {
+        public Reader<Event> reader() {
+            return new LengthReader<Event>() {
+
+                protected Event readBodyFrom(ReadableByteChannel channel, int length) throws IOException {
                     byte[] bytes = new byte[length];
                     channel.read(ByteBuffer.wrap(bytes));
                     return new StringEvent(new String(bytes));

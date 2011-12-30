@@ -17,7 +17,6 @@
 package com.github.zhongl.journal;
 
 import java.io.*;
-import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.Iterator;
@@ -30,16 +29,15 @@ import static com.google.common.base.Preconditions.checkState;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class Page implements Iterable<Event> {
     private static final int CRC32_LENGTH = 8;
-    private static final int LENGTH_BYTES = 4;
 
     private final File file;
     private final List<Event> list;
     private final WritableByteChannel channel;
-    private final ChannelAccessor<Event> channelAccessor;
+    private final Accessor<Event> accessor;
 
-    Page(File file, ChannelAccessor<Event> channelAccessor) throws IOException {
+    Page(File file, Accessor<Event> accessor) throws IOException {
         this.file = file;
-        this.channelAccessor = channelAccessor;
+        this.accessor = accessor;
         this.list = tryLoadEventsFromExistFile();
         this.channel = list.isEmpty() ? new CRC32WritableByteChannel(file) : null;
     }
@@ -59,15 +57,9 @@ public class Page implements Iterable<Event> {
     private List<Event> loadEvents(FileInputStream stream, long offset) throws IOException {
         FileChannel channel = stream.getChannel();
         LinkedList<Event> events = new LinkedList<Event>();
-        ByteBuffer buffer = ByteBuffer.allocate(LENGTH_BYTES);
         channel.position(0L);
         while (channel.position() < offset) {
-            buffer.rewind();
-            channel.read(buffer);
-            buffer.flip();
-            int length = buffer.getInt();
-            Event event = channelAccessor.reader(length).readFrom(channel);
-            events.add(event);
+            events.add(accessor.reader().readFrom(channel));
         }
         return events;
     }
@@ -83,14 +75,8 @@ public class Page implements Iterable<Event> {
 
     public void add(Event event) throws IOException {
         checkState(channel != null && channel.isOpen(), "Fixed page can't add event");
-        ChannelAccessor.Writer writer = channelAccessor.writer(event);
-        channel.write(lengthBuffer(writer.valueByteLength()));
-        writer.writeTo(channel);
+        accessor.writer(event).writeTo(channel);
         list.add(event);
-    }
-
-    private static ByteBuffer lengthBuffer(int value) {
-        return ByteBuffer.allocate(LENGTH_BYTES).putInt(0, value);
     }
 
     public void fix() throws IOException {

@@ -17,22 +17,21 @@
 package com.github.zhongl.journal;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface ChannelAccessor<T> {
-    Writer writer(T value);
-
-    Reader<T> reader(int length);
-
-    public interface Writer {
-        int valueByteLength();
-
-        int writeTo(WritableByteChannel channel) throws IOException;
+public abstract class LengthReader<T> implements Accessor.Reader<T> {
+    @Override
+    public final T readFrom(ReadableByteChannel channel) throws IOException {
+        ByteBuffer buffer = ByteBuffer.allocate(4);
+        buffer.rewind();
+        channel.read(buffer);
+        buffer.flip();
+        int length = buffer.getInt();
+        return readBodyFrom(channel, length);
     }
 
-    public interface Reader<T> {
-        T readFrom(ReadableByteChannel channel) throws IOException;
-    }
+    protected abstract T readBodyFrom(ReadableByteChannel channel, int length) throws IOException;
+
 }
