@@ -63,11 +63,6 @@ class Checkpoint {
 
     private void tryLoadLastCheckpoint() throws IOException {
         if (!dir.exists()) dir.mkdirs();
-        if (dir.list().length == 0) {
-            lastNumber = 0L;
-            lastCursor = Cursor.head();
-            return;
-        }
 
         ArrayList<String> list = new FilesLoader<String>(
                 dir,

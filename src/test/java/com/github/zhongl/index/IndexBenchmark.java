@@ -90,7 +90,7 @@ public class IndexBenchmark extends FileBase {
         }
 
         protected Cursor genOffset() {
-            return Cursor.valueOf("7");
+            return new Cursor(7L);
         }
 
     }
