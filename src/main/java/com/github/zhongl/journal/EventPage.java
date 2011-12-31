@@ -24,7 +24,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
-import java.nio.channels.WritableByteChannel;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -38,7 +37,6 @@ class EventPage extends Page<Event> {
     EventPage(File file, Accessor<Event> accessor) throws IOException {
         super(file, accessor);
         this.list = tryLoadFromExistFile();
-        if (!list.isEmpty()) fix();
     }
 
     @Override
@@ -57,8 +55,6 @@ class EventPage extends Page<Event> {
     public Iterator<Event> iterator() {
         return list.iterator();
     }
-
-    protected WritableByteChannel writeChannel() {return writeOnlychannel;}
 
     private List<Event> tryLoadFromExistFile() throws IOException {
         if (!file.exists()) return new LinkedList<Event>();

@@ -27,17 +27,22 @@ import static com.google.common.base.Preconditions.checkState;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
 public abstract class Page<T> implements Iterable<T> {
-    protected static final int CRC32_LENGTH = 8;
+    public static final int CRC32_LENGTH = 8;
 
     protected final File file;
     protected final Accessor<T> accessor;
-    protected final WritableByteChannel writeOnlychannel;
+
+    private final WritableByteChannel writeOnlychannel;
 
     public Page(File file, Accessor<T> accessor) throws IOException {
-        if (file.exists()) validateCheckSum(file);
         this.file = file;
         this.accessor = accessor;
-        this.writeOnlychannel = new CRC32WriteOnlyChannel(file);
+
+        if (file.exists()) {
+            writeOnlychannel = null;
+            validateCheckSum(file);
+        } else
+            this.writeOnlychannel = new CRC32WriteOnlyChannel(file);
     }
 
     private void validateCheckSum(File file) throws IOException {
@@ -51,12 +56,13 @@ public abstract class Page<T> implements Iterable<T> {
     }
 
     public int add(T object) throws IOException {
-        checkState(writeOnlychannel.isOpen(), "Fixed page can't add %s", object.getClass());
+        checkState(writeOnlychannel != null && writeOnlychannel.isOpen(), "Fixed page can't add %s", object);
         return accessor.writer(object).writeTo(writeOnlychannel);
     }
 
 
     public void fix() throws IOException {
+        if (writeOnlychannel == null || !writeOnlychannel.isOpen()) return;
         writeOnlychannel.close();
     }
 

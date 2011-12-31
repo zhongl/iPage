@@ -50,6 +50,7 @@ public class CRC32WriteOnlyChannel implements WritableByteChannel {
 
     @Override
     public void close() throws IOException {
+        if (!channel.isOpen()) return;
         writeCRC32();
         channel.close();
     }

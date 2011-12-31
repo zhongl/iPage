@@ -86,7 +86,7 @@ public class GarbageCollectorTest {
         Chunk<String> chunk0 = mockChunk(0L, 4095L);
         doReturn(mockChunk(0L, 14L)).when(chunk0).left(15L);
         Chunk<String> chunk1 = mockChunk(4096L, 8191L);
-        doReturn(mockChunk(4112L, 8191L)).when(chunk1).left(15L);
+        doReturn(mockChunk(4112L, 8191L)).when(chunk1).right(4112L);
 
         chunkList.append(chunk0);
         chunkList.append(chunk1);

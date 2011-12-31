@@ -18,14 +18,17 @@ package com.github.zhongl.sequence;
 
 import com.github.zhongl.page.Accessor;
 import com.github.zhongl.page.Accessors;
+import com.github.zhongl.page.Page;
 import com.github.zhongl.page.ReadOnlyChannels;
 import com.github.zhongl.util.FileBase;
 import org.junit.After;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.List;
 
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
@@ -33,10 +36,16 @@ public class LinkedPageTest extends FileBase {
 
     private LinkedPage<String> linkedPage;
 
+    @Override
+    @After
+    public void tearDown() throws Exception {
+        if (linkedPage != null) linkedPage.close();
+        super.tearDown();
+    }
+
     @Test
     public void main() throws Exception {
         dir = testDir("main");
-        dir.mkdirs();
         int capacity = 4096;
         Accessor<String> accessor = Accessors.STRING;
         linkedPage = new LinkedPage<String>(new File(dir, "0"), accessor, capacity, new ReadOnlyChannels());
@@ -47,10 +56,126 @@ public class LinkedPageTest extends FileBase {
         assertThat(linkedPage.next(cursor), is(new Cursor(10L)));
     }
 
-    @Override
-    @After
-    public void tearDown() throws Exception {
-        linkedPage.close();
-        super.tearDown();
+    @Test
+    public void splitCase1() throws Exception {
+        dir = testDir("splitCase1");
+        newLinkedPage();
+
+        List<LinkedPage<String>> linkedPages = linkedPage.split(new Cursor(32L), new Cursor(64L));
+        assertThat(linkedPages.size(), is(2));
+        assertThat(new File(dir, "0").length(), is(32L + Page.CRC32_LENGTH));
+        assertThat(new File(dir, "64").length(), is(4032L + Page.CRC32_LENGTH));
+
+        close(linkedPages);
     }
+
+    @Test
+    public void splitCase2() throws Exception {
+        dir = testDir("splitCase2");
+        newLinkedPage();
+
+        List<LinkedPage<String>> linkedPages = linkedPage.split(new Cursor(0L), new Cursor(64L));
+        assertThat(linkedPages.size(), is(1));
+        assertNotExistFile("0");
+        assertThat(new File(dir, "64").length(), is(4032L + Page.CRC32_LENGTH));
+
+        close(linkedPages);
+    }
+
+    @Test
+    public void splitCase3() throws Exception {
+        dir = testDir("splitCase3");
+        newLinkedPage();
+
+        List<LinkedPage<String>> linkedPages = linkedPage.split(new Cursor(16L), new Cursor(30L));
+        assertThat(linkedPages.get(0), is(linkedPage));
+    }
+
+    @Test
+    public void leftCase1() throws Exception {
+        dir = testDir("leftCase1");
+        newLinkedPage();
+
+        LinkedPage<String> left = linkedPage.left(new Cursor(16L));
+        assertThat(left, is(not(linkedPage)));
+        linkedPage = left; // let linkedPage be close when tear down
+        assertThat(new File(dir, "0").length(), is(16L + Page.CRC32_LENGTH));
+    }
+
+    @Test
+    public void leftCase2() throws Exception {
+        dir = testDir("leftCase2");
+        newLinkedPage();
+
+        linkedPage = linkedPage.left(new Cursor(0L));
+        assertThat(linkedPage, is(nullValue()));
+        assertNotExistFile("0");
+    }
+
+    @Test
+    public void leftCase2WithOffsetLessThanLinkedPageBeginPosition() throws Exception {
+        dir = testDir("leftCase2");
+        newLinkedPage(4096);
+
+        linkedPage = linkedPage.left(new Cursor(4095L));
+        assertThat(linkedPage, is(nullValue()));
+        assertNotExistFile("0");
+    }
+
+    @Test
+    public void rightCase1() throws Exception {
+        dir = testDir("rightCase1");
+        newLinkedPage();
+
+        linkedPage = linkedPage.right(new Cursor(64L));
+        assertThat(linkedPage, is(notNullValue()));
+        assertNotExistFile("0");
+        assertThat(new File(dir, "64").length(), is(4032L + Page.CRC32_LENGTH));
+    }
+
+    @Test
+    public void rightCase1WithNonZeroBeginPosition() throws Exception {
+        dir = testDir("rightCase1WithNonZeroBeginPosition");
+        newLinkedPage(4096);
+
+        linkedPage = linkedPage.right(new Cursor(4128L));
+        assertThat(linkedPage, is(notNullValue()));
+        assertNotExistFile("4096");
+        assertThat(new File(dir, "4128").length(), is(4064L + Page.CRC32_LENGTH));
+    }
+
+    @Test
+    public void rightCase2() throws Exception {
+        dir = testDir("rightCase2");
+        newLinkedPage();
+
+        LinkedPage<String> right = linkedPage.right(new Cursor(0L));
+        assertThat(right, is(linkedPage));
+        assertThat(new File(dir, "0").length(), is(4096L + Page.CRC32_LENGTH));
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void appendToMultipliedPage() throws Exception {
+        dir = testDir("appendToMultipliedPage");
+        newLinkedPage();
+        linkedPage.append("");
+    }
+
+    private void close(List<LinkedPage<String>> linkedPages) throws IOException {
+        for (LinkedPage<String> c : linkedPages) c.close();
+    }
+
+    protected void newLinkedPage() throws IOException, OverflowException {
+        newLinkedPage(0);
+    }
+
+    private void newLinkedPage(int beginPosition) throws IOException, OverflowException {
+        dir.mkdirs();
+        linkedPage = new LinkedPage<String>(new File(dir, beginPosition + ""), Accessors.STRING, 4096, new ReadOnlyChannels());
+        for (int i = 0; i < 256; i++) {
+            linkedPage.append("0123456789ab");
+        }
+        linkedPage.multiply();
+    }
+
 }
