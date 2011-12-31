@@ -48,13 +48,16 @@ class Checkpoint {
         return page.number() <= lastNumber;
     }
 
-    public boolean trySaveBy(Cursor cursor, long number) throws IOException {
+    public boolean canSave(Cursor cursor) throws IOException {
         if (cursor.distanceTo(lastCursor) < groupApplyLength) return false;
+        return true;
+    }
+
+    public void save(long number, Cursor cursor) throws IOException {
         new File(dir, number + "." + cursor).createNewFile();
         new File(dir, lastNumber + "." + lastCursor).delete();
         lastNumber = number;
         lastCursor = cursor;
-        return true;
     }
 
     public Cursor lastCursor() {

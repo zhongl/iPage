@@ -50,7 +50,6 @@ public class DurableEngine<T> extends Engine implements Durable<Md5Key, T> {
     private final Events<Md5Key, T> events;
     private final Index index;
 
-
     public DurableEngine(
             File dir,
             Accessor<T> accessor,
@@ -88,14 +87,14 @@ public class DurableEngine<T> extends Engine implements Durable<Md5Key, T> {
 
         pendingPages.add(page);
 
-        submit(new Task<Cursor>(new ApplyCallback(page)) {
+        submit(new Task<Page<?>>(new ApplyCallback()) {
             @Override
-            protected Cursor execute() throws Throwable {
+            protected Page<?> execute() throws Throwable {
                 Cursor cursor = null;
                 for (Event event : page) {
                     cursor = events.isAdd(event) ? add(event) : delete(event);
                 }
-                return cursor;
+                return page;
             }
         });
     }
@@ -124,18 +123,16 @@ public class DurableEngine<T> extends Engine implements Durable<Md5Key, T> {
         return sync.get();
     }
 
-    private class ApplyCallback implements FutureCallback<Cursor> {
-
-        private final Page<Event> page;
-
-        public ApplyCallback(Page<Event> page) {
-            this.page = page;
-        }
+    private class ApplyCallback implements FutureCallback<Page<?>> {
 
         @Override
-        public void onSuccess(Cursor cursor) {
+        public void onSuccess(Page<?> page) {
             try {
-                if (checkpoint.trySaveBy(cursor, page.number())) { // clear applied pending pages
+                if (checkpoint.canSave(sequence.tail())) { // clear applied pending pages
+                    sequence.fixLastPage();
+                    checkpoint.save(page.number(),sequence.tail());
+                    sequence.addNewPage();
+
                     while (pendingPages.peek() != page)
                         pendingPages.remove().clear();
                 }

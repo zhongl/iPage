@@ -78,6 +78,11 @@ public class Sequence<T> implements Closeable {
         linkedPages.addLast(linkedPages.getLast().multiply());
     }
 
+    public Cursor tail() {
+        LinkedPage<T> last = linkedPages.getLast();
+        return new Cursor(last.begin() + last.length());
+    }
+
     // TODO clear journal page and weak cache
     public void fixLastPage() throws IOException {
         linkedPages.getLast().fix();
@@ -94,7 +99,6 @@ public class Sequence<T> implements Closeable {
         int index = cursor.indexIn(linkedPages);
         return linkedPages.get(index).next(cursor);
     }
-
     @Override
     public void close() throws IOException {
         for (LinkedPage<T> linkedPage : linkedPages) linkedPage.close();

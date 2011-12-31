@@ -50,23 +50,26 @@ public class CheckpointTest extends FileBase {
     }
 
     @Test
-    public void trySavePoint() throws Exception {
-        dir = testDir("loadLast");
+    public void savePoint() throws Exception {
+        dir = testDir("savePoint");
 
         Checkpoint checkpoint = new Checkpoint(dir, 16);
-        assertThat(checkpoint.trySaveBy(new Cursor(0L),0L), is(false));
+        Cursor cursor0 = new Cursor(0L);
+        assertThat(checkpoint.canSave(cursor0), is(false));
+        checkpoint.save(0L, cursor0);
 
         Cursor cursor1 = new Cursor(16L);
-        assertThat(checkpoint.trySaveBy(cursor1,1L), is(true));
+        assertThat(checkpoint.canSave(cursor1), is(true));
+        checkpoint.save(1L, cursor1);
         assertThat(checkpoint.lastCursor(), is(cursor1));
-        assertThat(new File(dir,"1.16").exists(),is(true));
+        assertThat(new File(dir, "1.16").exists(), is(true));
 
         Cursor cursor2 = new Cursor(30L);
-        assertThat(checkpoint.trySaveBy(cursor2,2L), is(false));
-        assertThat(checkpoint.lastCursor(), is(cursor1));
+        assertThat(checkpoint.canSave(cursor2), is(false));
 
         Cursor cursor3 = new Cursor(32L);
-        assertThat(checkpoint.trySaveBy(cursor3,3L), is(true));
+        assertThat(checkpoint.canSave(cursor3), is(true));
+        checkpoint.save(3L, cursor3);
         assertThat(checkpoint.lastCursor(), is(cursor3));
         assertThat(new File(dir,"1.16").exists(),is(false));
         assertThat(new File(dir,"3.32").exists(),is(true));
