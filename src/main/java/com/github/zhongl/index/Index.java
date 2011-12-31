@@ -16,11 +16,12 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.builder.*;
 import com.github.zhongl.integrity.ValidateOrRecover;
 import com.github.zhongl.integrity.Validator;
-import com.github.zhongl.util.FileHandler;
-import com.github.zhongl.util.NumberNamedFilesLoader;
+import com.github.zhongl.sequence.Cursor;
+import com.github.zhongl.util.FilesLoader;
+import com.github.zhongl.util.NumberNamedFilterAndComparator;
+import com.github.zhongl.util.Transformer;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
@@ -45,31 +46,31 @@ public class Index implements Closeable, ValidateOrRecover<Slot, IOException> {
     private final int initialBucketSize;
     private final List<FileHashTable> fileHashTables;
 
-    Index(File baseDir, int initialBucketSize) throws IOException {
+    public Index(File baseDir, int initialBucketSize) throws IOException {
         this.baseDir = baseDir;
         this.initialBucketSize = initialBucketSize;
         this.fileHashTables = loadExistFileHashTables();
     }
 
-    public Long put(Md5Key key, Long offset) throws IOException {
+    public Cursor put(Md5Key key, Cursor cursor) throws IOException {
         try {
-            if (!fileHashTables.isEmpty()) return lastRecentlyUsedBuckets().put(key, offset);
+            if (!fileHashTables.isEmpty()) return lastRecentlyUsedBuckets().put(key, cursor);
         } catch (BufferOverflowException e) { } // chunk no space for appending
         grow();
-        return put(key, offset);
+        return put(key, cursor);
     }
 
 
-    public Long get(Md5Key key) throws IOException {
-        if (fileHashTables.isEmpty()) return FileHashTable.NULL_OFFSET;
-        Long offset = lastRecentlyUsedBuckets().get(key);
+    public Cursor get(Md5Key key) throws IOException {
+        if (fileHashTables.isEmpty()) return Cursor.NULL;
+        Cursor offset = lastRecentlyUsedBuckets().get(key);
         if (offset != null) return offset;
         return tryRemoveFromOthersAndMigrate(key, true);
     }
 
-    public Long remove(Md5Key key) throws IOException {
-        if (fileHashTables.isEmpty()) return FileHashTable.NULL_OFFSET;
-        Long offset = lastRecentlyUsedBuckets().remove(key);
+    public Cursor remove(Md5Key key) throws IOException {
+        if (fileHashTables.isEmpty()) return Cursor.NULL;
+        Cursor offset = lastRecentlyUsedBuckets().remove(key);
         if (offset != null) return offset;
         return tryRemoveFromOthersAndMigrate(key, false);
     }
@@ -99,14 +100,17 @@ public class Index implements Closeable, ValidateOrRecover<Slot, IOException> {
     private List<FileHashTable> loadExistFileHashTables() throws IOException {
         baseDir.mkdirs();
         checkArgument(baseDir.isDirectory(), "%s should be a directory.", baseDir);
-        return new NumberNamedFilesLoader<FileHashTable>(baseDir, new FileHandler<FileHashTable>() {
-            @Override
-            public FileHashTable handle(File file, boolean last) throws IOException {
-                checkState((file.length() % Bucket.LENGTH == 0), "FileHashTable %s has invalid length %s", file, file.length());
-                int buckets = (int) (file.length() / Bucket.LENGTH);
-                return new FileHashTable(file, buckets);
-            }
-        }).loadTo(new ArrayList<FileHashTable>());
+        return new FilesLoader<FileHashTable>(baseDir,
+                new NumberNamedFilterAndComparator(),
+                new Transformer<FileHashTable>() {
+                    @Override
+                    public FileHashTable transform(File file, boolean last) throws IOException {
+                        checkState((file.length() % Bucket.LENGTH == 0), "FileHashTable %s has invalid length %s", file, file
+                                .length());
+                        int buckets = (int) (file.length() / Bucket.LENGTH);
+                        return new FileHashTable(file, buckets);
+                    }
+                }).loadTo(new ArrayList<FileHashTable>());
     }
 
     private FileHashTable grow() throws IOException {
@@ -127,41 +131,22 @@ public class Index implements Closeable, ValidateOrRecover<Slot, IOException> {
 
     private int lastIndex() {return fileHashTables.size() - 1;}
 
-    private Long tryRemoveFromOthersAndMigrate(Md5Key key, boolean migrate) throws IOException {
+    private Cursor tryRemoveFromOthersAndMigrate(Md5Key key, boolean migrate) throws IOException {
         for (int i = 0; i < fileHashTables.size() - 1; i++) {
             FileHashTable fileHashTable = fileHashTables.get(i);
-            Long offset = fileHashTable.remove(key);
-            if (offset != null) {
+            Cursor cursor = fileHashTable.remove(key);
+            if (cursor != null) {
                 if (migrate)
-                    lastRecentlyUsedBuckets().put(key, offset); // migrate index to last recently used fileHashTable
+                    lastRecentlyUsedBuckets().put(key, cursor); // migrate index to last recently used fileHashTable
                 if (fileHashTable.isEmpty()) {
                     fileHashTable.clean();
                     fileHashTables.remove(i);
                 }
-                return offset;
+                return cursor;
             }
         }
-        return FileHashTable.NULL_OFFSET;
+        return Cursor.NULL;
     }
 
-    public static Builder baseOn(File dir) {
-        Builder builder = Builders.newInstanceOf(Builder.class);
-        builder.dir(dir);
-        return builder;
-    }
-
-    public static interface Builder extends BuilderConvention {
-
-        @ArgumentIndex(0)
-        @NotNull
-        Builder dir(File value);
-
-        @ArgumentIndex(1)
-        @GreaterThan("0")
-        @DefaultValue("256")
-        Builder initialBucketSize(int value);
-
-        Index build();
-    }
 }
 

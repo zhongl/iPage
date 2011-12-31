@@ -18,6 +18,7 @@ package com.github.zhongl.index;
 
 import com.github.zhongl.integrity.ValidateOrRecover;
 import com.github.zhongl.integrity.Validator;
+import com.github.zhongl.sequence.Cursor;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
@@ -39,7 +40,6 @@ import static com.google.common.base.Preconditions.checkState;
 @NotThreadSafe
 public final class FileHashTable implements ValidateOrRecover<Slot, IOException> {
 
-    public static final Long NULL_OFFSET = null;
     public static final int DEFAULT_SIZE = 256;
 
     private final int amountOfBuckets;
@@ -65,26 +65,26 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
         return occupiedSlots;
     }
 
-    public Long put(Md5Key key, Long offset) throws IOException {
+    public Cursor put(Md5Key key, Cursor cursor) throws IOException {
         Bucket bucket = buckets(hashAndMod(key));
-        Long preoffset = bucket.put(key, offset);
+        Cursor preCursor = bucket.put(key, cursor);
         bucket.updateCRC();
-        if (preoffset == null) occupiedSlots++; // add a new key
-        return preoffset;
+        if (preCursor == null) occupiedSlots++; // add a new key
+        return preCursor;
     }
 
-    public Long get(Md5Key key) throws IOException {
+    public Cursor get(Md5Key key) throws IOException {
         return buckets(hashAndMod(key)).get(key);
     }
 
-    public Long remove(Md5Key key) throws IOException {
+    public Cursor remove(Md5Key key) throws IOException {
         Bucket bucket = buckets(hashAndMod(key));
-        Long preoffset = bucket.remove(key);
-        if (preoffset != null) { // remove an exist key
+        Cursor cursor = bucket.remove(key);
+        if (cursor != null) { // remove an exist key
             bucket.updateCRC();
             occupiedSlots--;
         }
-        return preoffset;
+        return cursor;
     }
 
     public void close() throws IOException {

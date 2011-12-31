@@ -14,16 +14,23 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.util;
+package com.github.zhongl.durable;
 
-import java.io.File;
-import java.util.Comparator;
+import com.github.zhongl.sequence.Cursor;
+import com.github.zhongl.util.FileBase;
+import org.junit.Test;
+
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class FileNumberNameComparator implements Comparator<File> {
+public class CheckpointTest extends FileBase {
 
-    @Override
-    public int compare(File o1, File o2) {
-        return (int) (Long.parseLong(o1.getName()) - Long.parseLong(o2.getName()));
+    @Test
+    public void initialize() throws Exception {
+        dir = testDir("initialize");
+
+        Checkpoint checkpoint = new Checkpoint(dir, 16);
+        assertThat(checkpoint.lastCursor(), is(Cursor.head()));
     }
 }

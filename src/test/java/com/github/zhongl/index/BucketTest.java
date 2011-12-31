@@ -17,6 +17,7 @@
 package com.github.zhongl.index;
 
 import com.github.zhongl.integrity.Validator;
+import com.github.zhongl.sequence.Cursor;
 import com.github.zhongl.util.FileBase;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
@@ -58,7 +59,7 @@ public class BucketTest extends FileBase {
             @Override
             public boolean validate(Slot slot) {
                 try {
-                    return slot.offset() < 10L;
+                    return slot.cursor().compareTo(new Cursor(10L)) < 0;
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }

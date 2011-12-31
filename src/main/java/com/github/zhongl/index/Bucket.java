@@ -18,14 +18,14 @@ package com.github.zhongl.index;
 
 import com.github.zhongl.integrity.ValidateOrRecover;
 import com.github.zhongl.integrity.Validator;
+import com.github.zhongl.sequence.Cursor;
+import com.google.common.primitives.Longs;
 
 import java.io.IOException;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.zip.CRC32;
-
-import static com.github.zhongl.page.Accessors.LONG;
 
 /**
  * {@link Bucket}
@@ -45,14 +45,14 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
         this.channel = channel;
     }
 
-    public Long put(Md5Key key, Long offset) throws IOException {
+    public Cursor put(Md5Key key, Cursor cursor) throws IOException {
         int firstReleased = -1;
         for (int i = 0; i < amountOfSlots(); i++) {
             switch (slots(i).state()) {
                 case EMPTY:
-                    return slots(i).add(key, offset);
+                    return slots(i).add(key, cursor);
                 case OCCUPIED:
-                    if (slots(i).key().equals(key)) return slots(i).replace(key, offset);
+                    if (slots(i).key().equals(key)) return slots(i).replace(key, cursor);
                     break;
                 case RELEASED:
                     if (firstReleased < 0) firstReleased = i;
@@ -61,33 +61,33 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
             // continue to check rest slots whether contain the key.
         }
         if (firstReleased < 0) throw new BufferOverflowException();
-        return slots(firstReleased).add(key, offset);
+        return slots(firstReleased).add(key, cursor);
     }
 
-    public Long get(Md5Key key) throws IOException {
+    public Cursor get(Md5Key key) throws IOException {
         for (int i = 0; i < amountOfSlots(); i++) {
             Slot slot = slots(i);
-            if (slot.state() == Slot.State.EMPTY) return FileHashTable.NULL_OFFSET; // because rest slots are all empty
-            if (slot.state() == Slot.State.OCCUPIED && slot.key().equals(key)) return slot.offset();
+            if (slot.state() == Slot.State.EMPTY) return Cursor.NULL; // because rest slots are all empty
+            if (slot.state() == Slot.State.OCCUPIED && slot.key().equals(key)) return slot.cursor();
         }
-        return FileHashTable.NULL_OFFSET;
+        return Cursor.NULL;
     }
 
-    public Long remove(Md5Key key) throws IOException {
+    public Cursor remove(Md5Key key) throws IOException {
         for (int i = 0; i < amountOfSlots(); i++) {
             Slot slot = slots(i);
-            if (slot.state() == Slot.State.EMPTY) return FileHashTable.NULL_OFFSET; // because rest slots are all empty
+            if (slot.state() == Slot.State.EMPTY) return Cursor.NULL; // because rest slots are all empty
             if (slot.state() == Slot.State.OCCUPIED && slot.key().equals(key)) {
                 return slot.release();
             }
         }
-        return FileHashTable.NULL_OFFSET;
+        return Cursor.NULL;
     }
 
     public void updateCRC() throws IOException {
         long checksum = calculateCRC();
         channel.position(CRC_OFFSET);
-        LONG.writer(checksum).writeTo(channel);
+        channel.write(ByteBuffer.wrap(Longs.toByteArray(checksum)));
     }
 
     public boolean checkCRC() throws IOException {
@@ -135,7 +135,9 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
 
     private long readCRC() throws IOException {
         channel.position(CRC_OFFSET);
-        return LONG.reader().readFrom(channel);
+        ByteBuffer buffer = ByteBuffer.allocate(8);
+        channel.read(buffer);
+        return buffer.getLong(0);
     }
 
 

@@ -19,6 +19,7 @@ package com.github.zhongl.kvengine;
 import com.github.zhongl.index.Index;
 import com.github.zhongl.index.Md5Key;
 import com.github.zhongl.ipage.IPage;
+import com.github.zhongl.sequence.Cursor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -137,7 +138,7 @@ public class GroupCommitTest {
 
     @Test(expected = IOException.class)
     public void writeFailure() throws Exception {
-        doThrow(new IOException()).when(index).put(any(Md5Key.class), anyLong());
+        doThrow(new IOException()).when(index).put(any(Md5Key.class), any(Cursor.class));
 
         callByCountOrElapse = new CallByCountOrElapse(Integer.MAX_VALUE, 10L, flusher);
         newEngineAndStartup();

@@ -16,41 +16,83 @@
 
 package com.github.zhongl.sequence;
 
+import com.github.zhongl.page.Accessor;
+import com.github.zhongl.page.ReadOnlyChannels;
+import com.github.zhongl.util.FilesLoader;
+import com.github.zhongl.util.NumberNamedFilterAndComparator;
+import com.github.zhongl.util.Transformer;
+
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
-import java.util.List;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
 public class Sequence<T> implements Closeable {
 
     private final LinkedList<LinkedPage<T>> linkedPages;
-    private final long minimizeCollectLength;
+    private final GarbageCollector<T> garbageCollector;
 
-    public Sequence(LinkedList<LinkedPage<T>> linkedPages, long minimizeCollectLength) {
-        this.linkedPages = linkedPages;
-        this.minimizeCollectLength = minimizeCollectLength;
+    public Sequence(File dir, Accessor<T> accessor, int pageCapcity, long minimizeCollectLength) throws IOException {
+        this.linkedPages = load(dir, accessor, pageCapcity, new ReadOnlyChannels());
+        garbageCollector = new GarbageCollector<T>(linkedPages, minimizeCollectLength);
+    }
+
+    public LinkedList<LinkedPage<T>> load(
+            File dir,
+            final Accessor<T> accessor,
+            int pageCapacity,
+            final ReadOnlyChannels readOnlyChannels
+    ) throws IOException {
+        LinkedList<LinkedPage<T>> list = new FilesLoader<LinkedPage<T>>(
+                dir,
+                new NumberNamedFilterAndComparator(),
+                new Transformer<LinkedPage<T>>() {
+                    @Override
+                    public LinkedPage<T> transform(File file, boolean last) throws IOException {
+                        try {
+                            return new LinkedPage<T>(file, accessor, readOnlyChannels);
+                        } catch (IllegalStateException e) {
+                            file.delete(); // delete invalid page file.
+                            return null;
+                        }
+
+                    }
+                }).loadTo(new LinkedList<LinkedPage<T>>());
+
+        if (list.isEmpty()) {
+            list.addLast(new LinkedPage<T>(new File(dir, "0"), accessor, pageCapacity, readOnlyChannels));
+        } else {
+            list.addLast(list.getLast().multiply());
+        }
+        return list;
     }
 
     public Cursor append(T object) throws OverflowException, IOException {
-        try {
-            return linkedPages.getLast().append(object);
-        } catch (IllegalStateException e) { // grow for retry one time
-            linkedPages.addLast(linkedPages.getLast().multiply());
-            return linkedPages.getLast().append(object);
-        }
+        return linkedPages.getLast().append(object);
+    }
+
+    public void addNewPage() throws IOException {
+        linkedPages.addLast(linkedPages.getLast().multiply());
+    }
+
+    // TODO clear journal page and weak cache
+    public void fixLastPage() throws IOException {
+        linkedPages.getLast().fix();
     }
 
     public T get(Cursor cursor) throws UnderflowException, IOException {
         if (linkedPages.getLast().compareTo(cursor) < 0) throw new UnderflowException();
         if (linkedPages.getFirst().compareTo(cursor) > 0) return null; // non-existed cursor
-        return linkedPages.get(indexOf(cursor)).get(cursor);
+        int index = cursor.indexIn(linkedPages);
+        return linkedPages.get(index).get(cursor);
     }
 
     public Cursor next(Cursor cursor) throws IOException {
-        return linkedPages.get(indexOf(cursor)).next(cursor);
+        int index = cursor.indexIn(linkedPages);
+        return linkedPages.get(index).next(cursor);
     }
 
     @Override
@@ -59,73 +101,7 @@ public class Sequence<T> implements Closeable {
     }
 
     public long collect(Cursor begin, Cursor end) throws IOException {
-        if (begin.equals(end) || linkedPages.isEmpty() || distanceBetween(begin, end) < minimizeCollectLength)
-            return 0L;
-
-        int indexOfBeginPage = indexOf(begin);
-        int indexOfEndPage = indexOf(end);
-
-        indexOfBeginPage = indexOfBeginPage < 0 ? 0 : indexOfBeginPage;
-        indexOfEndPage = indexOfEndPage < 0 ? linkedPages.size() - 1 : indexOfEndPage;
-
-        if (indexOfBeginPage == indexOfEndPage) return collectIn(indexOfBeginPage, begin, end);
-
-        /*
-         *   |   left    |  between |   right   |
-         *   |@@@@@|-----|----------|-----|@@@@@|
-         *   |      0    |    1     |     2     |
-         */
-        return collectRight(indexOfEndPage, end) + collectBetween(indexOfEndPage, indexOfBeginPage) + collectLeft(indexOfBeginPage, begin);
+        return garbageCollector.collect(begin, end);
     }
-
-    private int indexOf(Cursor cursor) {
-        int low = 0, high = linkedPages.size() - 1;
-        while (low <= high) { // binary search
-            int mid = (low + high) >>> 1;
-            int cmp = linkedPages.get(mid).compareTo(cursor);
-            if (cmp < 0) low = mid + 1;
-            else if (cmp > 0) high = mid - 1;
-            else return mid;
-        }
-        return -(low + 1);
-    }
-
-    private long collectRight(int index, Cursor cursor) throws IOException {
-        LinkedPage<T> right = linkedPages.get(index);
-        LinkedPage<T> newLinkedPage = right.right(cursor);
-        if (newLinkedPage == right) return 0L;
-        linkedPages.set(index, newLinkedPage);
-        return cursor.offset - right.begin();
-    }
-
-    private long collectLeft(int index, Cursor cursor) throws IOException {
-        LinkedPage<T> left = linkedPages.get(index);
-        long collectedLength = left.begin() + left.length() - cursor.offset;
-        LinkedPage<T> newLeft = left.left(cursor);
-        if (newLeft == null) linkedPages.remove(index);
-        else linkedPages.set(index, newLeft);
-        return collectedLength;
-    }
-
-    private long collectBetween(int indexOfEndLinkedPage, int indexOfBeginLinkedPage) {
-        long collectedLength = 0L;
-        for (int i = indexOfEndLinkedPage - 1; i > indexOfBeginLinkedPage; i--) {
-            LinkedPage<T> page = linkedPages.remove(i);
-            collectedLength += page.length();
-            page.clear();
-        }
-        return collectedLength;
-    }
-
-    private long collectIn(int indexOfLinkedPage, Cursor begin, Cursor end) throws IOException {
-        LinkedPage<T> splittingLinkedPage = linkedPages.get(indexOfLinkedPage);
-        List<? extends LinkedPage<T>> pieces = splittingLinkedPage.split(begin, end);
-        if (pieces.get(0).equals(splittingLinkedPage)) return 0L; // can't left appending page
-        linkedPages.set(indexOfLinkedPage, pieces.get(0));
-        linkedPages.add(indexOfLinkedPage + 1, pieces.get(1));
-        return distanceBetween(begin, end);
-    }
-
-    private int distanceBetween(Cursor begin, Cursor end) {return end.compareTo(begin);}
 
 }

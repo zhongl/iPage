@@ -40,7 +40,6 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
     private static final int LENGTH_BYTES = 4;
     private final File file;
     private final Accessor<T> accessor;
-    private final long begin;
     private final int capacity;
     private final InnerPage page;
     private final ReadOnlyChannels readOnlyChannels;
@@ -53,7 +52,6 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
         this.capacity = capacity;
         this.readOnlyChannels = readOnlyChannels;
         page = new InnerPage(file, accessor);
-        this.begin = Long.parseLong(file.getName());
         position = (int) file.length();
     }
 
@@ -66,20 +64,18 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
 
         if (position + writer.valueByteLength() > capacity) throw new OverflowException();
 
-        Cursor cursor = new Cursor(begin + position);
+        Cursor cursor = new Cursor(begin() + position);
         position += page.add(object);
         return cursor;
     }
 
     public LinkedPage<T> multiply() throws IOException {
         File newFile = new File(file.getParentFile(), begin() + length() + "");
-        LinkedPage<T> newPage = new LinkedPage<T>(newFile, accessor, capacity, readOnlyChannels);
-        page.fix();
-        return newPage;
+        return new LinkedPage<T>(newFile, accessor, capacity, readOnlyChannels);
     }
 
     public T get(Cursor cursor) throws IOException {
-        int offset = (int) (cursor.offset - begin);
+        int offset = (int) (cursor.offset - begin());
         FileChannel readOnlyChannel = readOnlyChannels.getOrCreateBy(file);
         readOnlyChannel.position(offset);
         return accessor.reader().readFrom(readOnlyChannel);
@@ -96,14 +92,18 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
         return 0;
     }
 
+    public void fix() throws IOException {
+        page.fix();
+    }
+
     @Override
     public void close() throws IOException {
-        page.fix();
+        fix();
         readOnlyChannels.close(file);
     }
 
     public long begin() {
-        return begin;
+        return page.number();
     }
 
     public long length() {
@@ -176,7 +176,7 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
      */
     public LinkedPage<T> left(Cursor cursor) throws IOException {
         close();
-        if (cursor.offset <= begin()) {                                               // Case 2
+        if (cursor.offset <= begin()) {                                          // Case 2
             clear();
             return null;
         }
@@ -190,7 +190,7 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
         randomAccessFile.seek(size);
         randomAccessFile.writeLong(checksum);
         randomAccessFile.close();
-        return new LinkedPage(file, accessor, readOnlyChannels);          // Case 1
+        return new LinkedPage<T>(file, accessor, readOnlyChannels);          // Case 1
     }
 
     private LinkedPage<T> right0(Cursor cursor) throws IOException {
@@ -203,7 +203,7 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
 
         Files.copy(ByteStreams.join(from, ByteStreams.newInputStreamSupplier(Longs.toByteArray(checksum))), newFile);
 
-        return new LinkedPage(newFile, accessor, readOnlyChannels);
+        return new LinkedPage<T>(newFile, accessor, readOnlyChannels);
     }
 
     private class InnerPage extends Page<T> {

@@ -54,11 +54,12 @@ class Operation<T> implements Closeable {
 
             @Override
             protected T execute() throws IOException {
-                Long offset = index.put(key, iPage.append(new Entry<T>(key, value)));
-                group.register(callback);
-                tryGroupCommitByCount();
-                if (offset == null) return null;
-                return iPage.get(offset).value();
+//                Long offset = index.put(key, iPage.append(new Entry<T>(key, value)));
+//                group.register(callback);
+//                tryGroupCommitByCount();
+//                if (offset == null) return null;
+//                return iPage.get(offset).value();
+                return null;
             }
         };
     }
@@ -67,9 +68,10 @@ class Operation<T> implements Closeable {
         return new Task<T>(callback) {
             @Override
             protected T execute() throws Throwable {
-                Long offset = index.get(key);
-                if (offset == null) return null;
-                return iPage.get(offset).value();
+//                Long offset = index.get(key);
+//                if (offset == null) return null;
+//                return iPage.get(offset).value();
+                return null;
             }
         };
     }
@@ -78,11 +80,12 @@ class Operation<T> implements Closeable {
         return new Task<T>(group.decorate(callback)) {
             @Override
             protected T execute() throws Throwable {
-                Long offset = index.remove(key);
-                group.register(callback);
-                tryGroupCommitByCount();
-                if (offset == null) return null;
-                return iPage.get(offset).value();
+//                Long offset = index.remove(key);
+//                group.register(callback);
+//                tryGroupCommitByCount();
+//                if (offset == null) return null;
+//                return iPage.get(offset).value();
+                return null;
             }
         };
     }
@@ -94,11 +97,12 @@ class Operation<T> implements Closeable {
             protected Cursor<Entry<T>> execute() throws Throwable {
                 Cursor<Entry<T>> next = iPage.next(entryCursor);
                 if (next.isTail()) return next; // EOF
-                Long offset = index.get(next.lastValue().key());
-                if (offset != null // existed key
-                        && offset.equals(entryCursor.offset()) /*is the newest version value*/)
-                    return next;
-                return Cursor.<Entry<T>>head().skipTo(next.offset()); // value was deleted
+//                Long offset = index.get(next.lastValue().key());
+//                if (offset != null // existed key
+//                        && offset.equals(entryCursor.offset()) /*is the newest version value*/)
+//                    return next;
+//                return Cursor.<Entry<T>>head().skipTo(next.offset()); // value was deleted
+                return next;
             }
         };
     }

@@ -16,11 +16,11 @@
 
 package com.github.zhongl.index;
 
+import com.github.zhongl.sequence.Cursor;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-
-import static com.github.zhongl.page.Accessors.LONG;
 
 
 /**
@@ -49,15 +49,15 @@ public class Slot {
         return Md5Key.ACCESSOR.reader().readFrom(channel);
     }
 
-    public Long offset() throws IOException {
+    public Cursor cursor() throws IOException {
         channel.position(beginPositionOfOffset());
-        return LONG.reader().readFrom(channel);
+        return Cursor.ACCESSOR.reader().readFrom(channel);
     }
 
-    Long add(Md5Key key, Long offset) throws IOException {
+    Cursor add(Md5Key key, Cursor cursor) throws IOException {
         State.OCCUPIED.writeTo(channel, beginPosition);
         Md5Key.ACCESSOR.writer(key).writeTo(channel);
-        LONG.writer(offset).writeTo(channel);
+        Cursor.ACCESSOR.writer(cursor).writeTo(channel);
         return null;
     }
 
@@ -65,15 +65,15 @@ public class Slot {
 
     private int beginPositionOfKey() {return beginPosition + 1;}
 
-    Long replace(Md5Key key, Long offset) throws IOException {
-        Long previous = offset();
-        add(key, offset);
+    Cursor replace(Md5Key key, Cursor cursor) throws IOException {
+        Cursor previous = cursor();
+        add(key, cursor);
         return previous;
     }
 
-    Long release() throws IOException {
+    Cursor release() throws IOException {
         State.RELEASED.writeTo(channel, beginPosition);
-        return offset();
+        return cursor();
     }
 
     enum State {

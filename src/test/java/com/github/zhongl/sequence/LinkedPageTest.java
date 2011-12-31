@@ -175,7 +175,7 @@ public class LinkedPageTest extends FileBase {
         for (int i = 0; i < 256; i++) {
             linkedPage.append("0123456789ab");
         }
-        linkedPage.multiply();
+        linkedPage.fix();
     }
 
 }

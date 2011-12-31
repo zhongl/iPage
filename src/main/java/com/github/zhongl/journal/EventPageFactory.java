@@ -17,8 +17,9 @@
 package com.github.zhongl.journal;
 
 import com.github.zhongl.page.Accessor;
-import com.github.zhongl.util.FileHandler;
-import com.github.zhongl.util.NumberNamedFilesLoader;
+import com.github.zhongl.util.FilesLoader;
+import com.github.zhongl.util.NumberNamedFilterAndComparator;
+import com.github.zhongl.util.Transformer;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
@@ -50,18 +51,22 @@ public class EventPageFactory {
     }
 
     private List<EventPage> loadUnappliedPages() throws IOException {
-        return new NumberNamedFilesLoader<EventPage>(dir, new FileHandler<EventPage>() {
-            @Override
-            public EventPage handle(File file, boolean last) throws IOException {
-                try {
-                    EventPage eventPage = new EventPage(file, accessor);
-                    lastIndex = Long.parseLong(file.getName()) + 1;
-                    return eventPage;
-                } catch (IllegalStateException e) {
-                    file.delete();
-                    return null;
+        return new FilesLoader<EventPage>(
+                dir,
+                new NumberNamedFilterAndComparator(),
+                new Transformer<EventPage>() {
+                    @Override
+                    public EventPage transform(File file, boolean last) throws IOException {
+                        try {
+                            EventPage eventPage = new EventPage(file, accessor);
+                            lastIndex = Long.parseLong(file.getName()) + 1;
+                            return eventPage;
+                        } catch (IllegalStateException e) {
+                            file.delete();
+                            return null;
+                        }
+                    }
                 }
-            }
-        }).loadTo(new LinkedList<EventPage>());
+        ).loadTo(new LinkedList<EventPage>());
     }
 }

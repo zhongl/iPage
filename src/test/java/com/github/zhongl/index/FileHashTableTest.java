@@ -17,6 +17,7 @@
 package com.github.zhongl.index;
 
 import com.github.zhongl.integrity.Validator;
+import com.github.zhongl.sequence.Cursor;
 import com.github.zhongl.util.FileBase;
 import com.google.common.io.Files;
 import com.google.common.primitives.Bytes;
@@ -58,7 +59,7 @@ public class FileHashTableTest extends FileBase {
 
         Md5Key key = Md5Key.generate("key".getBytes());
 
-        long offset = 7L;
+        Cursor offset = new Cursor(7L);
         assertThat(fileHashTable.put(key, offset), is(nullValue()));
         assertThat(fileHashTable.get(key), is(offset));
 
@@ -74,7 +75,7 @@ public class FileHashTableTest extends FileBase {
         fileHashTable = new FileHashTable(file, 1);
 
         Md5Key key = Md5Key.generate("key".getBytes());
-        Long offset = 7L;
+        Cursor offset = new Cursor(7L);
         assertThat(fileHashTable.put(key, offset), is(nullValue()));
         assertThat(fileHashTable.remove(key), is(offset));
         assertThat(fileHashTable.get(key), is(nullValue()));
@@ -87,8 +88,7 @@ public class FileHashTableTest extends FileBase {
         fileHashTable = new FileHashTable(file, 1);
         Validator<Slot, IOException> validator = mock(Validator.class);
         assertThat(fileHashTable.validateOrRecoverBy(validator), is(true));// validateAndRecoverBy a empty bucket
-
-        fileHashTable.put(Md5Key.generate("key".getBytes()), 7L);
+        fileHashTable.put(Md5Key.generate("key".getBytes()), new Cursor(7L));
         fileHashTable.close();
         fileHashTable = new FileHashTable(file, 1);
         doReturn(true).when(validator).validate(any(Slot.class));
@@ -118,7 +118,7 @@ public class FileHashTableTest extends FileBase {
         Validator<Slot, IOException> validator = new Validator<Slot, IOException>() {
             @Override
             public boolean validate(Slot slot) throws IOException {
-                return slot.offset() == 4L;
+                return slot.cursor() == new Cursor(4L);
             }
         };
         assertThat(fileHashTable.validateOrRecoverBy(validator), is(false));
@@ -135,8 +135,9 @@ public class FileHashTableTest extends FileBase {
         Md5Key key1 = Md5Key.generate(Ints.toByteArray(1));
         fileHashTable.remove(key0);
         fileHashTable.remove(key1);
-        assertThat(fileHashTable.put(key1, 7L), is(nullValue()));
-        assertThat(fileHashTable.put(key0, 7L), is(nullValue())); // no exception means new item index put in released slot.
+        Cursor offset = new Cursor(7L);
+        assertThat(fileHashTable.put(key1, offset), is(nullValue()));
+        assertThat(fileHashTable.put(key0, offset), is(nullValue())); // no exception means new item index put in released slot.
     }
 
     @Test
@@ -175,7 +176,7 @@ public class FileHashTableTest extends FileBase {
         file = testFile("noSlotForNewItemIndex");
         fillFullBuckets();
         Md5Key key163 = Md5Key.generate(Ints.toByteArray(163));
-        fileHashTable.put(key163, 7L);  // trigger exception
+        fileHashTable.put(key163, new Cursor(7L));  // trigger exception
     }
 
     @Test
@@ -183,8 +184,9 @@ public class FileHashTableTest extends FileBase {
         file = testFile("replace");
         fileHashTable = new FileHashTable(file, 1);
         Md5Key key = Md5Key.generate("key".getBytes());
-        assertThat(fileHashTable.put(key, 7L), is(nullValue()));
-        assertThat(fileHashTable.put(key, 4L), is(7L));
+        Cursor offset = new Cursor(7L);
+        assertThat(fileHashTable.put(key, offset), is(nullValue()));
+        assertThat(fileHashTable.put(key, new Cursor(4L)), is(offset));
     }
 
     @Test
@@ -193,8 +195,9 @@ public class FileHashTableTest extends FileBase {
         fileHashTable = new FileHashTable(file, 1);
         Md5Key key = Md5Key.generate("key".getBytes());
         fileHashTable.remove(key); // test remove a non-exist key with no effect
-        fileHashTable.put(key, 7L);
-        fileHashTable.put(key, 7L);
+        Cursor offset = new Cursor(7L);
+        fileHashTable.put(key, offset);
+        fileHashTable.put(key, offset);
         fileHashTable.remove(key);
         assertThat(fileHashTable.isEmpty(), is(true));
         fileHashTable.clean();
@@ -204,7 +207,7 @@ public class FileHashTableTest extends FileBase {
     private void fillFullBuckets() throws Exception {
         fileHashTable = new FileHashTable(file, 1);
         for (int i = 0; i < 163; i++) {
-            fileHashTable.put(Md5Key.generate(Ints.toByteArray(i)), 10L);
+            fileHashTable.put(Md5Key.generate(Ints.toByteArray(i)), new Cursor(10L));
         }
     }
 

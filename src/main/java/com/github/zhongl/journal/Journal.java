@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 @ThreadSafe
 public class Journal {
 
-    private static final int BACKLOG = Integer.getInteger("jounal.backlog", 256);
+    private static final int BACKLOG = Integer.getInteger("ipage.jounal.engine.backlog", 256);
     private final static TimeUnit TIME_UNIT = TimeUnit.MILLISECONDS;
 
     private final EventPageFactory eventPageFactory;

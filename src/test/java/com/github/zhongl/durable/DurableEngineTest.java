@@ -14,12 +14,20 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.util;
+package com.github.zhongl.durable;
 
-import java.io.File;
-import java.io.IOException;
+import org.junit.Test;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface FileHandler<V> {
-    V handle(File file, boolean last) throws IOException;
+public class DurableEngineTest {
+
+    @Test
+    public void apply() throws Exception {
+        // TODO apply
+    }
+
+    @Test
+    public void cleanByCheckpoint() throws Exception {
+        // TODO cleanByCheckpoint
+    }
 }

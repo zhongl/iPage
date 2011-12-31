@@ -14,12 +14,22 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.cache;
+package com.github.zhongl.util;
 
-import java.io.IOException;
+import java.io.File;
+import java.util.regex.Pattern;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface Durable<K, V> {
+public class NumberNamedFilterAndComparator implements FilterAndComparator {
+    private static final Pattern NUMBER_NAMED = Pattern.compile("[0-9]+");
 
-    V load(K key) throws IOException, InterruptedException;
+    @Override
+    public int compare(File o1, File o2) {
+        return (int) (Long.parseLong(o1.getName()) - Long.parseLong(o2.getName()));
+    }
+
+    @Override
+    public boolean accept(File dir, String name) {
+        return NUMBER_NAMED.matcher(name).matches();
+    }
 }

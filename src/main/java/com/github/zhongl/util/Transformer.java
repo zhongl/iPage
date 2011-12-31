@@ -14,12 +14,12 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.cache;
+package com.github.zhongl.util;
 
+import java.io.File;
 import java.io.IOException;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface Durable<K, V> {
-
-    V load(K key) throws IOException, InterruptedException;
+public interface Transformer<V> {
+    V transform(File file, boolean last) throws IOException;
 }

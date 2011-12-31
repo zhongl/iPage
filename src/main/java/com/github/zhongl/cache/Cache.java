@@ -43,8 +43,6 @@ public class Cache<K, V> {
         fresh = new ConcurrentHashMap<K, V>(16, 0.75f, concurrentLevel);
         gCache = CacheBuilder.newBuilder()
                              .maximumSize(capacity)
-                             .weakKeys()
-                             .weakValues()
                              .concurrencyLevel(concurrentLevel)
                              .expireAfterWrite(durationMilliseconds, TimeUnit.MILLISECONDS)
                              .build(new CacheLoader<K, V>() {

@@ -25,21 +25,23 @@ import java.util.ArrayList;
 import static org.hamcrest.Matchers.hasItems;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class NumberNamedFilesLoaderTest extends FileBase {
+public class FilesLoaderTest extends FileBase {
     @Test
     public void load() throws Exception {
         dir = testDir("load");
         dir.mkdirs();
         new File(dir, "0").createNewFile();
         new File(dir, "1").createNewFile();
-        FileHandler<String> handler = new FileHandler<String>() {
+        ArrayList<String> collection = new FilesLoader<String>(
+                dir,
+                new NumberNamedFilterAndComparator(),
+                new Transformer<String>() {
 
-            @Override
-            public String handle(File file, boolean last) {
-                return file.getName();
-            }
-        };
-        ArrayList<String> collection = new NumberNamedFilesLoader<String>(dir, handler).loadTo(new ArrayList<String>());
+                    @Override
+                    public String transform(File file, boolean last) {
+                        return file.getName();
+                    }
+                }).loadTo(new ArrayList<String>());
         Assert.assertThat(collection, hasItems("0", "1"));
     }
 }

@@ -33,10 +33,12 @@ public abstract class Page<T> implements Iterable<T> {
     protected final Accessor<T> accessor;
 
     private final WritableByteChannel writeOnlychannel;
+    private final long number;
 
     public Page(File file, Accessor<T> accessor) throws IOException {
         this.file = file;
         this.accessor = accessor;
+        this.number = Long.parseLong(file.getName());
 
         if (file.exists()) {
             writeOnlychannel = null;
@@ -80,5 +82,9 @@ public abstract class Page<T> implements Iterable<T> {
             crc32.update(stream.read());
         }
         return crc32.getValue() == stream.readLong();
+    }
+
+    public long number() {
+        return number;
     }
 }

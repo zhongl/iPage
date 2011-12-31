@@ -56,7 +56,7 @@ public class KVEngine<T> extends Engine implements AutoGarbageCollectable<Entry<
              int flushCount,
              long flushElapseMilliseconds,
              boolean groupCommit,
-             boolean startAutoGarbageCollectOnStartup) {
+             boolean startAutoGarbageCollectOnStartup) throws IOException {
 
         // TODO refactor this method
         super(flushElapseMilliseconds / 2, DEFAULT_TIME_UNIT, backlog);
@@ -75,7 +75,7 @@ public class KVEngine<T> extends Engine implements AutoGarbageCollectable<Entry<
                 .maximizeChunkCapacity(maximizeChunkCapacity)
                 .build();
 
-        final Index index = Index.baseOn(new File(dir, INDEX_DIR)).initialBucketSize(initialBucketSize).build();
+        final Index index = new Index(new File(dir, INDEX_DIR), initialBucketSize);
 
         dataIntegrity = new DataIntegrity(dir);
 

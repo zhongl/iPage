@@ -17,6 +17,7 @@
 package com.github.zhongl.index;
 
 import com.github.zhongl.benchmarker.*;
+import com.github.zhongl.sequence.Cursor;
 import com.github.zhongl.util.FileBase;
 import com.google.common.primitives.Ints;
 import org.junit.After;
@@ -39,7 +40,7 @@ public class IndexBenchmark extends FileBase {
     public void benchmark() throws Exception {
         dir = testDir("benchmark");
 
-        index = Index.baseOn(dir).initialBucketSize(100).build();
+        index = new Index(dir, 100);
 
         CallableFactory addFactory = new AddFactory(index);
         CallableFactory replaceFactory = new ReplaceFactory(index);
@@ -88,8 +89,8 @@ public class IndexBenchmark extends FileBase {
             };
         }
 
-        protected long genOffset() {
-            return 7L;
+        protected Cursor genOffset() {
+            return Cursor.valueOf("7");
         }
 
     }

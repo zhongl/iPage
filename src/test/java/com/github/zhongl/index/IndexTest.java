@@ -17,6 +17,7 @@
 package com.github.zhongl.index;
 
 import com.github.zhongl.integrity.Validator;
+import com.github.zhongl.sequence.Cursor;
 import com.github.zhongl.util.FileBase;
 import com.google.common.io.Files;
 import com.google.common.primitives.Bytes;
@@ -42,39 +43,33 @@ public class IndexTest extends FileBase {
         if (index != null) index.close();
     }
 
-    @Test(expected = IllegalStateException.class)
-    public void repeatSetInitBucketSize() throws Exception {
-        dir = testDir("repeatSetInitBucketSize");
-        Index.baseOn(dir).initialBucketSize(1).initialBucketSize(1);
-    }
-
     @Test
     public void grow() throws Exception {
         dir = testDir("grow");
         newIndex();
 
+        Cursor cursor = new Cursor(7L);
         for (int i = 0; i < 163; i++) {
-            index.put(Md5Key.generate(Ints.toByteArray(i)), 7L);
+            index.put(Md5Key.generate(Ints.toByteArray(i)), cursor);
         }
 
         assertExistFile("0");
         assertNotExistFile("1");
 
-        index.put(Md5Key.generate(Ints.toByteArray(163)), 7L);
+        index.put(Md5Key.generate(Ints.toByteArray(163)), cursor);
 
         assertExistFile("0");
         assertExistFile("1");
     }
-
-    private void newIndex() throws IOException {index = Index.baseOn(dir).initialBucketSize(1).build();}
 
     @Test
     public void autoremoveMigratedBuckets() throws Exception {
         dir = testDir("autoremoveMigratedBuckets");
         newIndex();
 
+        Cursor cursor = new Cursor(7L);
         for (int i = 0; i < 164; i++) {
-            index.put(Md5Key.generate(Ints.toByteArray(i)), 7L);
+            index.put(Md5Key.generate(Ints.toByteArray(i)), cursor);
         }
 
         assertExistFile("0");
@@ -92,27 +87,28 @@ public class IndexTest extends FileBase {
     public void removeFromExtendedIndex() throws Exception {
         dir = testDir("removeFromExtendedIndex");
         newIndex();
+        Cursor cursor = new Cursor(7L);
         for (int i = 0; i < 164; i++) {
-            index.put(Md5Key.generate(Ints.toByteArray(i)), 7L);
+            index.put(Md5Key.generate(Ints.toByteArray(i)), cursor);
         }
-        assertThat(index.remove(Md5Key.generate(Ints.toByteArray(163))), is(7L)); // remove from index file 1
-        assertThat(index.remove(Md5Key.generate(Ints.toByteArray(162))), is(7L)); // remove from index file 0
+        assertThat(index.remove(Md5Key.generate(Ints.toByteArray(163))), is(cursor)); // remove from index file 1
+        assertThat(index.remove(Md5Key.generate(Ints.toByteArray(162))), is(cursor)); // remove from index file 0
         assertThat(index.remove(Md5Key.generate(Ints.toByteArray(164))), is(nullValue())); // remove from index file 0
     }
 
     @Test
     public void removeNonExistKey() throws Exception {
         dir = testDir("removeNonExistKey");
-        index = Index.baseOn(dir).build();
+        newIndex();
         assertThat(index.remove(Md5Key.generate(Ints.toByteArray(0))), is(nullValue())); // remove from empty index
-        index.put(Md5Key.generate("key".getBytes()), 7L);
+        index.put(Md5Key.generate("key".getBytes()), new Cursor(7L));
         assertThat(index.remove(Md5Key.generate(Ints.toByteArray(1))), is(nullValue())); // remove from non-empty index
     }
 
     @Test
     public void getNonExsitKey() throws Exception {
         dir = testDir("getNonExsitKey");
-        index = Index.baseOn(dir).build();
+        newIndex();
         assertThat(index.get(Md5Key.generate(Ints.toByteArray(0))), is(nullValue()));
     }
 
@@ -121,8 +117,9 @@ public class IndexTest extends FileBase {
         dir = testDir("loadExist");
         newIndex();
 
+        Cursor cursor = new Cursor(7L);
         for (int i = 0; i < 164; i++) {
-            index.put(Md5Key.generate(Ints.toByteArray(i)), 7L);
+            index.put(Md5Key.generate(Ints.toByteArray(i)), cursor);
         }
 
         index.close();
@@ -132,9 +129,9 @@ public class IndexTest extends FileBase {
 
         newIndex();
 
-        assertThat(index.get(Md5Key.generate(Ints.toByteArray(0))), is(7L));     // migrate
-        assertThat(index.get(Md5Key.generate(Ints.toByteArray(162))), is(7L));   // migrate
-        assertThat(index.get(Md5Key.generate(Ints.toByteArray(163))), is(7L));
+        assertThat(index.get(Md5Key.generate(Ints.toByteArray(0))), is(cursor));     // migrate
+        assertThat(index.get(Md5Key.generate(Ints.toByteArray(162))), is(cursor));   // migrate
+        assertThat(index.get(Md5Key.generate(Ints.toByteArray(163))), is(cursor));
     }
 
     @Test
@@ -142,8 +139,9 @@ public class IndexTest extends FileBase {
         dir = testDir("validateOrRecoveryIfNoBroken");
         newIndex();
 
+        Cursor cursor = new Cursor(7L);
         for (int i = 0; i < 164; i++) {
-            index.put(Md5Key.generate(Ints.toByteArray(i)), 7L);
+            index.put(Md5Key.generate(Ints.toByteArray(i)), cursor);
         }
 
         index.flush();
@@ -184,6 +182,10 @@ public class IndexTest extends FileBase {
         };
 
         assertThat(index.validateOrRecoverBy(validator), is(false));
+    }
+
+    private void newIndex() throws IOException {
+        index = new Index(dir, 1);
     }
 
 

@@ -16,12 +16,13 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.nio.Accessor;
 import com.github.zhongl.builder.*;
 import com.github.zhongl.integrity.ValidateOrRecover;
 import com.github.zhongl.integrity.Validator;
-import com.github.zhongl.util.FileHandler;
-import com.github.zhongl.util.NumberNamedFilesLoader;
+import com.github.zhongl.nio.Accessor;
+import com.github.zhongl.util.FilesLoader;
+import com.github.zhongl.util.NumberNamedFilterAndComparator;
+import com.github.zhongl.util.Transformer;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
@@ -102,13 +103,16 @@ public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
     private ArrayList<Chunk<T>> loadExistChunksBy(File baseDir, final ChunkFactory<T> chunkFactory) throws IOException {
         baseDir.mkdirs();
         checkArgument(baseDir.isDirectory(), "%s should be a directory", baseDir);
-        return new NumberNamedFilesLoader<Chunk<T>>(baseDir, new FileHandler<Chunk<T>>() {
-            @Override
-            public Chunk<T> handle(File file, boolean last) throws IOException {
-                return last ? chunkFactory.appendableChunkOn(file) : chunkFactory.readOnlyChunkOn(file);
-            }
+        return new FilesLoader<Chunk<T>>(
+                baseDir,
+                new NumberNamedFilterAndComparator(),
+                new Transformer<Chunk<T>>() {
+                    @Override
+                    public Chunk<T> transform(File file, boolean last) throws IOException {
+                        return last ? chunkFactory.appendableChunkOn(file) : chunkFactory.readOnlyChunkOn(file);
+                    }
 
-        }).loadTo(new ArrayList<Chunk<T>>());
+                }).loadTo(new ArrayList<Chunk<T>>());
     }
 
     private Chunk<T> grow() throws IOException {

@@ -42,9 +42,10 @@ public class Recovery<V> implements Runnable {
             index.validateOrRecoverBy(new Validator<Slot, IOException>() {
                 @Override
                 public boolean validate(Slot slot) throws IOException {
-                    Entry<V> entry = ipage.get(slot.offset());
-                    if (entry == null) return false;
-                    return entry.key().equals(slot.key());
+//                    Entry<V> entry = ipage.get(slot.cursor());
+//                    if (entry == null) return false;
+//                    return entry.key().equals(slot.key());
+                    return false;
                 }
             });
             ipage.validateOrRecoverBy(new Validator<Entry<V>, IOException>() {

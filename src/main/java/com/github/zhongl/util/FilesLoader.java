@@ -22,22 +22,24 @@ import java.util.Arrays;
 import java.util.Collection;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class NumberNamedFilesLoader<V> {
+public class FilesLoader<V> {
     private final File dir;
-    private final FileHandler<V> handler;
+    private final Transformer<V> transformer;
+    private final FilterAndComparator filterAndComparator;
 
-    public NumberNamedFilesLoader(File dir, FileHandler<V> handler) {
+    public FilesLoader(File dir, FilterAndComparator filterAndComparator, Transformer<V> transformer) {
         this.dir = dir;
-        this.handler = handler;
+        this.transformer = transformer;
+        this.filterAndComparator = filterAndComparator;
     }
 
     public <T extends Collection<V>> T loadTo(T collection) throws IOException {
-        File[] files = dir.listFiles(new NumberNameFilter());
+        File[] files = dir.listFiles(filterAndComparator);
         if (files == null) return collection;
-        Arrays.sort(files, new FileNumberNameComparator());
+        Arrays.sort(files, filterAndComparator);
         for (int i = 0; i < files.length; i++) {
             boolean last = i == files.length - 1;
-            V e = handler.handle(files[i], last);
+            V e = transformer.transform(files[i], last);
             if (e != null) collection.add(e);
         }
         return collection;
