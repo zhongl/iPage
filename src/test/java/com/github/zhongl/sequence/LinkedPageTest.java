@@ -18,7 +18,6 @@ package com.github.zhongl.sequence;
 
 import com.github.zhongl.page.Accessor;
 import com.github.zhongl.page.Accessors;
-import com.github.zhongl.page.Page;
 import com.github.zhongl.page.ReadOnlyChannels;
 import com.github.zhongl.util.FileBase;
 import org.junit.After;
@@ -63,8 +62,8 @@ public class LinkedPageTest extends FileBase {
 
         List<LinkedPage<String>> linkedPages = linkedPage.split(new Cursor(32L), new Cursor(64L));
         assertThat(linkedPages.size(), is(2));
-        assertThat(new File(dir, "0").length(), is(32L + Page.CRC32_LENGTH));
-        assertThat(new File(dir, "64").length(), is(4032L + Page.CRC32_LENGTH));
+        assertThat(new File(dir, "0").length(), is(32L));
+        assertThat(new File(dir, "64").length(), is(4032L));
 
         close(linkedPages);
     }
@@ -77,7 +76,7 @@ public class LinkedPageTest extends FileBase {
         List<LinkedPage<String>> linkedPages = linkedPage.split(new Cursor(0L), new Cursor(64L));
         assertThat(linkedPages.size(), is(1));
         assertNotExistFile("0");
-        assertThat(new File(dir, "64").length(), is(4032L + Page.CRC32_LENGTH));
+        assertThat(new File(dir, "64").length(), is(4032L));
 
         close(linkedPages);
     }
@@ -99,7 +98,7 @@ public class LinkedPageTest extends FileBase {
         LinkedPage<String> left = linkedPage.left(new Cursor(16L));
         assertThat(left, is(not(linkedPage)));
         linkedPage = left; // let linkedPage be close when tear down
-        assertThat(new File(dir, "0").length(), is(16L + Page.CRC32_LENGTH));
+        assertThat(new File(dir, "0").length(), is(16L));
     }
 
     @Test
@@ -130,7 +129,7 @@ public class LinkedPageTest extends FileBase {
         linkedPage = linkedPage.right(new Cursor(64L));
         assertThat(linkedPage, is(notNullValue()));
         assertNotExistFile("0");
-        assertThat(new File(dir, "64").length(), is(4032L + Page.CRC32_LENGTH));
+        assertThat(new File(dir, "64").length(), is(4032L));
     }
 
     @Test
@@ -141,7 +140,7 @@ public class LinkedPageTest extends FileBase {
         linkedPage = linkedPage.right(new Cursor(4128L));
         assertThat(linkedPage, is(notNullValue()));
         assertNotExistFile("4096");
-        assertThat(new File(dir, "4128").length(), is(4064L + Page.CRC32_LENGTH));
+        assertThat(new File(dir, "4128").length(), is(4064L));
     }
 
     @Test
@@ -151,7 +150,7 @@ public class LinkedPageTest extends FileBase {
 
         LinkedPage<String> right = linkedPage.right(new Cursor(0L));
         assertThat(right, is(linkedPage));
-        assertThat(new File(dir, "0").length(), is(4096L + Page.CRC32_LENGTH));
+        assertThat(new File(dir, "0").length(), is(4096L));
     }
 
     @Test(expected = OverflowException.class)

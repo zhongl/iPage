@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,22 +17,27 @@
 package com.github.zhongl.journal;
 
 import com.github.zhongl.page.Accessor;
+import com.github.zhongl.page.CRC32WriteOnlyChannel;
 import com.github.zhongl.page.Page;
 
 import javax.annotation.concurrent.NotThreadSafe;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.zip.CRC32;
+
+import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
 class EventPage extends Page<Event> {
+    private static final int CRC32_LENGTH = 8;
 
     private final List<Event> list;
+    private boolean pageNotExisted;
 
     EventPage(File file, Accessor<Event> accessor) throws IOException {
         super(file, accessor);
@@ -57,13 +62,25 @@ class EventPage extends Page<Event> {
     }
 
     private List<Event> tryLoadFromExistFile() throws IOException {
-        if (!file.exists()) return new LinkedList<Event>();
+        if (pageNotExisted) return new LinkedList<Event>();
+
         FileInputStream stream = new FileInputStream(file);
+        long offset = file.length() - CRC32_LENGTH;
         try {
+            checkState(offset >= 0 && validateCheckSum(stream, offset));
             return load(stream, file.length() - CRC32_LENGTH);
         } finally {
             stream.close();
         }
+    }
+
+    private static boolean validateCheckSum(FileInputStream fileInputStream, long offset) throws IOException {
+        DataInputStream stream = new DataInputStream(new BufferedInputStream(fileInputStream));
+        CRC32 crc32 = new CRC32();
+        for (long i = 0; i < offset; i++) {
+            crc32.update(stream.read());
+        }
+        return crc32.getValue() == stream.readLong();
     }
 
     private List<Event> load(FileInputStream stream, long offset) throws IOException {
@@ -74,5 +91,10 @@ class EventPage extends Page<Event> {
             events.add(accessor.reader().readFrom(channel));
         }
         return events;
+    }
+
+    protected WritableByteChannel createWriteOnlyChannel(File file) throws FileNotFoundException {
+        pageNotExisted = true;
+        return new CRC32WriteOnlyChannel(file);
     }
 }

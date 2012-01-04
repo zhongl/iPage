@@ -21,23 +21,20 @@ import com.github.zhongl.page.Page;
 import com.github.zhongl.page.ReadOnlyChannels;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
-import com.google.common.io.InputSupplier;
-import com.google.common.primitives.Longs;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.*;
 import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.zip.CRC32;
 
 import static java.util.Collections.singletonList;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
 class LinkedPage<T> implements Comparable<Cursor>, Closeable {
-    private static final int LENGTH_BYTES = 4;
     private final File file;
     private final Accessor<T> accessor;
     private final int capacity;
@@ -56,7 +53,7 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
     }
 
     LinkedPage(File file, Accessor<T> accessor, ReadOnlyChannels readOnlyChannels) throws IOException {
-        this(file, accessor, (int) file.length() - Page.CRC32_LENGTH, readOnlyChannels);
+        this(file, accessor, (int) file.length(), readOnlyChannels);
     }
 
     public Cursor append(T object) throws OverflowException, IOException {
@@ -180,15 +177,9 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
             clear();
             return null;
         }
-        long size = cursor.offset - begin();
-
-        InputSupplier<InputStream> supplier = ByteStreams.slice(Files.newInputStreamSupplier(file), 0L, size);
-        long checksum = ByteStreams.getChecksum(supplier, new CRC32());
 
         RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
-        randomAccessFile.setLength(size);
-        randomAccessFile.seek(size);
-        randomAccessFile.writeLong(checksum);
+        randomAccessFile.setLength(cursor.offset - begin());
         randomAccessFile.close();
         return new LinkedPage<T>(file, accessor, readOnlyChannels);          // Case 1
     }
@@ -198,10 +189,7 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
         long offset = cursor.offset - begin();
         long length = length() - offset;
 
-        InputSupplier<InputStream> from = ByteStreams.slice(Files.newInputStreamSupplier(file), offset, length);
-        long checksum = ByteStreams.getChecksum(from, new CRC32());
-
-        Files.copy(ByteStreams.join(from, ByteStreams.newInputStreamSupplier(Longs.toByteArray(checksum))), newFile);
+        Files.copy(ByteStreams.slice(Files.newInputStreamSupplier(file), offset, length), newFile);
 
         return new LinkedPage<T>(newFile, accessor, readOnlyChannels);
     }
@@ -215,6 +203,10 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
         @Override
         public Iterator<T> iterator() {
             return null;
+        }
+
+        protected WritableByteChannel createWriteOnlyChannel(File file) throws FileNotFoundException {
+            return new FileOutputStream(file).getChannel();
         }
     }
 }
