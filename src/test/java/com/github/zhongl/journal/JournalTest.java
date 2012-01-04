@@ -18,54 +18,99 @@ package com.github.zhongl.journal;
 
 import com.github.zhongl.cache.Cache;
 import com.github.zhongl.durable.DurableEngine;
+import com.github.zhongl.util.FileBase;
+import org.junit.After;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
-import java.util.Collections;
+import java.io.File;
 import java.util.concurrent.CountDownLatch;
 
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.sameInstance;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class JournalTest {
+public class JournalTest extends FileBase {
 
     private Journal journal;
 
     @Test
     public void append() throws Exception {
+        dir = testDir("append");
+
         boolean groupCommit = false;
         long flushElapseMilliseconds = Long.MAX_VALUE;
         int flushCount = 1;
         DurableEngine durableEngine = mock(DurableEngine.class);
 
-        EventPage eventPage = mock(EventPage.class);
-        EventPageFactory eventPageFactory = mock(EventPageFactory.class);
-        doReturn(Collections.emptyList()).when(eventPageFactory).unappliedPages();
-        doReturn(eventPage).when(eventPageFactory).create();
-
         Cache cache = mock(Cache.class);
 
-        journal = new Journal(eventPageFactory, durableEngine, cache, flushCount, flushElapseMilliseconds, groupCommit);
+        journal = new Journal(dir, new EventAccessor(), durableEngine, cache, flushCount, flushElapseMilliseconds, groupCommit);
 
         journal.open();
-        verify(eventPageFactory, times(1)).create();
-        verify(eventPageFactory, times(1)).unappliedPages();
 
-        MockEvent event = new MockEvent();
+        MockEvent event = new MockEvent("event");
         journal.append(event);
         event.await();
 
         verify(cache, times(1)).apply(event);
-        verify(eventPage, times(1)).fix();
-        verify(durableEngine).apply(eventPage);
-        verify(eventPageFactory, times(2)).create();
+
+        ArgumentCaptor<EventPage> argumentCaptor = ArgumentCaptor.forClass(EventPage.class);
+        verify(durableEngine).apply(argumentCaptor.capture());
+        assertThat((MockEvent) argumentCaptor.getValue().iterator().next(), sameInstance(event));
 
         journal.close();
-        verify(eventPage, times(2)).fix();
     }
 
-    private static class MockEvent implements Event {
+    @Test
+    public void load() throws Exception {
+        dir = testDir("load");
+
+        EventAccessor accessor = new EventAccessor();
+        new EventPage(new File(dir, "0"), accessor).fix();
+        new File(dir, "1").createNewFile();
+
+        boolean groupCommit = false;
+        long flushElapseMilliseconds = Long.MAX_VALUE;
+        int flushCount = 1;
+        DurableEngine durableEngine = mock(DurableEngine.class);
+
+        Cache cache = mock(Cache.class);
+
+        journal = new Journal(dir, new EventAccessor(), durableEngine, cache, flushCount, flushElapseMilliseconds, groupCommit);
+
+        journal.open();
+
+        ArgumentCaptor<EventPage> argumentCaptor = ArgumentCaptor.forClass(EventPage.class);
+        verify(durableEngine).apply(argumentCaptor.capture());
+        assertThat(argumentCaptor.getAllValues().size(), is(1));
+        assertThat(argumentCaptor.getValue().number(), is(0L));
+
+        MockEvent event = new MockEvent("event");
+        journal.append(event);
+        event.await();
+
+        verify(durableEngine, times(2)).apply(argumentCaptor.capture());
+        assertThat(argumentCaptor.getValue().number(), is(1L));
+    }
+
+
+    @Override
+    @After
+    public void tearDown() throws Exception {
+        journal.close();
+        super.tearDown();
+    }
+
+    private static class MockEvent extends StringEvent {
         private final CountDownLatch latch = new CountDownLatch(1);
+
+        public MockEvent(String value) {
+            super(value);
+        }
 
         public void await() throws InterruptedException {
             latch.await();

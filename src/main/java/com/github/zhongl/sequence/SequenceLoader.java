@@ -21,7 +21,6 @@ import com.github.zhongl.page.ReadOnlyChannels;
 import com.github.zhongl.util.FilesLoader;
 import com.github.zhongl.util.NumberNamedFilterAndComparator;
 import com.github.zhongl.util.Transformer;
-import com.google.common.base.Preconditions;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,14 +49,11 @@ public class SequenceLoader<T> {
                 new Transformer<LinkedPage<T>>() {
                     @Override
                     public LinkedPage<T> transform(File file, boolean last) throws IOException {
-                        try {
-                            checkOverLastSequenceTail(file);
+                        long begin = Long.parseLong(file.getName());
+                        if (lastSequenceTail.compareTo(new Cursor(begin)) < 0)
                             return new LinkedPage<T>(file, accessor, readOnlyChannels);
-                        } catch (IllegalStateException e) {
-                            file.delete(); // delete invalid page file.
-                            return null;
-                        }
-
+                        file.delete(); // delete invalid page file.
+                        return null;
                     }
                 }).loadTo(new LinkedList<LinkedPage<T>>());
 
@@ -70,8 +66,4 @@ public class SequenceLoader<T> {
 
     }
 
-    private void checkOverLastSequenceTail(File file) {
-        long begin = Long.parseLong(file.getName());
-        Preconditions.checkState(lastSequenceTail.compareTo(new Cursor(begin)) > 0);
-    }
 }

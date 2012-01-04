@@ -24,6 +24,7 @@ import java.nio.channels.WritableByteChannel;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class Accessors {
     public static final Accessor<String> STRING = new StringAccessor();
+    public static final Accessor<byte[]> BYTES = new BytesAccessor();
 
 
     private static class StringAccessor implements Accessor<String> {
@@ -54,6 +55,35 @@ public class Accessors {
             };
         }
 
+    }
+
+    private static class BytesAccessor implements Accessor<byte[]> {
+        @Override
+        public Writer writer(final byte[] value) {
+            return new LengthWriter() {
+                @Override
+                protected int bodyByteLength() {
+                    return value.length;
+                }
+
+                @Override
+                protected int writeBodyTo(WritableByteChannel channel) throws IOException {
+                    return channel.write(ByteBuffer.wrap(value));
+                }
+            };
+        }
+
+        @Override
+        public Reader<byte[]> reader() {
+            return new LengthReader<byte[]>() {
+                @Override
+                protected byte[] readBodyFrom(ReadableByteChannel channel, int length) throws IOException {
+                    byte[] bytes = new byte[length];
+                    channel.read(ByteBuffer.wrap(bytes));
+                    return bytes;
+                }
+            };
+        }
     }
 
 }

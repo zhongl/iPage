@@ -32,9 +32,9 @@ public class Sequence<T> implements Closeable {
     private final Accessor<T> accessor;
 
     public Sequence(SequenceLoader<T> loader, long minimizeCollectLength) throws IOException {
+        this.accessor = loader.accessor;
         this.linkedPages = loader.load();
-        accessor = loader.accessor;
-        garbageCollector = new GarbageCollector<T>(linkedPages, minimizeCollectLength);
+        this.garbageCollector = new GarbageCollector<T>(linkedPages, minimizeCollectLength);
     }
 
     public Cursor append(T object) throws OverflowException, IOException {
