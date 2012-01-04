@@ -48,7 +48,7 @@ public class SequenceTest extends FileBase {
         Cursor cursor = sequence.append(record);
         assertThat(cursor, is(new Cursor(0L)));
         assertThat(sequence.get(cursor), is(record));
-        assertThat(sequence.next(cursor), is(new Cursor(10L)));
+
     }
 
 

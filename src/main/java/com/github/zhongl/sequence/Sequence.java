@@ -61,11 +61,6 @@ public class Sequence<T> implements Closeable {
         return linkedPages.get(index).get(cursor);
     }
 
-    public Cursor next(Cursor cursor) throws IOException {
-        int index = cursor.indexIn(linkedPages);
-        return linkedPages.get(index).next(cursor);
-    }
-
     @Override
     public void close() throws IOException {
         for (LinkedPage<T> linkedPage : linkedPages) linkedPage.close();

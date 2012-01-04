@@ -23,11 +23,11 @@ import com.github.zhongl.index.Index;
 import com.github.zhongl.index.Md5Key;
 import com.github.zhongl.journal.Event;
 import com.github.zhongl.journal.Events;
-import com.github.zhongl.kvengine.Sync;
 import com.github.zhongl.page.Page;
 import com.github.zhongl.sequence.Cursor;
 import com.github.zhongl.sequence.OverflowException;
 import com.github.zhongl.sequence.Sequence;
+import com.github.zhongl.util.Sync;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.FutureCallback;
 

@@ -20,8 +20,12 @@ import com.github.zhongl.sequence.Cursor;
 import com.google.common.util.concurrent.FutureCallback;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface Collectable<T> extends Nextable<T> {
+public interface Nextable<T> {
+    boolean get(Cursor cursor, FutureCallback<T> cursorFutureCallback);
 
-    boolean garbageCollect(Cursor begin, Cursor end, FutureCallback<Long> longFutureCallback);
+    boolean contains(T object);
 
+    Cursor calculateNextCursorBy(Cursor last, T object);
+
+    boolean isTail(Cursor cursor);
 }

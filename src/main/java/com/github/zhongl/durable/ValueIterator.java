@@ -14,9 +14,9 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.kvengine;
+package com.github.zhongl.durable;
 
-import com.github.zhongl.ipage.Cursor;
+import com.github.zhongl.sequence.Cursor;
 import com.github.zhongl.util.Sync;
 import com.google.common.collect.AbstractIterator;
 
@@ -24,8 +24,7 @@ import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl</a> */
 public class ValueIterator<T> extends AbstractIterator<T> {
-    private static final Entry DELETED = null;
-    private Cursor<Entry<T>> cursor = Cursor.head();
+    private Cursor cursor = Cursor.head();
     private final Nextable<Entry<T>> nextable;
 
     public ValueIterator(Nextable<Entry<T>> nextable) {
@@ -35,13 +34,15 @@ public class ValueIterator<T> extends AbstractIterator<T> {
     @Override
     protected T computeNext() {
         try {
+            if (cursor.isTail()) return endOfData();
+            Entry<T> entry = null;
             do {
-                Sync<Cursor<Entry<T>>> callback = new Sync<Cursor<Entry<T>>>();
-                checkState(nextable.next(cursor, callback), "Too many tasks to submit.");
-                cursor = callback.get();
-                if (cursor.isTail()) return endOfData();
-            } while (cursor.lastValue() == DELETED);
-            return cursor.lastValue().value();
+                Sync<Entry<T>> callback = new Sync<Entry<T>>();
+                checkState(nextable.get(cursor, callback), "Too many tasks to submit.");
+                entry = callback.get();
+                cursor = nextable.calculateNextCursorBy(cursor, entry);
+            } while (!nextable.contains(entry));
+            return entry.value();
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {

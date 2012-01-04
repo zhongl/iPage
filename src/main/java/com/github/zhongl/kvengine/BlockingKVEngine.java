@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package com.github.zhongl.kvengine;
 
 import com.github.zhongl.index.Md5Key;
+import com.github.zhongl.util.Sync;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;

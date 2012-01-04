@@ -78,10 +78,6 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
         return accessor.reader().readFrom(readOnlyChannel);
     }
 
-    public Cursor next(Cursor cursor) throws IOException {
-        return cursor.forword(accessor.writer(get(cursor)).byteLength());
-    }
-
     @Override
     public int compareTo(Cursor cursor) {
         if (cursor.offset() < begin()) return 1;

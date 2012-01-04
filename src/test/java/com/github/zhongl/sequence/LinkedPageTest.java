@@ -52,7 +52,6 @@ public class LinkedPageTest extends FileBase {
         String record = "record";
         Cursor cursor = linkedPage.append(record);
         assertThat(linkedPage.get(cursor), is(record));
-        assertThat(linkedPage.next(cursor), is(new Cursor(10L)));
     }
 
     @Test
