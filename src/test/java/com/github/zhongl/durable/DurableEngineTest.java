@@ -31,14 +31,16 @@ import com.github.zhongl.util.FileBase;
 import com.google.common.util.concurrent.FutureCallback;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
 
@@ -52,35 +54,33 @@ public class DurableEngineTest extends FileBase {
         dir = testDir("apply");
         List<Event> list = new ArrayList<Event>();
 
-        Event event0 = mock(Event.class);
+        final Event event0 = mock(Event.class);
         list.add(event0);
-        Event event1 = mock(Event.class);
+        final Event event1 = mock(Event.class);
         list.add(event1);
-        Event event2 = mock(Event.class);
+        final Event event2 = mock(Event.class);
         list.add(event2);
 
         EntryAccessor<String> entryAccessor = new EntryAccessor<String>(Accessors.STRING);
-        int length = 63;
-        SequenceLoader<Entry<String>> loader = new SequenceLoader<Entry<String>>(new File(dir, "seq"), entryAccessor, length, Cursor.NULL);
+        SequenceLoader<Entry<String>> loader = new SequenceLoader<Entry<String>>(new File(dir, "seq"), entryAccessor, 4096, Cursor.NULL);
         Sequence<Entry<String>> sequence = new Sequence<Entry<String>>(loader, 16);
 
         Index index = new Index(new File(dir, "idx"), 1);
-        Checkpoint checkpoint = new Checkpoint(new File(dir, ".cp"), length);
+        Checkpoint checkpoint = new Checkpoint(new File(dir, ".cp"), 42);
 
         Events<Md5Key, String> events = mock(Events.class, Mockito.RETURNS_DEEP_STUBS);
         String value0 = "0";
         Md5Key key0 = Md5Key.generate(value0.getBytes());
-        String value1 = "1";
-        Md5Key key1 = Md5Key.generate(value1.getBytes());
         String value2 = "2";
         Md5Key key2 = Md5Key.generate(value2.getBytes());
 
         when(events.isAdd(event0)).thenReturn(true);
         when(events.getKey(event0)).thenReturn(key0);
         when(events.getValue(event0)).thenReturn(value0);
-        when(events.isAdd(event1)).thenReturn(true);
-        when(events.getKey(event1)).thenReturn(key1);
-        when(events.getValue(event1)).thenReturn(value1);
+
+        when(events.isAdd(event1)).thenReturn(false);
+        when(events.getKey(event1)).thenReturn(key0);
+
         when(events.isAdd(event2)).thenReturn(true);
         when(events.getKey(event2)).thenReturn(key2);
         when(events.getValue(event2)).thenReturn(value2);
@@ -91,37 +91,62 @@ public class DurableEngineTest extends FileBase {
                 return engine.load(key);
             }
         };
-        Cache<Md5Key, String> cache = new Cache<Md5Key, String>(events, durable, 16, 100L);
+        long durationMilliseconds = 100L;
+        Cache<Md5Key, String> cache = new Cache<Md5Key, String>(events, durable, 16, durationMilliseconds);
 
         engine = new DurableEngine<String>(sequence, index, checkpoint, events, cache);
         engine.startup();
 
-        Page<Event> page = mock(Page.class);
-        doReturn(0L).when(page).number();
-        doReturn(list.iterator()).when(page).iterator();
-
-        final CountDownLatch latch = new CountDownLatch(1);
-        engine.apply(page, new FutureCallback<Page<?>>() {
+        Page<Event> page0 = mock(Page.class);
+        doReturn(0L).when(page0).number();
+        when(page0.iterator()).thenAnswer(new Answer<Iterator<Event>>() {
             @Override
-            public void onSuccess(Page<?> result) {
-                latch.countDown();
+            public Iterator<Event> answer(InvocationOnMock invocation) throws Throwable {
+                return Collections.singletonList(event0).iterator();
             }
-
-            @Override
-            public void onFailure(Throwable t) { }
         });
 
-        latch.await();
+        PageFutureCallback callback0 = new PageFutureCallback();
+        engine.apply(page0, callback0);
+        callback0.await();
 
         assertThat(cache.get(key0), is(value0));
-        assertThat(cache.get(key1), is(value1));
+
+
+        Page<Event> page1 = mock(Page.class);
+        doReturn(21L).when(page1).number();
+        when(page1.iterator()).thenAnswer(new Answer<Iterator<Event>>() {
+            @Override
+            public Iterator<Event> answer(InvocationOnMock invocation) throws Throwable {
+                return Arrays.<Event>asList(event1, event2).iterator();
+            }
+        });
+
+        PageFutureCallback callback1 = new PageFutureCallback();
+        engine.apply(page1, callback1);
+        callback1.await();
+
+        Thread.sleep(durationMilliseconds);
+
+        assertThat(cache.get(key0), is(nullValue()));
         assertThat(cache.get(key2), is(value2));
 
         engine.shutdown();
     }
 
-    @Test
-    public void cleanByCheckpoint() throws Exception {
-        // TODO cleanByCheckpoint
+    private static class PageFutureCallback implements FutureCallback<Page<?>> {
+        private final CountDownLatch latch = new CountDownLatch(1);
+
+        @Override
+        public void onSuccess(Page<?> result) {
+            latch.countDown();
+        }
+
+        @Override
+        public void onFailure(Throwable t) { }
+
+        public void await() throws InterruptedException {
+            latch.await();
+        }
     }
 }
