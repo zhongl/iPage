@@ -16,6 +16,8 @@
 
 package com.github.zhongl.sequence;
 
+import com.github.zhongl.page.Accessor;
+
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
 import java.io.IOException;
@@ -27,9 +29,11 @@ public class Sequence<T> implements Closeable {
 
     private final LinkedList<LinkedPage<T>> linkedPages;
     private final GarbageCollector<T> garbageCollector;
+    private final Accessor<T> accessor;
 
     public Sequence(SequenceLoader<T> loader, long minimizeCollectLength) throws IOException {
         this.linkedPages = loader.load();
+        accessor = loader.accessor;
         garbageCollector = new GarbageCollector<T>(linkedPages, minimizeCollectLength);
     }
 
@@ -71,4 +75,7 @@ public class Sequence<T> implements Closeable {
         return garbageCollector.collect(begin, end);
     }
 
+    public int byteLengthOf(T object) {
+        return accessor.writer(object).byteLength();
+    }
 }

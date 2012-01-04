@@ -30,9 +30,9 @@ import java.util.LinkedList;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class SequenceLoader<T> {
     private final File dir;
-    private final Accessor<T> accessor;
     private final int pageCapacity;
     private final Cursor lastSequenceTail;
+    final Accessor<T> accessor;
 
     public SequenceLoader(File dir, Accessor<T> accessor, int pageCapacity, Cursor lastSequenceTail) {
         this.dir = dir;

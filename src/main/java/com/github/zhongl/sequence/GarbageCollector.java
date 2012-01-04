@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -56,12 +56,12 @@ class GarbageCollector<T> {
         LinkedPage<T> newLinkedPage = right.right(cursor);
         if (newLinkedPage == right) return 0L;
         linkedPages.set(index, newLinkedPage);
-        return cursor.offset - right.begin();
+        return cursor.offset() - right.begin();
     }
 
     private long collectLeft(int index, Cursor cursor) throws IOException {
         LinkedPage<T> left = linkedPages.get(index);
-        long collectedLength = left.begin() + left.length() - cursor.offset;
+        long collectedLength = left.begin() + left.length() - cursor.offset();
         LinkedPage<T> newLeft = left.left(cursor);
         if (newLeft == null) linkedPages.remove(index);
         else linkedPages.set(index, newLeft);

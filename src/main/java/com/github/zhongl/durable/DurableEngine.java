@@ -56,6 +56,7 @@ public class DurableEngine<T> extends Engine {
     private final Events<Md5Key, T> events;
     private final Cache cache;
     private final Index index;
+    private final AutoGarbageCollector<Entry<T>> collector;
 
     public DurableEngine(
             Sequence<Entry<T>> sequence,
@@ -71,20 +72,20 @@ public class DurableEngine<T> extends Engine {
         this.events = events;
         this.cache = cache;
         pendingPages = new LinkedList<Page<Event>>();
+        collector = new AutoGarbageCollector<Entry<T>>(new InnerCollectable());
     }
 
     @Override
     public void startup() {
         super.startup();
-        // TODO startup auto gc
+        collector.start();
     }
 
     @Override
     public void shutdown() {
-        // TODO shutdown auto gc
+        collector.stop();
         super.shutdown();
     }
-
 
     public void apply(final Page<Event> page) {
         apply(page, NULL_CALLBACK);
@@ -134,6 +135,45 @@ public class DurableEngine<T> extends Engine {
         return sync.get();
     }
 
+
+    private class InnerCollectable implements Collectable<Entry<T>> {
+
+        @Override
+        public boolean get(final Cursor cursor, FutureCallback<Entry<T>> cursorFutureCallback) {
+            return submit(new Task<Entry<T>>(cursorFutureCallback) {
+                @Override
+                protected Entry<T> execute() throws Throwable {
+                    return sequence.get(cursor);
+                }
+            });
+        }
+
+        @Override
+        public boolean garbageCollect(final Cursor begin, final Cursor end, FutureCallback<Long> longFutureCallback) {
+            return submit(new Task<Long>(longFutureCallback) {
+                @Override
+                protected Long execute() throws Throwable {
+                    return sequence.collect(begin, end);
+                }
+            });
+        }
+
+        @Override
+        public boolean contains(Entry<T> object) {
+            return cache.get(object.key()) == null;
+        }
+
+        @Override
+        public Cursor calculateNextCursorBy(Cursor last, Entry<T> object) {
+            return last.forword(sequence.byteLengthOf(object));
+        }
+
+        @Override
+        public boolean isTail(Cursor cursor) {
+            return sequence.tail().compareTo(cursor) <= 0;
+        }
+    }
+
     private class ApplyCallback implements FutureCallback<Page<?>> {
 
         private final FutureCallback<Page<?>> callback;
@@ -173,5 +213,6 @@ public class DurableEngine<T> extends Engine {
             callback.onFailure(t);
             // TODO log error
         }
+
     }
 }

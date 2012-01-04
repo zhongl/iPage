@@ -33,7 +33,7 @@ public class Cursor implements Comparable<Cursor> {
     public static final Accessor<Cursor> ACCESSOR = new InnerAccessor();
     public static final Cursor NULL = null;
 
-    final long offset;
+    private final long offset;
 
     public static Cursor head() {
         return new Cursor(0L);
@@ -46,6 +46,10 @@ public class Cursor implements Comparable<Cursor> {
     public Cursor(long offset) {
         checkArgument(offset >= 0);
         this.offset = offset;
+    }
+
+    public long offset() {
+        return offset;
     }
 
     @Override
@@ -89,6 +93,14 @@ public class Cursor implements Comparable<Cursor> {
 
     public int distanceTo(Cursor that) {
         return Math.abs(compareTo(that));
+    }
+
+    public boolean isTail() {
+        return false;  // TODO isTail
+    }
+
+    public boolean isValid() {
+        return false;  // TODO isValid
     }
 
     private static class InnerAccessor implements Accessor<Cursor> {

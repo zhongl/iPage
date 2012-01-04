@@ -72,7 +72,7 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
     }
 
     public T get(Cursor cursor) throws IOException {
-        int offset = (int) (cursor.offset - begin());
+        int offset = (int) (cursor.offset() - begin());
         FileChannel readOnlyChannel = readOnlyChannels.getOrCreateBy(file);
         readOnlyChannel.position(offset);
         return accessor.reader().readFrom(readOnlyChannel);
@@ -84,8 +84,8 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
 
     @Override
     public int compareTo(Cursor cursor) {
-        if (cursor.offset < begin()) return 1;
-        if (cursor.offset >= begin() + length()) return -1;
+        if (cursor.offset() < begin()) return 1;
+        if (cursor.offset() >= begin() + length()) return -1;
         return 0;
     }
 
@@ -131,9 +131,9 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
      */
     public List<LinkedPage<T>> split(Cursor begin, Cursor end) throws IOException {
         T value = get(begin);
-        if (end.offset - begin.offset < accessor.writer(value).byteLength())
+        if (end.offset() - begin.offset() < accessor.writer(value).byteLength())
             return singletonList(this);                                         // Case 3
-        if (begin.offset == begin()) return singletonList(right(end));          // Case 2
+        if (begin.offset() == begin()) return singletonList(right(end));          // Case 2
         LinkedPage<T> right = right0(end); // do right first for avoiding delete by left
         LinkedPage<T> left = left(begin);
         return Arrays.asList(left, right);                                       // Case 1
@@ -152,7 +152,7 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
      * </pre>
      */
     public LinkedPage<T> right(Cursor cursor) throws IOException {
-        if (cursor.offset == begin()) return this;        // Case 2
+        if (cursor.offset() == begin()) return this;        // Case 2
         LinkedPage<T> chunk = right0(cursor);
         clear();                                    // Case 1
         return chunk;
@@ -173,20 +173,20 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
      */
     public LinkedPage<T> left(Cursor cursor) throws IOException {
         close();
-        if (cursor.offset <= begin()) {                                          // Case 2
+        if (cursor.offset() <= begin()) {                                          // Case 2
             clear();
             return null;
         }
 
         RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
-        randomAccessFile.setLength(cursor.offset - begin());
+        randomAccessFile.setLength(cursor.offset() - begin());
         randomAccessFile.close();
         return new LinkedPage<T>(file, accessor, readOnlyChannels);          // Case 1
     }
 
     private LinkedPage<T> right0(Cursor cursor) throws IOException {
-        File newFile = new File(file.getParentFile(), Long.toString(cursor.offset));
-        long offset = cursor.offset - begin();
+        File newFile = new File(file.getParentFile(), Long.toString(cursor.offset()));
+        long offset = cursor.offset() - begin();
         long length = length() - offset;
 
         Files.copy(ByteStreams.slice(Files.newInputStreamSupplier(file), offset, length), newFile);
