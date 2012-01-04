@@ -14,27 +14,20 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.page;
+package com.github.zhongl.index;
+
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.WritableByteChannel;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class LengthWriter implements Accessor.Writer {
+public interface ValidateOrRecover {
 
-    @Override
-    public final int writeTo(WritableByteChannel channel) throws IOException {
-        channel.write(ByteBuffer.allocate(4).putInt(0, bodyByteLength()));
-        return writeBodyTo(channel) + 4;
-    }
-
-    @Override
-    public final int byteLength() {
-        return bodyByteLength() + 4;
-    }
-
-    protected abstract int bodyByteLength();
-
-    protected abstract int writeBodyTo(WritableByteChannel channel) throws IOException;
+    /**
+     * Do validate, recovery only if it found invalid T.
+     *
+     * @param validator
+     *
+     * @return true if there is no invalid T and recover nothing, or else false.
+     */
+    boolean validateOrRecoverBy(Validator validator) throws IOException;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package com.github.zhongl.durable;
 
-import com.github.zhongl.cache.Durable;
+import com.github.zhongl.cache.Cache;
 import com.github.zhongl.engine.Engine;
 import com.github.zhongl.engine.Task;
 import com.github.zhongl.index.Index;
@@ -24,47 +24,53 @@ import com.github.zhongl.index.Md5Key;
 import com.github.zhongl.journal.Event;
 import com.github.zhongl.journal.Events;
 import com.github.zhongl.kvengine.Sync;
-import com.github.zhongl.page.Accessor;
 import com.github.zhongl.page.Page;
 import com.github.zhongl.sequence.Cursor;
 import com.github.zhongl.sequence.OverflowException;
 import com.github.zhongl.sequence.Sequence;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.concurrent.ThreadSafe;
-import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.concurrent.TimeUnit;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @ThreadSafe
-public class DurableEngine<T> extends Engine implements Durable<Md5Key, T> {
+public class DurableEngine<T> extends Engine {
     private static final long TIMEOUT = Long.getLong("ipage.durable.engine.timeout.ms", 500L);
     private static final int BACKLOG = Integer.getInteger("ipage.durable.engine.backlog", 256);
     private static final TimeUnit TIME_UNIT = TimeUnit.MILLISECONDS;
+    private static final FutureCallback<Page<?>> NULL_CALLBACK = new FutureCallback<Page<?>>() {
+        @Override
+        public void onSuccess(Page<?> result) { }
+
+        @Override
+        public void onFailure(Throwable t) { }
+    };
 
     private final Sequence<Entry<T>> sequence;
     private final Checkpoint checkpoint;
     private final LinkedList<Page<Event>> pendingPages;
     private final Events<Md5Key, T> events;
+    private final Cache cache;
     private final Index index;
 
     public DurableEngine(
-            File dir,
-            Accessor<T> accessor,
+            Sequence<Entry<T>> sequence,
+            Index index,
+            Checkpoint checkpoint,
             Events<Md5Key, T> events,
-            int groupApplyLength,
-            long minimizeCollectLength,
-            int initialBucketSize) throws IOException {
+            Cache cache
+    ) throws IOException {
         super(TIMEOUT, TIME_UNIT, BACKLOG);
+        this.sequence = sequence;
+        this.index = index;
+        this.checkpoint = checkpoint;
         this.events = events;
+        this.cache = cache;
         pendingPages = new LinkedList<Page<Event>>();
-        checkpoint = new Checkpoint(new File(dir, ".cp"), groupApplyLength);
-        // TODO clean checkpoint for recovery
-        index = new Index(new File(dir, "idx"), initialBucketSize);
-        sequence = new Sequence<Entry<T>>(new File(dir, "seq"), new EntryAccessor<T>(accessor), groupApplyLength, minimizeCollectLength);
-
     }
 
     @Override
@@ -79,7 +85,13 @@ public class DurableEngine<T> extends Engine implements Durable<Md5Key, T> {
         super.shutdown();
     }
 
+
     public void apply(final Page<Event> page) {
+        apply(page, NULL_CALLBACK);
+    }
+
+    @VisibleForTesting
+    void apply(final Page<Event> page, FutureCallback<Page<?>> callback) {
         if (checkpoint.isApplied(page)) {
             page.clear();// clear alreay applied page , which may not clear successful last time because of crash.
             return;
@@ -87,12 +99,12 @@ public class DurableEngine<T> extends Engine implements Durable<Md5Key, T> {
 
         pendingPages.add(page);
 
-        submit(new Task<Page<?>>(new ApplyCallback()) {
+        submit(new Task<Page<?>>(new ApplyCallback(callback)) {
             @Override
             protected Page<?> execute() throws Throwable {
-                Cursor cursor = null;
                 for (Event event : page) {
-                    cursor = events.isAdd(event) ? add(event) : delete(event);
+                    if (events.isAdd(event)) add(event);
+                    else delete(event);
                 }
                 return page;
             }
@@ -111,7 +123,6 @@ public class DurableEngine<T> extends Engine implements Durable<Md5Key, T> {
         return cursor;
     }
 
-    @Override
     public T load(final Md5Key key) throws IOException, InterruptedException {
         Sync<T> sync = new Sync<T>();
         submit(new Task<T>(sync) {
@@ -125,19 +136,33 @@ public class DurableEngine<T> extends Engine implements Durable<Md5Key, T> {
 
     private class ApplyCallback implements FutureCallback<Page<?>> {
 
+        private final FutureCallback<Page<?>> callback;
+
+        public ApplyCallback(FutureCallback<Page<?>> callback) {
+            this.callback = callback;
+        }
+
         @Override
         public void onSuccess(Page<?> page) {
             try {
                 if (checkpoint.canSave(sequence.tail())) { // clear applied pending pages
                     sequence.fixLastPage();
-                    checkpoint.save(page.number(),sequence.tail());
+                    checkpoint.save(page.number(), sequence.tail());
                     sequence.addNewPage();
 
-                    while (pendingPages.peek() != page)
-                        pendingPages.remove().clear();
+                    for (; ; ) {
+                        Page<Event> removed = pendingPages.remove();
+                        for (Event event : removed) {
+                            if (events.isAdd(event)) cache.weak(events.getKey(event));
+                        }
+                        removed.clear();
+                        if (removed == page) break;
+                    }
                 }
+                callback.onSuccess(page);
             } catch (IOException e) {
                 e.printStackTrace();
+                callback.onFailure(e);
                 // TODO log error
             }
         }
@@ -145,6 +170,7 @@ public class DurableEngine<T> extends Engine implements Durable<Md5Key, T> {
         @Override
         public void onFailure(Throwable t) {
             t.printStackTrace();
+            callback.onFailure(t);
             // TODO log error
         }
     }

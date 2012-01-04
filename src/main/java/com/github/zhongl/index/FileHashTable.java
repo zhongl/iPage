@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.integrity.ValidateOrRecover;
-import com.github.zhongl.integrity.Validator;
 import com.github.zhongl.sequence.Cursor;
 
 import javax.annotation.concurrent.NotThreadSafe;
@@ -38,7 +36,7 @@ import static com.google.common.base.Preconditions.checkState;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @NotThreadSafe
-public final class FileHashTable implements ValidateOrRecover<Slot, IOException> {
+public final class FileHashTable implements ValidateOrRecover {
 
     public static final int DEFAULT_SIZE = 256;
 
@@ -122,7 +120,7 @@ public final class FileHashTable implements ValidateOrRecover<Slot, IOException>
     }
 
     @Override
-    public boolean validateOrRecoverBy(Validator<Slot, IOException> validator) throws IOException {
+    public boolean validateOrRecoverBy(Validator validator) throws IOException {
         for (int i = 0; i < amountOfBuckets; i++) {
             Bucket bucket = buckets(i);
             if (bucket.checkCRC()) continue;

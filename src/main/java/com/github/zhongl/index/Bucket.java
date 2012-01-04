@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.integrity.ValidateOrRecover;
-import com.github.zhongl.integrity.Validator;
 import com.github.zhongl.sequence.Cursor;
 import com.google.common.primitives.Longs;
 
@@ -32,7 +30,7 @@ import java.util.zip.CRC32;
  *
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl</a>
  */
-class Bucket implements ValidateOrRecover<Slot, IOException> {
+class Bucket implements ValidateOrRecover {
 
     public static final int LENGTH = Integer.getInteger("com.github.zhongl.index.bucket.length", 4096); // default 4K
     private static final int CRC_OFFSET = LENGTH - 8;
@@ -96,10 +94,10 @@ class Bucket implements ValidateOrRecover<Slot, IOException> {
     }
 
     @Override
-    public boolean validateOrRecoverBy(Validator<Slot, IOException> validator) throws IOException {
+    public boolean validateOrRecoverBy(Validator validator) throws IOException {
         for (int i = 0; i < amountOfSlots(); i++) {
             Slot slot = slots(i);
-            if (validator.validate(slot)) continue;
+            if (validator.validate(slot.key(), slot.cursor())) continue;
             slot.release();
             return false;
         }

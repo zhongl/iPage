@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -16,15 +16,8 @@
 
 package com.github.zhongl.sequence;
 
-import com.github.zhongl.page.Accessor;
-import com.github.zhongl.page.ReadOnlyChannels;
-import com.github.zhongl.util.FilesLoader;
-import com.github.zhongl.util.NumberNamedFilterAndComparator;
-import com.github.zhongl.util.Transformer;
-
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
 
@@ -35,39 +28,9 @@ public class Sequence<T> implements Closeable {
     private final LinkedList<LinkedPage<T>> linkedPages;
     private final GarbageCollector<T> garbageCollector;
 
-    public Sequence(File dir, Accessor<T> accessor, int pageCapcity, long minimizeCollectLength) throws IOException {
-        this.linkedPages = load(dir, accessor, pageCapcity, new ReadOnlyChannels());
+    public Sequence(SequenceLoader<T> loader, long minimizeCollectLength) throws IOException {
+        this.linkedPages = loader.load();
         garbageCollector = new GarbageCollector<T>(linkedPages, minimizeCollectLength);
-    }
-
-    public LinkedList<LinkedPage<T>> load(
-            File dir,
-            final Accessor<T> accessor,
-            int pageCapacity,
-            final ReadOnlyChannels readOnlyChannels
-    ) throws IOException {
-        LinkedList<LinkedPage<T>> list = new FilesLoader<LinkedPage<T>>(
-                dir,
-                new NumberNamedFilterAndComparator(),
-                new Transformer<LinkedPage<T>>() {
-                    @Override
-                    public LinkedPage<T> transform(File file, boolean last) throws IOException {
-                        try {
-                            return new LinkedPage<T>(file, accessor, readOnlyChannels);
-                        } catch (IllegalStateException e) {
-                            file.delete(); // delete invalid page file.
-                            return null;
-                        }
-
-                    }
-                }).loadTo(new LinkedList<LinkedPage<T>>());
-
-        if (list.isEmpty()) {
-            list.addLast(new LinkedPage<T>(new File(dir, "0"), accessor, pageCapacity, readOnlyChannels));
-        } else {
-            list.addLast(list.getLast().multiply());
-        }
-        return list;
     }
 
     public Cursor append(T object) throws OverflowException, IOException {
@@ -83,7 +46,6 @@ public class Sequence<T> implements Closeable {
         return new Cursor(last.begin() + last.length());
     }
 
-    // TODO clear journal page and weak cache
     public void fixLastPage() throws IOException {
         linkedPages.getLast().fix();
     }
@@ -99,6 +61,7 @@ public class Sequence<T> implements Closeable {
         int index = cursor.indexIn(linkedPages);
         return linkedPages.get(index).next(cursor);
     }
+
     @Override
     public void close() throws IOException {
         for (LinkedPage<T> linkedPage : linkedPages) linkedPage.close();

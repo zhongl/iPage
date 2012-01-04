@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.integrity.Validator;
 import com.github.zhongl.sequence.Cursor;
 import com.github.zhongl.util.FileBase;
 import com.google.common.io.Files;
@@ -174,9 +173,9 @@ public class IndexTest extends FileBase {
 
         newIndex();
 
-        Validator<Slot, IOException> validator = new Validator<Slot, IOException>() {
+        Validator validator = new Validator() {
             @Override
-            public boolean validate(Slot value) {
+            public boolean validate(Md5Key value, Cursor cursor) throws IOException {
                 return true;
             }
         };

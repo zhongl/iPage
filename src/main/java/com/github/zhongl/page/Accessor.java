@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ public interface Accessor<T> {
     Reader<T> reader();
 
     public interface Writer {
-        int valueByteLength();
+        int byteLength();
 
         int writeTo(WritableByteChannel channel) throws IOException;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -37,8 +37,8 @@ final class EntryAccessor<V> implements Accessor<Entry<V>> {
         return new Writer() {
 
             @Override
-            public int valueByteLength() {
-                return kWriter.valueByteLength() + vWriter.valueByteLength();
+            public int byteLength() {
+                return kWriter.byteLength() + vWriter.byteLength();
             }
 
             @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -96,7 +96,7 @@ public class Cursor implements Comparable<Cursor> {
         public Writer writer(final Cursor value) {
             return new Writer() {
                 @Override
-                public int valueByteLength() {
+                public int byteLength() {
                     return 8;
                 }
 

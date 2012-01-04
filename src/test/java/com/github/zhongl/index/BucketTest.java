@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.integrity.Validator;
 import com.github.zhongl.sequence.Cursor;
 import com.github.zhongl.util.FileBase;
 import com.google.common.primitives.Bytes;
@@ -55,14 +54,11 @@ public class BucketTest extends FileBase {
         FileChannel channel = randomAccessFile.getChannel();
         Bucket bucket = new Bucket(0, channel);// mock broken fileHashTable file.
 
-        Validator<Slot, IOException> validator = new Validator<Slot, IOException>() {
+        Validator validator = new Validator() {
+
             @Override
-            public boolean validate(Slot slot) {
-                try {
-                    return slot.cursor().compareTo(new Cursor(10L)) < 0;
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+            public boolean validate(Md5Key value, Cursor cursor) throws IOException {
+                return cursor.compareTo(new Cursor(10L)) < 0;
             }
         };
         assertThat(bucket.validateOrRecoverBy(validator), is(true));

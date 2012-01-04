@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -40,7 +40,9 @@ public class SequenceTest extends FileBase {
     public void main() throws Exception {
         dir = testDir("main");
 
-        sequence = new Sequence<String>(dir, Accessors.STRING, 16, 16L);
+        Cursor lastSequenceTail = Cursor.head();
+        SequenceLoader<String> loader = new SequenceLoader<String>(dir, Accessors.STRING, 16, lastSequenceTail);
+        sequence = new Sequence<String>(loader, 16L);
 
         String record = "record";
         Cursor cursor = sequence.append(record);

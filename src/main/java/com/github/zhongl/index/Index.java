@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.integrity.ValidateOrRecover;
-import com.github.zhongl.integrity.Validator;
 import com.github.zhongl.sequence.Cursor;
 import com.github.zhongl.util.FilesLoader;
 import com.github.zhongl.util.NumberNamedFilterAndComparator;
@@ -40,7 +38,7 @@ import static com.google.common.base.Preconditions.checkState;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @NotThreadSafe
-public class Index implements Closeable, ValidateOrRecover<Slot, IOException> {
+public class Index implements Closeable, ValidateOrRecover {
 
     private final File baseDir;
     private final int initialBucketSize;
@@ -89,7 +87,7 @@ public class Index implements Closeable, ValidateOrRecover<Slot, IOException> {
     }
 
     @Override
-    public boolean validateOrRecoverBy(Validator<Slot, IOException> validator) throws IOException {
+    public boolean validateOrRecoverBy(Validator validator) throws IOException {
         for (FileHashTable fileHashTable : fileHashTables) {
             if (fileHashTable.validateOrRecoverBy(validator)) continue;
             return false;

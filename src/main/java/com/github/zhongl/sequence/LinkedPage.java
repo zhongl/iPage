@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
     public Cursor append(T object) throws OverflowException, IOException {
         Accessor.Writer writer = accessor.writer(object);
 
-        if (position + writer.valueByteLength() > capacity) throw new OverflowException();
+        if (position + writer.byteLength() > capacity) throw new OverflowException();
 
         Cursor cursor = new Cursor(begin() + position);
         position += page.add(object);
@@ -82,7 +82,7 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
     }
 
     public Cursor next(Cursor cursor) throws IOException {
-        return cursor.forword(accessor.writer(get(cursor)).valueByteLength() + LENGTH_BYTES);
+        return cursor.forword(accessor.writer(get(cursor)).byteLength());
     }
 
     @Override
@@ -134,7 +134,7 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
      */
     public List<LinkedPage<T>> split(Cursor begin, Cursor end) throws IOException {
         T value = get(begin);
-        if (end.offset - begin.offset < accessor.writer(value).valueByteLength() + 4/* length bytes*/)
+        if (end.offset - begin.offset < accessor.writer(value).byteLength())
             return singletonList(this);                                         // Case 3
         if (begin.offset == begin()) return singletonList(right(end));          // Case 2
         LinkedPage<T> right = right0(end); // do right first for avoiding delete by left

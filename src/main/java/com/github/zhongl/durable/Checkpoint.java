@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -91,7 +91,7 @@ class Checkpoint {
         ).loadTo(new ArrayList<String>());
 
         if (list.isEmpty()) {
-            lastNumber = 0L;
+            lastNumber = -1L;
             lastCursor = Cursor.head();
         } else {
             String[] split = list.get(0).split("\\.");

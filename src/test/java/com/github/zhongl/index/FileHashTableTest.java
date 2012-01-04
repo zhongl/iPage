@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package com.github.zhongl.index;
 
-import com.github.zhongl.integrity.Validator;
 import com.github.zhongl.sequence.Cursor;
 import com.github.zhongl.util.FileBase;
 import com.google.common.io.Files;
@@ -86,12 +85,12 @@ public class FileHashTableTest extends FileBase {
         file = testFile("validateOrRecoveryIfNoBroken");
 
         fileHashTable = new FileHashTable(file, 1);
-        Validator<Slot, IOException> validator = mock(Validator.class);
+        Validator validator = mock(Validator.class);
         assertThat(fileHashTable.validateOrRecoverBy(validator), is(true));// validateAndRecoverBy a empty bucket
         fileHashTable.put(Md5Key.generate("key".getBytes()), new Cursor(7L));
         fileHashTable.close();
         fileHashTable = new FileHashTable(file, 1);
-        doReturn(true).when(validator).validate(any(Slot.class));
+        doReturn(true).when(validator).validate(any(Md5Key.class), any(Cursor.class));
         assertThat(fileHashTable.validateOrRecoverBy(validator), is(true)); // validateAndRecoverBy a exist bucket
     }
 
@@ -115,10 +114,11 @@ public class FileHashTableTest extends FileBase {
 
         fileHashTable = new FileHashTable(file, 1);
 
-        Validator<Slot, IOException> validator = new Validator<Slot, IOException>() {
+        Validator validator = new Validator() {
+
             @Override
-            public boolean validate(Slot slot) throws IOException {
-                return slot.cursor() == new Cursor(4L);
+            public boolean validate(Md5Key value, Cursor cursor) throws IOException {
+                return new Cursor(4L).equals(cursor);
             }
         };
         assertThat(fileHashTable.validateOrRecoverBy(validator), is(false));

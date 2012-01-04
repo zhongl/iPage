@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -154,9 +154,9 @@ public class LinkedPageTest extends FileBase {
         assertThat(new File(dir, "0").length(), is(4096L + Page.CRC32_LENGTH));
     }
 
-    @Test(expected = IllegalStateException.class)
-    public void appendToMultipliedPage() throws Exception {
-        dir = testDir("appendToMultipliedPage");
+    @Test(expected = OverflowException.class)
+    public void appendToFixedPage() throws Exception {
+        dir = testDir("appendToFixedPage");
         newLinkedPage();
         linkedPage.append("");
     }

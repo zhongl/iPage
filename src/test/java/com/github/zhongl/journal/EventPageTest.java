@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.zip.CRC32;
 
 import static com.github.zhongl.util.FileAsserter.assertExist;
@@ -35,7 +36,8 @@ public class EventPageTest extends FileBase {
 
     @Test
     public void main() throws Exception {
-        file = testFile("main");
+        dir = testDir("main");
+        file = new File(dir, "0");
 
         EventPage eventPage = new EventPage(file, new EventAccessor());
 
@@ -68,7 +70,9 @@ public class EventPageTest extends FileBase {
 
     @Test
     public void loadExist() throws Exception {
-        file = testFile("loadExist");
+        dir = testDir("loadExist");
+        file = new File(dir, "0");
+
         byte[] content = Bytes.concat(Ints.toByteArray(5), "event".getBytes());
         CRC32 crc32 = new CRC32();
         crc32.update(content);
@@ -88,7 +92,9 @@ public class EventPageTest extends FileBase {
 
     @Test(expected = IllegalStateException.class)
     public void loadInvalidExist() throws Exception {
-        file = testFile("loadInvalidExist");
+        dir = testDir("loadInvalidExist");
+        file = new File(dir, "0");
+
         Files.write(Bytes.concat(Ints.toByteArray(5), "event".getBytes(), Longs.toByteArray(4L)), file);
         new EventPage(file, new EventAccessor());
     }

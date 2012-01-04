@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ public class Accessors {
         public Writer writer(final String value) {
             return new LengthWriter() {
                 @Override
-                public int valueByteLength() {
+                public int bodyByteLength() {
                     return value.length();
                 }
 
