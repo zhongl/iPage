@@ -26,6 +26,7 @@ import org.mockito.ArgumentCaptor;
 import java.io.File;
 import java.util.concurrent.CountDownLatch;
 
+import static org.hamcrest.Matchers.any;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.Assert.assertThat;
@@ -41,7 +42,7 @@ public class JournalTest extends FileBase {
     public void append() throws Exception {
         dir = testDir("append");
 
-        boolean groupCommit = false;
+        boolean groupCommit = true;
         long flushElapseMilliseconds = Long.MAX_VALUE;
         int flushCount = 1;
         DurableEngine durableEngine = mock(DurableEngine.class);
@@ -56,10 +57,11 @@ public class JournalTest extends FileBase {
         journal.append(event);
         event.await();
 
-        verify(cache, times(1)).apply(event);
-
         ArgumentCaptor<EventPage> argumentCaptor = ArgumentCaptor.forClass(EventPage.class);
+
+        verify(cache, times(1)).apply(argumentCaptor.capture());
         verify(durableEngine).apply(argumentCaptor.capture());
+
         assertThat((MockEvent) argumentCaptor.getValue().iterator().next(), sameInstance(event));
 
         journal.close();
