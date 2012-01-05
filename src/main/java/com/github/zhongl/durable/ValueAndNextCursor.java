@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -14,30 +14,25 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.durable;
 
-import java.nio.ByteBuffer;
+import com.github.zhongl.sequence.Cursor;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-class ChunkContentUtils {
-    private ChunkContentUtils() { }
+public class ValueAndNextCursor<T> {
+    private final T value;
+    private final Cursor next;
 
-    public static byte[] concatToChunkContentWith(byte[]... data) {
-        int lengthBytes = 4;
-        int length = 0;
+    public ValueAndNextCursor(T value, Cursor next) {
+        this.next = next;
+        this.value = value;
+    }
 
-        for (byte[] bytes : data) {
-            length += bytes.length + lengthBytes;
-        }
+    public T value() {
+        return value;
+    }
 
-        byte[] union = new byte[length];
-
-        ByteBuffer buffer = ByteBuffer.wrap(union);
-
-        for (byte[] item : data) {
-            buffer.putInt(item.length);
-            buffer.put(item);
-        }
-        return union;
+    public Cursor next() {
+        return next;
     }
 }

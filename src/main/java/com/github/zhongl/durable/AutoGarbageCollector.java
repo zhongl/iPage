@@ -36,15 +36,16 @@ class AutoGarbageCollector<T> {
         this.collectable = collectable;
     }
 
-    public void start() {
-        collectable.get(Cursor.head(), new PreCollectingCallback());
+    public synchronized void start() {
+        if (stopped) return;
+        collectable.getAndNext(Cursor.head(), new PreCollectingCallback());
     }
 
-    public void stop() {
+    public synchronized void stop() {
         stopped = true;
     }
 
-    private class PreCollectingCallback implements FutureCallback<T> {
+    private class PreCollectingCallback implements FutureCallback<ValueAndNextCursor<T>> {
         private final Cursor last;
 
         public PreCollectingCallback(Cursor last) {
@@ -56,22 +57,22 @@ class AutoGarbageCollector<T> {
         }
 
         @Override
-        public void onSuccess(T entry) {
+        public void onSuccess(ValueAndNextCursor<T> valueAndNextCursor) {
             if (stopped) return;
-            Cursor next = collectable.calculateNextCursorBy(last, entry);
+            Cursor next = valueAndNextCursor.next();
             if (collectable.isTail(last)) {
-                collectable.get(Cursor.head(), new PreCollectingCallback());
+                collectable.getAndNext(Cursor.head(), new PreCollectingCallback());
                 return;
             }
-            if (!collectable.contains(entry)) {
+            if (valueAndNextCursor.value() == null) {
                 if (collectable.isTail(next)) {
                     collectable.garbageCollect(last, next, new CollectedCallback(Cursor.head()));
                 } else {
-                    collectable.get(next, new CollectingCallback(last, next));
+                    collectable.getAndNext(next, new CollectingCallback(last, next));
                 }
                 return;
             }
-            collectable.get(next, new PreCollectingCallback(next));
+            collectable.getAndNext(next, new PreCollectingCallback(next));
         }
 
         @Override
@@ -80,7 +81,7 @@ class AutoGarbageCollector<T> {
         }
     }
 
-    private class CollectingCallback implements FutureCallback<T> {
+    private class CollectingCallback implements FutureCallback<ValueAndNextCursor<T>> {
         private final Cursor begin;
         private final Cursor last;
 
@@ -90,10 +91,10 @@ class AutoGarbageCollector<T> {
         }
 
         @Override
-        public void onSuccess(T entry) {
+        public void onSuccess(ValueAndNextCursor<T> valueAndNextCursor) {
             if (stopped) return;
-            Cursor next = collectable.calculateNextCursorBy(last, entry);
-            if (collectable.contains(entry)) {
+            Cursor next = valueAndNextCursor.next();
+            if (valueAndNextCursor.value() != null) {
                 collectable.garbageCollect(begin, last, new CollectedCallback(next));
                 return;
             }
@@ -101,7 +102,7 @@ class AutoGarbageCollector<T> {
                 collectable.garbageCollect(begin, next, new CollectedCallback(Cursor.head()));
                 return;
             }
-            collectable.get(next, new CollectingCallback(begin, next));
+            collectable.getAndNext(next, new CollectingCallback(begin, next));
         }
 
         @Override
@@ -120,7 +121,7 @@ class AutoGarbageCollector<T> {
         @Override
         public void onSuccess(Long collectedLength) {
             if (stopped) return;
-            collectable.get(cursor, new PreCollectingCallback(cursor));
+            collectable.getAndNext(cursor, new PreCollectingCallback(cursor));
         }
 
         @Override

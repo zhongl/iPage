@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@
 package com.github.zhongl.kvengine;
 
 import com.github.zhongl.benchmarker.*;
-import com.github.zhongl.nio.CommonAccessors;
 import com.github.zhongl.index.Md5Key;
+import com.github.zhongl.page.Accessors;
 import com.github.zhongl.util.FileBase;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
@@ -64,11 +64,11 @@ public class BlockingKVEngineBenchmark extends FileBase {
                         .initialBucketSize(BUCKET_SIZE)
                         .flushCount(FLUSH_COUNT)
                         .flushElapseMilliseconds(FLUSH_ELAPSE)
-                        .maximizeChunkCapacity(CHUNK_CAPACITY)
-                        .valueAccessor(CommonAccessors.BYTES)
+                        .groupApplyLength(CHUNK_CAPACITY)
+                        .valueAccessor(Accessors.BYTES)
                         .minimzieCollectLength(COLLECT_LENGTH)
                         .groupCommit(GROUP_COMMIT)
-                        .startAutoGarbageCollectOnStartup(AUTO_GC)
+                        .autoStartGC(AUTO_GC)
                         .build());
         engine.startup();
     }

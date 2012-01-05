@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -39,29 +39,17 @@ import java.util.concurrent.TimeUnit;
 public class Journal {
 
     private static final int BACKLOG = Integer.getInteger("ipage.jounal.engine.backlog", 256);
-    private final static TimeUnit TIME_UNIT = TimeUnit.MILLISECONDS;
+    private static final TimeUnit TIME_UNIT = TimeUnit.MILLISECONDS;
 
+    private final File dir;
+    private final Accessor<Event> accessor;
     private final InnerEngine engine;
     private final Group group;
     private final DurableEngine durableEngine;
     private final Cache cache;
     private final CallByCountOrElapse callByCountOrElapse;
 
-    private final Callable<?> flusher = new Callable<Void>() {
-        @Override
-        public Void call() throws Exception {
-            currentEventPage.fix();
-            if (isGroupCommit()) cache.apply(currentEventPage);
-            durableEngine.apply(currentEventPage);
-            currentEventPage = createNewEventPage();
-            return null;
-        }
-    };
-
     private volatile EventPage currentEventPage;
-
-    private final File dir;
-    private final Accessor<Event> accessor;
 
     public Journal(
             File dir,
@@ -76,7 +64,16 @@ public class Journal {
         this.accessor = accessor;
         this.durableEngine = durableEngine;
         this.cache = cache;
-        this.callByCountOrElapse = new CallByCountOrElapse(flushCount, flushElapseMilliseconds, flusher);
+        this.callByCountOrElapse = new CallByCountOrElapse(flushCount, flushElapseMilliseconds, new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                currentEventPage.fix();
+                if (isGroupCommit()) Journal.this.cache.apply(currentEventPage);
+                Journal.this.durableEngine.apply(currentEventPage);
+                currentEventPage = createNewEventPage();
+                return null;
+            }
+        });
         this.group = groupCommit ? Group.newInstance() : Group.NULL;
         this.engine = new InnerEngine(flushElapseMilliseconds / 2, TIME_UNIT, BACKLOG);
     }
@@ -95,11 +92,12 @@ public class Journal {
         engine.shutdown();
     }
 
-    public void append(Event event) {
-        engine.append(event);
+    public boolean append(Event event) {
+        return engine.append(event);
     }
 
     private LinkedList<EventPage> loadUnappliedPages() throws IOException {
+        if (!dir.exists()) dir.mkdirs();
         return new FilesLoader<EventPage>(
                 dir,
                 new NumberNamedFilterAndComparator(),
@@ -107,7 +105,7 @@ public class Journal {
                     @Override
                     public EventPage transform(File file, boolean last) throws IOException {
                         try {
-                            currentEventPage = new EventPage(file, accessor);
+                            currentEventPage = new EventPage(file, accessor, cache);
                             return currentEventPage;
                         } catch (IllegalStateException e) {
                             file.delete();
@@ -120,7 +118,7 @@ public class Journal {
 
     private EventPage createNewEventPage() throws IOException {
         String child = currentEventPage == null ? "0" : Long.toString(currentEventPage.number() + 1);
-        return new EventPage(new File(dir, child), accessor);
+        return new EventPage(new File(dir, child), accessor, cache);
     }
 
     private Task<Void> task(final Event event) {
@@ -164,8 +162,8 @@ public class Journal {
             tryGroupCommitByElapse();
         }
 
-        public void append(final Event event) {
-            submit(task(event));
+        public boolean append(final Event event) {
+            return submit(task(event));
         }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -70,7 +70,7 @@ public class JournalTest extends FileBase {
         dir = testDir("load");
 
         EventAccessor accessor = new EventAccessor();
-        new EventPage(new File(dir, "0"), accessor).fix();
+        new EventPage(new File(dir, "0"), accessor, mock(Cache.class)).fix();
         new File(dir, "1").createNewFile();
 
         boolean groupCommit = false;

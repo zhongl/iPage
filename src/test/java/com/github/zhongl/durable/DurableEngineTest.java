@@ -62,7 +62,7 @@ public class DurableEngineTest extends FileBase {
         list.add(event2);
 
         EntryAccessor<String> entryAccessor = new EntryAccessor<String>(Accessors.STRING);
-        SequenceLoader<Entry<String>> loader = new SequenceLoader<Entry<String>>(new File(dir, "seq"), entryAccessor, 4096, Cursor.NULL);
+        SequenceLoader<Entry<String>> loader = new SequenceLoader<Entry<String>>(new File(dir, "seq"), entryAccessor, Cursor.NULL);
         Sequence<Entry<String>> sequence = new Sequence<Entry<String>>(loader, 16);
 
         Index index = new Index(new File(dir, "idx"), 1);
@@ -94,7 +94,7 @@ public class DurableEngineTest extends FileBase {
         long durationMilliseconds = 100L;
         Cache<Md5Key, String> cache = new Cache<Md5Key, String>(events, durable, 16, durationMilliseconds);
 
-        engine = new DurableEngine<String>(sequence, index, checkpoint, events, cache);
+        engine = new DurableEngine<String>(sequence, index, checkpoint, events, false);
         engine.startup();
 
         Page<Event> page0 = mock(Page.class);

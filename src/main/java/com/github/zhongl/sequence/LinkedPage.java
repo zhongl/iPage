@@ -37,30 +37,20 @@ import static java.util.Collections.singletonList;
 class LinkedPage<T> implements Comparable<Cursor>, Closeable {
     private final File file;
     private final Accessor<T> accessor;
-    private final int capacity;
     private final InnerPage page;
     private final ReadOnlyChannels readOnlyChannels;
 
     private volatile int position;
 
-    LinkedPage(File file, Accessor<T> accessor, int capacity, ReadOnlyChannels readOnlyChannels) throws IOException {
+    public LinkedPage(File file, Accessor<T> accessor, ReadOnlyChannels readOnlyChannels) throws IOException {
         this.file = file;
         this.accessor = accessor;
-        this.capacity = capacity;
         this.readOnlyChannels = readOnlyChannels;
         page = new InnerPage(file, accessor);
         position = (int) file.length();
     }
 
-    LinkedPage(File file, Accessor<T> accessor, ReadOnlyChannels readOnlyChannels) throws IOException {
-        this(file, accessor, (int) file.length(), readOnlyChannels);
-    }
-
-    public Cursor append(T object) throws OverflowException, IOException {
-        Accessor.Writer writer = accessor.writer(object);
-
-        if (position + writer.byteLength() > capacity) throw new OverflowException();
-
+    public Cursor append(T object) throws IOException {
         Cursor cursor = new Cursor(begin() + position);
         position += page.add(object);
         return cursor;
@@ -68,7 +58,7 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
 
     public LinkedPage<T> multiply() throws IOException {
         File newFile = new File(file.getParentFile(), begin() + length() + "");
-        return new LinkedPage<T>(newFile, accessor, capacity, readOnlyChannels);
+        return new LinkedPage<T>(newFile, accessor, readOnlyChannels);
     }
 
     public T get(Cursor cursor) throws IOException {
@@ -128,8 +118,8 @@ class LinkedPage<T> implements Comparable<Cursor>, Closeable {
     public List<LinkedPage<T>> split(Cursor begin, Cursor end) throws IOException {
         T value = get(begin);
         if (end.offset() - begin.offset() < accessor.writer(value).byteLength())
-            return singletonList(this);                                         // Case 3
-        if (begin.offset() == begin()) return singletonList(right(end));          // Case 2
+            return singletonList(this);                                          // Case 3
+        if (begin.offset() == begin()) return singletonList(right(end));         // Case 2
         LinkedPage<T> right = right0(end); // do right first for avoiding delete by left
         LinkedPage<T> left = left(begin);
         return Arrays.asList(left, right);                                       // Case 1

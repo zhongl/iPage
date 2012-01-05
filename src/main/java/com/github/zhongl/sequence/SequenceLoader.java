@@ -29,14 +29,12 @@ import java.util.LinkedList;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class SequenceLoader<T> {
     private final File dir;
-    private final int pageCapacity;
     private final Cursor lastSequenceTail;
     final Accessor<T> accessor;
 
-    public SequenceLoader(File dir, Accessor<T> accessor, int pageCapacity, Cursor lastSequenceTail) {
+    public SequenceLoader(File dir, Accessor<T> accessor, Cursor lastSequenceTail) {
         this.dir = dir;
         this.accessor = accessor;
-        this.pageCapacity = pageCapacity;
         this.lastSequenceTail = lastSequenceTail;
     }
 
@@ -58,7 +56,7 @@ public class SequenceLoader<T> {
                 }).loadTo(new LinkedList<LinkedPage<T>>());
 
         if (list.isEmpty()) {
-            list.addLast(new LinkedPage<T>(new File(dir, "0"), accessor, pageCapacity, readOnlyChannels));
+            list.addLast(new LinkedPage<T>(new File(dir, "0"), accessor, readOnlyChannels));
         } else {
             list.addLast(list.getLast().multiply());
         }

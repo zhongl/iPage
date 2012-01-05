@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -77,8 +77,8 @@ public class Cache<K, V> {
         }
     }
 
-    public void weak(K key) {
-        fresh.remove(key);
+    public void weak(Event event) {
+        fresh.remove(events.getKey(event));
     }
 
     public long size() {return gCache.size();}

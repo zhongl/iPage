@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -22,13 +22,9 @@ import javax.annotation.concurrent.ThreadSafe;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-/**
- * {@link com.github.zhongl.kvengine.Entry} is wrapper of bytes, a minimized store unit.
- *
- * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
- */
+/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @ThreadSafe
-final class Entry<V> {
+public final class Entry<V> {
 
     private final Md5Key key;
     private final V value;

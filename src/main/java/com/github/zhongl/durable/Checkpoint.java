@@ -30,7 +30,7 @@ import java.util.ArrayList;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-class Checkpoint {
+public class Checkpoint {
 
     private final File dir;
     private final int groupApplyLength;
@@ -44,24 +44,24 @@ class Checkpoint {
         tryLoadLastCheckpoint();
     }
 
-    public boolean isApplied(Page<Event> page) {
+    public Cursor lastCursor() {
+        return lastCursor;
+    }
+
+    boolean isApplied(Page<Event> page) {
         return page.number() <= lastNumber;
     }
 
-    public boolean canSave(Cursor cursor) throws IOException {
+    boolean canSave(Cursor cursor) throws IOException {
         if (cursor.distanceTo(lastCursor) < groupApplyLength) return false;
         return true;
     }
 
-    public void save(long number, Cursor cursor) throws IOException {
+    void save(long number, Cursor cursor) throws IOException {
         new File(dir, number + "." + cursor).createNewFile();
         new File(dir, lastNumber + "." + lastCursor).delete();
         lastNumber = number;
         lastCursor = cursor;
-    }
-
-    public Cursor lastCursor() {
-        return lastCursor;
     }
 
     private void tryLoadLastCheckpoint() throws IOException {

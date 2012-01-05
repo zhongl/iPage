@@ -41,7 +41,7 @@ public class SequenceTest extends FileBase {
         dir = testDir("main");
 
         Cursor lastSequenceTail = Cursor.head();
-        SequenceLoader<String> loader = new SequenceLoader<String>(dir, Accessors.STRING, 16, lastSequenceTail);
+        SequenceLoader<String> loader = new SequenceLoader<String>(dir, Accessors.STRING, lastSequenceTail);
         sequence = new Sequence<String>(loader, 16L);
 
         String record = "record";

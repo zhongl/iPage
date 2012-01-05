@@ -45,9 +45,8 @@ public class LinkedPageTest extends FileBase {
     @Test
     public void main() throws Exception {
         dir = testDir("main");
-        int capacity = 4096;
         Accessor<String> accessor = Accessors.STRING;
-        linkedPage = new LinkedPage<String>(new File(dir, "0"), accessor, capacity, new ReadOnlyChannels());
+        linkedPage = new LinkedPage<String>(new File(dir, "0"), accessor, new ReadOnlyChannels());
 
         String record = "record";
         Cursor cursor = linkedPage.append(record);
@@ -152,24 +151,17 @@ public class LinkedPageTest extends FileBase {
         assertThat(new File(dir, "0").length(), is(4096L));
     }
 
-    @Test(expected = OverflowException.class)
-    public void appendToFixedPage() throws Exception {
-        dir = testDir("appendToFixedPage");
-        newLinkedPage();
-        linkedPage.append("");
-    }
-
     private void close(List<LinkedPage<String>> linkedPages) throws IOException {
         for (LinkedPage<String> c : linkedPages) c.close();
     }
 
-    protected void newLinkedPage() throws IOException, OverflowException {
+    protected void newLinkedPage() throws IOException {
         newLinkedPage(0);
     }
 
-    private void newLinkedPage(int beginPosition) throws IOException, OverflowException {
+    private void newLinkedPage(int beginPosition) throws IOException {
         dir.mkdirs();
-        linkedPage = new LinkedPage<String>(new File(dir, beginPosition + ""), Accessors.STRING, 4096, new ReadOnlyChannels());
+        linkedPage = new LinkedPage<String>(new File(dir, beginPosition + ""), Accessors.STRING, new ReadOnlyChannels());
         for (int i = 0; i < 256; i++) {
             linkedPage.append("0123456789ab");
         }

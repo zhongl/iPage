@@ -16,11 +16,13 @@
 
 package com.github.zhongl.journal;
 
+import com.github.zhongl.cache.Cache;
 import com.github.zhongl.util.FileBase;
 import com.google.common.io.Files;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -30,16 +32,26 @@ import static com.github.zhongl.util.FileAsserter.assertExist;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class EventPageTest extends FileBase {
+
+
+    private Cache cache;
+
+    @Before
+    public void setUp() throws Exception {
+        cache = mock(Cache.class);
+    }
 
     @Test
     public void main() throws Exception {
         dir = testDir("main");
         file = new File(dir, "0");
 
-        EventPage eventPage = new EventPage(file, new EventAccessor());
+        EventPage eventPage = new EventPage(file, new EventAccessor(), cache);
 
         Event event = new StringEvent("event");
 
@@ -63,6 +75,8 @@ public class EventPageTest extends FileBase {
 
         eventPage.clear();
 
+        verify(cache).weak(event);
+
         assertThat(file.exists(), is(false));
 
         assertThat(eventPage.iterator().hasNext(), is(false));
@@ -79,7 +93,7 @@ public class EventPageTest extends FileBase {
         byte[] crc32Bytes = Longs.toByteArray(crc32.getValue());
         Files.write(Bytes.concat(content, crc32Bytes), file);
 
-        EventPage eventPage = new EventPage(file, new EventAccessor());
+        EventPage eventPage = new EventPage(file, new EventAccessor(), cache);
         StringEvent event = (StringEvent) eventPage.iterator().next();
         assertThat(event.value, is("event"));
 
@@ -96,7 +110,7 @@ public class EventPageTest extends FileBase {
         file = new File(dir, "0");
 
         Files.write(Bytes.concat(Ints.toByteArray(5), "event".getBytes(), Longs.toByteArray(4L)), file);
-        new EventPage(file, new EventAccessor());
+        new EventPage(file, new EventAccessor(), cache);
     }
 
 }

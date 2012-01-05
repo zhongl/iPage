@@ -21,11 +21,7 @@ import com.google.common.util.concurrent.FutureCallback;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public interface Nextable<T> {
-    boolean get(Cursor cursor, FutureCallback<T> cursorFutureCallback);
-
-    boolean contains(T object);
-
-    Cursor calculateNextCursorBy(Cursor last, T object);
+    boolean getAndNext(Cursor cursor, FutureCallback<ValueAndNextCursor<T>> cursorFutureCallback);
 
     boolean isTail(Cursor cursor);
 }

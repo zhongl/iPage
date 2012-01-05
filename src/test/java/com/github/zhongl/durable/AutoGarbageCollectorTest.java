@@ -128,11 +128,13 @@ public class AutoGarbageCollectorTest {
         }
 
         @Override
-        public boolean get(final Cursor cursor, final FutureCallback<String> cursorFutureCallback) {
+        public boolean getAndNext(final Cursor cursor, final FutureCallback<ValueAndNextCursor<String>> cursorFutureCallback) {
             service.submit(new Runnable() {
                 @Override
                 public void run() {
-                    cursorFutureCallback.onSuccess(data[((int) cursor.offset())]);
+                    String value = data[((int) cursor.offset())];
+                    Cursor next = cursor.forword(1);
+                    cursorFutureCallback.onSuccess(new ValueAndNextCursor<String>(value, next));
                 }
             });
             return true;
@@ -154,16 +156,6 @@ public class AutoGarbageCollectorTest {
                 }
             });
             return true;
-        }
-
-        @Override
-        public boolean contains(String object) {
-            return object != null;
-        }
-
-        @Override
-        public Cursor calculateNextCursorBy(Cursor last, String object) {
-            return last.forword(1);
         }
 
         @Override

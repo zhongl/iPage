@@ -16,6 +16,7 @@
 
 package com.github.zhongl.journal;
 
+import com.github.zhongl.cache.Cache;
 import com.github.zhongl.page.Accessor;
 import com.github.zhongl.page.CRC32WriteOnlyChannel;
 import com.github.zhongl.page.Page;
@@ -38,9 +39,11 @@ class EventPage extends Page<Event> {
 
     private final List<Event> list;
     private boolean pageNotExisted;
+    private final Cache cache;
 
-    EventPage(File file, Accessor<Event> accessor) throws IOException {
+    EventPage(File file, Accessor<Event> accessor, Cache cache) throws IOException {
         super(file, accessor);
+        this.cache = cache;
         this.list = tryLoadFromExistFile();
     }
 
@@ -52,6 +55,7 @@ class EventPage extends Page<Event> {
 
     @Override
     public void clear() {
+        for (Event event : list) cache.weak(event);
         list.clear();
         super.clear();
     }

@@ -37,7 +37,7 @@ public class Sequence<T> implements Closeable {
         this.garbageCollector = new GarbageCollector<T>(linkedPages, minimizeCollectLength);
     }
 
-    public Cursor append(T object) throws OverflowException, IOException {
+    public Cursor append(T object) throws IOException {
         return linkedPages.getLast().append(object);
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 package com.github.zhongl.kvengine;
 
-import com.github.zhongl.nio.CommonAccessors;
 import com.github.zhongl.index.Md5Key;
+import com.github.zhongl.page.Accessors;
 import com.github.zhongl.util.FileBase;
 import org.junit.After;
 import org.junit.Test;
@@ -69,10 +69,11 @@ public class KVEngineTest extends FileBase {
         byte[] value2 = "value2".getBytes();
         engine.put(Md5Key.generate(value2), value2);
 
-
-        byte[] value3 = "value3".getBytes();
-        assertThat(engine.put(Md5Key.generate(value0), value3),is(value0));
         engine.remove(Md5Key.generate(value1));
+        byte[] value3 = "value3".getBytes();
+        assertThat(engine.put(Md5Key.generate(value0), value3), is(value0));
+
+        Thread.sleep(100L); // wait remove and update applied.
 
         Iterator<byte[]> iterator = engine.valueIterator();
         assertThat(iterator.next(), is(value2));
@@ -90,7 +91,7 @@ public class KVEngineTest extends FileBase {
                 KVEngine.<byte[]>baseOn(dir)
                         .groupCommit(false)
                         .flushElapseMilliseconds(10L)
-                        .valueAccessor(CommonAccessors.BYTES)
+                        .valueAccessor(Accessors.BYTES)
                         .build());
         engine.startup();
     }

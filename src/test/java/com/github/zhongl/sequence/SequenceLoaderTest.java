@@ -31,7 +31,7 @@ public class SequenceLoaderTest extends FileBase {
     @Test
     public void initializeLoad() throws Exception {
         dir = testDir("initializeLoad");
-        SequenceLoader<String> loader = new SequenceLoader<String>(dir, Accessors.STRING, 16, Cursor.NULL);
+        SequenceLoader<String> loader = new SequenceLoader<String>(dir, Accessors.STRING, Cursor.NULL);
 
         LinkedList<LinkedPage<String>> linkedPages = loader.load();
         assertThat(linkedPages.size(), is(1));
@@ -44,7 +44,7 @@ public class SequenceLoaderTest extends FileBase {
         new File(dir, "0").createNewFile();
         new File(dir, "16").createNewFile();
 
-        SequenceLoader<String> loader = new SequenceLoader<String>(dir, Accessors.STRING, 16, new Cursor(16L));
+        SequenceLoader<String> loader = new SequenceLoader<String>(dir, Accessors.STRING, new Cursor(16L));
         LinkedList<LinkedPage<String>> linkedPages = loader.load();
         assertThat(linkedPages.size(), is(1));
         assertThat(new File(dir, "16").exists(), is(false));
@@ -56,7 +56,7 @@ public class SequenceLoaderTest extends FileBase {
 
         new File(dir, "0").createNewFile();
 
-        SequenceLoader<String> loader = new SequenceLoader<String>(dir, Accessors.STRING, 16, new Cursor(16L));
+        SequenceLoader<String> loader = new SequenceLoader<String>(dir, Accessors.STRING, new Cursor(16L));
         LinkedList<LinkedPage<String>> linkedPages = loader.load();
         assertThat(linkedPages.size(), is(1));
     }

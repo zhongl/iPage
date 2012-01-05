@@ -56,13 +56,8 @@ public class BlockingKVEngine<T> {
         return callback.get();
     }
 
-    public Iterator<T> valueIterator() { return new ValueIterator<T>(delegate); }
-
-    @Deprecated
-    public long garbageCollect(long begin, long end) throws IOException, InterruptedException {
-        Sync<Long> longCallback = new Sync<Long>();
-        checkState(delegate.garbageCollect(begin, end, longCallback), ERROR_MESSAGE);
-        return longCallback.get();
+    public Iterator<T> valueIterator() {
+        return delegate.valueIterator();
     }
 
 }

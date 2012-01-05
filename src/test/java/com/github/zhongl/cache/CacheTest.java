@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ public class CacheTest {
         assertThat(cache.get(key), is(value));
 
         Thread.sleep(durationMilliseconds);
-        cache.weak(key);
+        cache.weak(event);
         assertThat(cache.get(key), is(nullValue()));
 
         doReturn(value).when(durable).load(key);

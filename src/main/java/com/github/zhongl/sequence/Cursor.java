@@ -95,14 +95,6 @@ public class Cursor implements Comparable<Cursor> {
         return Math.abs(compareTo(that));
     }
 
-    public boolean isTail() {
-        return false;  // TODO isTail
-    }
-
-    public boolean isValid() {
-        return false;  // TODO isValid
-    }
-
     private static class InnerAccessor implements Accessor<Cursor> {
         @Override
         public Writer writer(final Cursor value) {

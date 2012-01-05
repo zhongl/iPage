@@ -16,7 +16,6 @@
 
 package com.github.zhongl.durable;
 
-import com.github.zhongl.cache.Cache;
 import com.github.zhongl.engine.Engine;
 import com.github.zhongl.engine.Task;
 import com.github.zhongl.index.Index;
@@ -25,7 +24,6 @@ import com.github.zhongl.journal.Event;
 import com.github.zhongl.journal.Events;
 import com.github.zhongl.page.Page;
 import com.github.zhongl.sequence.Cursor;
-import com.github.zhongl.sequence.OverflowException;
 import com.github.zhongl.sequence.Sequence;
 import com.github.zhongl.util.Sync;
 import com.google.common.annotations.VisibleForTesting;
@@ -33,6 +31,7 @@ import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.TimeUnit;
 
@@ -54,31 +53,32 @@ public class DurableEngine<T> extends Engine {
     private final Checkpoint checkpoint;
     private final LinkedList<Page<Event>> pendingPages;
     private final Events<Md5Key, T> events;
-    private final Cache cache;
     private final Index index;
     private final AutoGarbageCollector<Entry<T>> collector;
+    private final boolean autoStartGC;
+    private final DurableEngine<T>.InnerCollectable innerCollectable;
 
     public DurableEngine(
             Sequence<Entry<T>> sequence,
             Index index,
             Checkpoint checkpoint,
             Events<Md5Key, T> events,
-            Cache cache
-    ) throws IOException {
+            boolean autoStartGC) throws IOException {
         super(TIMEOUT, TIME_UNIT, BACKLOG);
         this.sequence = sequence;
         this.index = index;
         this.checkpoint = checkpoint;
         this.events = events;
-        this.cache = cache;
+        this.autoStartGC = autoStartGC;
         pendingPages = new LinkedList<Page<Event>>();
-        collector = new AutoGarbageCollector<Entry<T>>(new InnerCollectable());
+        innerCollectable = new InnerCollectable();
+        collector = new AutoGarbageCollector<Entry<T>>(innerCollectable);
     }
 
     @Override
     public void startup() {
         super.startup();
-        collector.start();
+        if (autoStartGC) collector.start();
     }
 
     @Override
@@ -116,10 +116,10 @@ public class DurableEngine<T> extends Engine {
         return index.remove(events.getKey(event));
     }
 
-    private Cursor add(final Event event) throws IOException, OverflowException {
+    private Cursor add(final Event event) throws IOException {
         Md5Key key = events.getKey(event);
         T value = events.getValue(event);
-        Cursor cursor = sequence.append(new Entry(key, value));
+        Cursor cursor = sequence.append(new Entry<T>(key, value));
         index.put(key, cursor);
         return cursor;
     }
@@ -129,21 +129,38 @@ public class DurableEngine<T> extends Engine {
         submit(new Task<T>(sync) {
             @Override
             protected T execute() throws Throwable {
-                return sequence.get(index.get(key)).value();
+                Cursor cursor = index.get(key);
+                if (cursor == Cursor.NULL) return null;
+                return sequence.get(cursor).value();
             }
         });
         return sync.get();
     }
 
+    public void startAutoGarbageCollect() {
+        collector.start();
+    }
+
+    public void stopAutoGarbageCollect() {
+        collector.stop();
+    }
+
+    public Iterator<T> valueIterator() {
+        return new ValueIterator<T>(innerCollectable);
+    }
 
     private class InnerCollectable implements Collectable<Entry<T>> {
 
         @Override
-        public boolean get(final Cursor cursor, FutureCallback<Entry<T>> cursorFutureCallback) {
-            return submit(new Task<Entry<T>>(cursorFutureCallback) {
+        public boolean getAndNext(final Cursor cursor, FutureCallback<ValueAndNextCursor<Entry<T>>> cursorFutureCallback) {
+            return submit(new Task<ValueAndNextCursor<Entry<T>>>(cursorFutureCallback) {
                 @Override
-                protected Entry<T> execute() throws Throwable {
-                    return sequence.get(cursor);
+                protected ValueAndNextCursor<Entry<T>> execute() throws Throwable {
+                    Entry<T> entry = sequence.get(cursor);
+                    Cursor indexCursor = index.get(entry.key());
+                    Cursor next = cursor.forword(sequence.byteLengthOf(entry));
+                    if (cursor.equals(indexCursor)) return new ValueAndNextCursor<Entry<T>>(entry, next);
+                    return new ValueAndNextCursor<Entry<T>>(null, next);
                 }
             });
         }
@@ -156,16 +173,6 @@ public class DurableEngine<T> extends Engine {
                     return sequence.collect(begin, end);
                 }
             });
-        }
-
-        @Override
-        public boolean contains(Entry<T> object) {
-            return cache.get(object.key()) == null;
-        }
-
-        @Override
-        public Cursor calculateNextCursorBy(Cursor last, Entry<T> object) {
-            return last.forword(sequence.byteLengthOf(object));
         }
 
         @Override
@@ -188,13 +195,11 @@ public class DurableEngine<T> extends Engine {
                 if (checkpoint.canSave(sequence.tail())) { // clear applied pending pages
                     sequence.fixLastPage();
                     checkpoint.save(page.number(), sequence.tail());
+                    index.flush();
                     sequence.addNewPage();
 
                     for (; ; ) {
                         Page<Event> removed = pendingPages.remove();
-                        for (Event event : removed) {
-                            if (events.isAdd(event)) cache.weak(events.getKey(event));
-                        }
                         removed.clear();
                         if (removed == page) break;
                     }

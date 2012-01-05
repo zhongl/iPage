@@ -24,7 +24,7 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-final class EntryAccessor<V> implements Accessor<Entry<V>> {
+public final class EntryAccessor<V> implements Accessor<Entry<V>> {
 
     private final Accessor<V> vAccessor;
 

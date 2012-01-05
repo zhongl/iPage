@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -17,106 +17,103 @@
 package com.github.zhongl.kvengine;
 
 import com.github.zhongl.builder.*;
-import com.github.zhongl.engine.Engine;
+import com.github.zhongl.cache.Cache;
+import com.github.zhongl.cache.Durable;
+import com.github.zhongl.durable.Checkpoint;
+import com.github.zhongl.durable.DurableEngine;
+import com.github.zhongl.durable.Entry;
+import com.github.zhongl.durable.EntryAccessor;
 import com.github.zhongl.index.Index;
 import com.github.zhongl.index.Md5Key;
-import com.github.zhongl.ipage.Cursor;
-import com.github.zhongl.ipage.IPage;
-import com.github.zhongl.nio.Accessor;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import com.github.zhongl.journal.Journal;
+import com.github.zhongl.page.Accessor;
+import com.github.zhongl.sequence.Cursor;
+import com.github.zhongl.sequence.Sequence;
+import com.github.zhongl.sequence.SequenceLoader;
+import com.github.zhongl.sequence.UnderflowException;
 import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.File;
 import java.io.IOException;
-import java.util.concurrent.Callable;
-import java.util.concurrent.TimeUnit;
+import java.util.Iterator;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @ThreadSafe
-public class KVEngine<T> extends Engine implements AutoGarbageCollectable<Entry<T>> {
-    static final String IPAGE_DIR = "ipage";
-    static final String INDEX_DIR = "index";
+public class KVEngine<T> {
 
-    private static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
+    private final DurableEngine<T> durableEngine;
+    private final Cache<Md5Key, T> cache;
+    private final Journal journal;
+    private final Md5KeyEvents<T> events;
 
-    private final AutoGarbageCollector autoGarbageCollector = new AutoGarbageCollector(this);
-    private final DataIntegrity dataIntegrity;
-    private final Operation<T> operation;
-    private final boolean startAutoGarbageCollectOnStartup;
+    KVEngine(
+            File dir,
+            Accessor<T> vAccessor,
+            int flushCount,
+            long flushElapseMillisenconds,
+            long minimizeCollectLength,
+            boolean groupCommit,
+            int initialBucketSize,
+            int groupApplyLength,
+            int cacheCapacity,
+            long durationMilliseconds,
+            boolean autoStartGC
+    ) throws IOException {
 
-    KVEngine(int backlog,
-             File dir,
-             Accessor<T> valueAccessor,
-             long maxChunkIdleTimeMillis,
-             int maximizeChunkCapacity,
-             long minimzieCollectLength,
-             int initialBucketSize,
-             int flushCount,
-             long flushElapseMilliseconds,
-             boolean groupCommit,
-             boolean startAutoGarbageCollectOnStartup) throws IOException {
+        Accessor<Entry<T>> accessor = new EntryAccessor<T>(vAccessor);
+        events = new Md5KeyEvents<T>(vAccessor);
 
-        // TODO refactor this method
-        super(flushElapseMilliseconds / 2, DEFAULT_TIME_UNIT, backlog);
+        Checkpoint checkpoint = new Checkpoint(new File(dir, ".cp"), groupApplyLength);
+        Cursor lastSequenceTail = checkpoint.lastCursor();
 
-        this.startAutoGarbageCollectOnStartup = startAutoGarbageCollectOnStartup;
+        SequenceLoader<Entry<T>> loader = new SequenceLoader<Entry<T>>(new File(dir, "seq"), accessor, lastSequenceTail);
+        final Sequence<Entry<T>> sequence = new Sequence<Entry<T>>(loader, minimizeCollectLength);
 
+        Index index = new Index(new File(dir, "idx"), initialBucketSize);
 
-        boolean exists = dir.exists();
-        dir.mkdirs();
-        Preconditions.checkArgument(dir.isDirectory(), "%s should be a directory", dir);
-
-        final IPage<Entry<T>> iPage = IPage.<Entry<T>>baseOn(new File(dir, IPAGE_DIR))
-                                           .maxChunkIdleTimeMillis(maxChunkIdleTimeMillis)
-                .minimizeCollectLength(minimzieCollectLength)
-//                                           .accessor(new EntryAccessor<T>(valueAccessor))
-                .maximizeChunkCapacity(maximizeChunkCapacity)
-                .build();
-
-        final Index index = new Index(new File(dir, INDEX_DIR), initialBucketSize);
-
-        dataIntegrity = new DataIntegrity(dir);
-
-        if (exists && !dataIntegrity.validate()) new Recovery(index, iPage).run();
-
-        CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(flushCount, flushElapseMilliseconds, new Callable<Object>() {
-
+        index.validateOrRecoverBy(new com.github.zhongl.index.Validator() {
             @Override
-            public Object call() throws Exception {
-                iPage.flush();
-                index.flush();
-                return null;
+            public boolean validate(Md5Key key, Cursor cursor) throws IOException {
+                try {
+                    return sequence.get(cursor).key().equals(key);
+                } catch (UnderflowException e) {
+                    return false;
+                }
             }
         });
 
-        operation = new Operation<T>(iPage, index, groupCommit ? Group.newInstance() : Group.NULL, callByCountOrElapse);
+
+        durableEngine = new DurableEngine<T>(sequence, index, checkpoint, events, autoStartGC);
+        Durable<Md5Key, T> durable = new Durable<Md5Key, T>() {
+            @Override
+            public T load(Md5Key key) throws IOException, InterruptedException {
+                return durableEngine.load(key);
+            }
+        };
+
+        cache = new Cache<Md5Key, T>(events, durable, cacheCapacity, durationMilliseconds);
+
+        journal = new Journal(new File(dir, "jou"), events, durableEngine, cache, flushCount, flushElapseMillisenconds, groupCommit);
     }
 
-    @VisibleForTesting
-    KVEngine(long pollTimeout, int backlog, DataIntegrity dataIntegrity, Operation<T> operation) {
-        super(pollTimeout, DEFAULT_TIME_UNIT, backlog);
-        this.dataIntegrity = dataIntegrity;
-        this.operation = operation;
-        startAutoGarbageCollectOnStartup = false;
-    }
 
-    @Override
     public void startup() {
-        super.startup();
-        if (startAutoGarbageCollectOnStartup) autoGarbageCollector.start();
+        try {
+            durableEngine.startup();
+            journal.open();
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
-    @Override
     public void shutdown() {
-        autoGarbageCollector.stop();
-        super.shutdown();
         try {
-            operation.close();
-            dataIntegrity.safeClose();
+            journal.close();
+            durableEngine.shutdown();
+            cache.cleanUp();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new IllegalStateException(e);
         }
     }
 
@@ -126,66 +123,54 @@ public class KVEngine<T> extends Engine implements AutoGarbageCollectable<Entry<
         return builder;
     }
 
-    // TODO @Count monitor
-    // TODO @Elapse monitor
     public boolean put(Md5Key key, T value, FutureCallback<T> callback) {
-        return submit(operation.put(key, value, callback));
+        return journal.append(events.put(key, value, callback, cache.get(key)));
     }
 
     public boolean get(Md5Key key, FutureCallback<T> callback) {
-        return submit(operation.get(key, callback));
+        callback.onSuccess(cache.get(key));
+        return true;
     }
 
     public boolean remove(Md5Key key, FutureCallback<T> callback) {
-        return submit(operation.remove(key, callback));
+        return journal.append(events.remove(key, callback, cache.get(key)));
     }
 
-    @Override
-    public boolean next(Cursor<Entry<T>> cursor, FutureCallback<Cursor<Entry<T>>> callback) {
-        return submit(operation.next(cursor, callback));
-    }
+    public Iterator<T> valueIterator() { return durableEngine.valueIterator(); }
 
-    @Override
-    protected void hearbeat() { operation.tryGroupCommitByElapse(); }
+    public void startAutoGarbageCollect() { durableEngine.startAutoGarbageCollect(); }
 
-    @Override
-    public boolean garbageCollect(long begin, long end, FutureCallback<Long> longCallback) {
-        return submit(operation.garbageCollect(begin, end, longCallback));
-    }
-
-    public void startAutoGarbageCollect() { autoGarbageCollector.start(); }
-
-    public void stopAutoGarbageCollect() { autoGarbageCollector.stop(); }
+    public void stopAutoGarbageCollect() { durableEngine.stopAutoGarbageCollect(); }
 
     public static interface Builder<T> extends BuilderConvention {
 
-        @ArgumentIndex(0)
-        @DefaultValue("256")
-        @GreaterThan("0")
-        Builder<T> backlog(int value);
 
-        @ArgumentIndex(1)
+        @ArgumentIndex(0)
         @NotNull
         Builder<T> dir(File value);
 
-        @ArgumentIndex(2)
+        @ArgumentIndex(1)
         @NotNull
         Builder<T> valueAccessor(Accessor<T> value);
 
+        @ArgumentIndex(2)
+        @DefaultValue("10000")
+        @GreaterThan("0")
+        Builder<T> flushCount(int value);
+
         @ArgumentIndex(3)
-        @DefaultValue("4000")
-        @GreaterThanOrEqual("1000")
-        Builder<T> maxChunkIdleTimeMillis(long value);
+        @DefaultValue("1000")
+        @GreaterThan("0")
+        Builder<T> flushElapseMilliseconds(long value);
 
         @ArgumentIndex(4)
         @DefaultValue("67108864") // 64M
         @GreaterThanOrEqual("4096")
-        Builder<T> maximizeChunkCapacity(int value);
+        Builder<T> minimzieCollectLength(long value);
 
         @ArgumentIndex(5)
-        @DefaultValue("67108864") // 64M
-        @GreaterThanOrEqual("4096")
-        Builder<T> minimzieCollectLength(long value);
+        @DefaultValue("false")
+        Builder<T> groupCommit(boolean value);
 
         @ArgumentIndex(6)
         @DefaultValue("1024")
@@ -193,24 +178,25 @@ public class KVEngine<T> extends Engine implements AutoGarbageCollectable<Entry<
         Builder<T> initialBucketSize(int value);
 
         @ArgumentIndex(7)
-        @DefaultValue("10000")
-        @GreaterThan("0")
-        Builder<T> flushCount(int value);
+        @DefaultValue("67108864") // 64M
+        @GreaterThanOrEqual("4096")
+        Builder<T> groupApplyLength(int value);
 
         @ArgumentIndex(8)
-        @DefaultValue("1000")
+        @DefaultValue("5000")
         @GreaterThan("0")
-        Builder<T> flushElapseMilliseconds(long value);
+        Builder<T> cacheCapacity(int value);
 
         @ArgumentIndex(9)
-        @DefaultValue("false")
-        Builder<T> groupCommit(boolean value);
+        @DefaultValue("1000")
+        @GreaterThan("0")
+        Builder<T> durationMilliseconds(long value);
 
         @ArgumentIndex(10)
         @DefaultValue("false")
-        Builder<T> startAutoGarbageCollectOnStartup(boolean value);
+        Builder<T> autoStartGC(boolean value);
 
         KVEngine<T> build();
-
     }
+
 }

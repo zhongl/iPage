@@ -34,17 +34,16 @@ public class ValueIterator<T> extends AbstractIterator<T> {
     @Override
     protected T computeNext() {
         try {
-            if (cursor.isTail()) return endOfData();
-            Entry<T> entry = null;
-            do {
-                Sync<Entry<T>> callback = new Sync<Entry<T>>();
-                checkState(nextable.get(cursor, callback), "Too many tasks to submit.");
-                entry = callback.get();
-                cursor = nextable.calculateNextCursorBy(cursor, entry);
-            } while (!nextable.contains(entry));
-            return entry.value();
-        } catch (IllegalStateException e) {
-            throw e;
+            if (nextable.isTail(cursor)) return endOfData();
+            ValueAndNextCursor<Entry<T>> valueAndNextCursor;
+            for (; ; ) {
+                Sync<ValueAndNextCursor<Entry<T>>> callback = new Sync<ValueAndNextCursor<Entry<T>>>();
+                checkState(nextable.getAndNext(cursor, callback), "Too many tasks to submit.");
+                valueAndNextCursor = callback.get();
+                cursor = valueAndNextCursor.next();
+                Entry<T> entry = valueAndNextCursor.value();
+                if (entry != null) return entry.value();
+            }
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }

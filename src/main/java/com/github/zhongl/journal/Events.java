@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 zhongl
+ * Copyright 2012 zhongl
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -20,14 +20,9 @@ import com.github.zhongl.page.Accessor;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public interface Events<K, V> extends Accessor<Event> {
-    Event add(K key, V value);
-
-    Event delete(K key);
-
     K getKey(Event event);
 
     V getValue(Event event);
 
     boolean isAdd(Event event);
-
 }
