@@ -26,6 +26,7 @@ import com.github.zhongl.page.Accessor;
 import com.github.zhongl.util.FilesLoader;
 import com.github.zhongl.util.NumberNamedFilterAndComparator;
 import com.github.zhongl.util.Transformer;
+import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.File;
@@ -127,6 +128,7 @@ public class Journal {
             protected Void execute() throws Throwable {
                 currentEventPage.add(event);
                 if (!isGroupCommit()) cache.apply(event);
+                group.register(callback);
                 tryGroupCommitByCount();
                 return null;
             }
