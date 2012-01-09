@@ -92,6 +92,7 @@ public class KVEngineTest extends FileBase {
                         .groupCommit(false)
                         .flushElapseMilliseconds(10L)
                         .valueAccessor(Accessors.BYTES)
+                        .autoStartGC(true)
                         .build());
         engine.startup();
     }

@@ -156,6 +156,7 @@ public class DurableEngine<T> extends Engine {
             return submit(new Task<ValueAndNextCursor<Entry<T>>>(cursorFutureCallback) {
                 @Override
                 protected ValueAndNextCursor<Entry<T>> execute() throws Throwable {
+                    if (isTail(cursor)) return new ValueAndNextCursor<Entry<T>>(null, cursor);
                     Entry<T> entry = sequence.get(cursor);
                     Cursor indexCursor = index.get(entry.key());
                     Cursor next = cursor.forword(sequence.byteLengthOf(entry));
