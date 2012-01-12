@@ -19,9 +19,9 @@ package com.github.zhongl.journal1;
 import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertThat;
+import java.nio.ByteBuffer;
+
+import static org.mockito.Mockito.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class JournalTest extends FileBase {
@@ -30,27 +30,23 @@ public class JournalTest extends FileBase {
     public void normal() throws Exception {
         dir = testDir("normal");
 
-        EventLoader loader = null;
+        Journal journal = Journal.open(dir);
 
-        Journal journal = Journal.open(dir, loader);
+        byte[] bytes = "something".getBytes();
 
-        Event event = new MockEvent();
+        ByteBuffer buffer = ByteBuffer.wrap(bytes);
 
-        assertThat(journal.headEvent(), is(nullValue()));
+        journal.append(buffer);
 
-        journal.append(event);
+        ByteBufferHandler handler = mock(ByteBufferHandler.class);
 
-        assertThat(journal.headEvent(), is(event));
+        journal.applyTo(handler);
+        verify(handler, times(1)).handle(buffer);
 
-        journal.removeHeadEvent();
-
-        assertThat(journal.headEvent(), is(nullValue()));
+        journal.applyTo(handler);
+        verify(handler, times(1)).handle(buffer); // no buffer for applying
 
         journal.close();
-    }
-
-    static class MockEvent implements Event {
-
     }
 
     /*
@@ -62,14 +58,19 @@ public class JournalTest extends FileBase {
 
     {EEEEELEEEELLLLL}
 
-    Handler.hande(
+    Directory {
+        0, 1*PAGE_SIZE, 2*PAGE_SIZE, ..., n*PAGE_SIZE
+
+        |---------|---------|---------|---------|
+
+    }
 
     class Journal(Directory, EventAccessor){
         Cursor head
     }
 
     journal.append(event) {
-        lastPage.append(event)
+        tailPage = tailPage.append(event)
     }
 
     book.append(event)
@@ -79,7 +80,9 @@ public class JournalTest extends FileBase {
     }
 
     journal.applyBy(handler) throws Exception {
-        handler.handle(head())
+        handler.handle(headPage.head().event())
+        headPage = headPage.remove()
+        tailPage = tailPage.saveCheckpoint(headPage.head())
     }
 
     journal.close()

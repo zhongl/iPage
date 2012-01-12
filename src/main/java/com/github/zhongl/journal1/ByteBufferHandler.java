@@ -15,6 +15,10 @@
 
 package com.github.zhongl.journal1;
 
+import java.nio.ByteBuffer;
+
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface EventLoader {
+public interface ByteBufferHandler {
+
+    void handle(ByteBuffer buffer) throws Exception;
 }

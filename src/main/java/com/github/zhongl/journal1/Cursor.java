@@ -15,6 +15,9 @@
 
 package com.github.zhongl.journal1;
 
-/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface Event {}
+import java.nio.ByteBuffer;
 
+/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+interface Cursor {
+    ByteBuffer get();
+}

@@ -16,37 +16,43 @@
 package com.github.zhongl.journal1;
 
 
-import javax.annotation.concurrent.ThreadSafe;
+import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
-/**
- * A {@link com.github.zhongl.journal1.Journal} can have only one {@link com.github.zhongl.journal1.Event} consumer.
- *
- * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
- */
-@ThreadSafe
-public  class Journal implements Closeable {
+/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+@NotThreadSafe
+public class Journal implements Closeable {
 
-    public static Journal open(File dir, EventLoader loader) {
-        return null;  // TODO open
+    private volatile Page first;
+    private volatile Page last;
+
+    public Journal(Page first, Page last) {
+        this.first = first;
+        this.last = last;
     }
 
-    public void append(Event event) {
-        // TODO append
+    public static Journal open(File dir) {
+
+        Page tail = null;
+        Page head = null;
+        return new Journal(head, tail);
     }
 
-    public Event headEvent() {
-        return null;  // TODO headEvent
-    }
-
-    public void removeHeadEvent() {
-        // TODO removeHeadEvent
+    public void append(ByteBuffer buffer) throws IOException {
+        last = last.append(buffer);
     }
 
     @Override
     public void close() throws IOException {
         // TODO close
+    }
+
+    public void applyTo(ByteBufferHandler handler) throws Exception {
+        handler.handle(first.head().get());
+        first = first.remove();
+        last = last.saveCheckpoint(first.head());
     }
 }
