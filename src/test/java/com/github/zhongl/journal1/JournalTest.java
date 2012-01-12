@@ -1,5 +1,6 @@
 /*
  * Copyright 2012 zhongl
+ *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -54,31 +55,34 @@ public class JournalTest extends FileBase {
 
     /*
 
-    Event -> Entity
+    Event : {CRC32, Type, length, boby}
 
-    Handler
-
-    committer.commit(event)
-
-    Journal journal = new Journal(committer)
+    journal : {[Event|LastHead]...}
 
 
+    {EEEEELEEEELLLLL}
 
-    journal.append(event, callback)
+    Handler.hande(
 
-    journal.append(event) {
-        try{
-            event.writeTo(channel)
-            event.recorded()
-        } catch(Throwable t){
-            event.recordFailedBecauseOf(t)
-        }
-
+    class Journal(Directory, EventAccessor){
+        Cursor head
     }
 
-    Event event = journal.headEvent();
+    journal.append(event) {
+        lastPage.append(event)
+    }
 
-    journal.removeHeadEvent()
+    book.append(event)
+
+    page.append(event) {
+        event.writeTo(channel)
+    }
+
+    journal.applyBy(handler) throws Exception {
+        handler.handle(head())
+    }
+
+    journal.close()
 
     case Append_Event:
     case Delete_Event:
