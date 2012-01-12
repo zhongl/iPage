@@ -32,22 +32,29 @@ public class PageTest extends FileBase {
     private Page page;
 
     @Test
-    public void append() throws Exception {
-        dir = testDir("append");
+    public void main() throws Exception {
+        dir = testDir("main");
         file = new File(dir, "0");
         int capacity = Page.FLAG_CRC32_LENGTH + 2;
 
         page = new Page(file, capacity);
-        ByteBuffer buffer = ByteBuffer.wrap(new byte[1]);
+        ByteBuffer buffer = ByteBuffer.wrap(new byte[] {1});
 
-        assertThat(page.append(buffer), is(page));
+        assertThat(page.append(buffer.duplicate()), is(page));
 
-        Page newPage = page.append(buffer);
+        Page newPage = page.append(buffer.duplicate());
         assertThat(newPage, is(not(page)));
 
-        page = newPage;
-        newPage.append(buffer);
+        newPage.append(buffer.duplicate());
         assertThat(new File(dir, 2 * (Page.FLAG_CRC32_LENGTH + 1) + "").exists(), is(true));
+
+        Cursor cursor = page.head();
+        assertThat(cursor.get(), is(buffer));
+
+        assertThat(page.remove(), is(page));
+        assertThat(page.remove(), is(newPage));
+
+        newPage.close();
     }
 
     @Override
