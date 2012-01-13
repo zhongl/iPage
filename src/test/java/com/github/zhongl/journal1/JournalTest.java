@@ -30,7 +30,7 @@ public class JournalTest extends FileBase {
     public void normal() throws Exception {
         dir = testDir("normal");
 
-        Journal journal = Journal.open(dir);
+        Journal journal = Journal.open(dir, 10);
 
         byte[] bytes = "something".getBytes();
 

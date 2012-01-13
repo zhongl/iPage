@@ -47,7 +47,7 @@ class Packet {
     }
 
     public long checksum() {
-        return Checksums.checksum(body.duplicate());
+        return Checksums.checksum(body());
     }
 
     public int length() {

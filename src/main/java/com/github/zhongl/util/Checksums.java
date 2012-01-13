@@ -27,11 +27,7 @@ public class Checksums {
 
     public static long checksum(ByteBuffer buffer) {
         CRC32 crc32 = new CRC32();
-        if (buffer.isDirect()) {
-            while (buffer.hasRemaining()) crc32.update(buffer.get());
-        } else {
-            crc32.update(buffer.array());
-        }
+        while (buffer.hasRemaining()) crc32.update(buffer.get());
         return crc32.getValue();
     }
 }

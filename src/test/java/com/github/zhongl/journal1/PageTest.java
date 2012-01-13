@@ -17,6 +17,7 @@
 package com.github.zhongl.journal1;
 
 import com.github.zhongl.util.FileBase;
+import com.google.common.io.Files;
 import org.junit.Test;
 
 import java.io.EOFException;
@@ -56,7 +57,7 @@ public class PageTest extends FileBase {
 
         assertThat(page0.remove(), is(page0));
         // page2
-        Page page2 = page1.saveCheckpoint(cursor);
+        Page page2 = page1.saveCheckpoint(cursor.position());
         assertThat(page2, is(not(page1)));
 
         cursor = page0.head();
@@ -65,7 +66,7 @@ public class PageTest extends FileBase {
         assertThat(page0.remove(), is(page1));
         assertThat(page0File.exists(), is(false));
 
-        page2.saveCheckpoint(cursor);
+        page2.saveCheckpoint(cursor.position());
         File page2File = new File(dir, 63 + "");
         assertThat(page2File.exists(), is(true));
 
@@ -91,4 +92,40 @@ public class PageTest extends FileBase {
         page2.close();
     }
 
+    @Test
+    public void neitherRecoveryNorLastCheckpoint() throws Exception {
+        dir = testDir("neitherRecoveryNorLastCheckpoint");
+        file = new File(dir, "4096");
+        Page page = new Page(file, 4096);
+        page.append(ByteBuffer.wrap("something".getBytes()));
+        page.close();
+        page = new Page(file, 4096);
+        assertThat(page.recoverAndGetLastCheckpoint(), is(-1L));
+        page.close();
+    }
+
+    @Test
+    public void recoveryButNoLastCheckpoint() throws Exception {
+        dir = testDir("recoveryButNoLastCheckpoint");
+        file = new File(dir, "4096");
+        Files.write(new byte[1], file); // write broken data
+        Page page = new Page(file, 7);
+        assertThat(page.recoverAndGetLastCheckpoint(), is(-1L));
+        page.close();
+        assertThat(file.length(), is(0L));
+    }
+
+    @Test
+    public void getLastCheckpointButNoRecovery() throws Exception {
+        dir = testDir("getLastCheckpointButNoRecovery");
+        file = new File(dir, "4096");
+        Page page = new Page(file, 4096);
+        page.saveCheckpoint(16L);
+        page.saveCheckpoint(32L);
+        page.close();
+
+        page = new Page(file, 4096);
+        assertThat(page.recoverAndGetLastCheckpoint(), is(32L));
+        page.close();
+    }
 }

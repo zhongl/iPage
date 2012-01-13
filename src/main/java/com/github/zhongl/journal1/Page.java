@@ -29,7 +29,7 @@ class Page implements Closeable, Flushable {
     static final byte APPEND = (byte) 1;
     static final byte SAVING = (byte) 0;
 
-    static final int PAGE_SIZE = Integer.getInteger("ipage.read.page.size", 4096);
+    static final int READ_BUFFER_SIZE = Integer.getInteger("ipage.read.buffer.size", 4096);
 
     private final File file;
     private final int capacity;
@@ -54,13 +54,13 @@ class Page implements Closeable, Flushable {
         return append(new Packet(APPEND, buffer));
     }
 
-    public Page saveCheckpoint(Cursor cursor) throws IOException {
-        return append(new Packet(SAVING, ByteBuffer.wrap(Longs.toByteArray(cursor.position()))));
+    public Page saveCheckpoint(long position) throws IOException {
+        return append(new Packet(SAVING, ByteBuffer.wrap(Longs.toByteArray(position))));
     }
 
     public Cursor head() throws IOException {
         if (readPosition == writePosition) throw new EOFException();
-        if (head == null) head = readPacket();
+        if (head == null) head = readPacket(false);
         if (head.type() == SAVING) return new Cursor(ByteBuffer.wrap(new byte[0]), number + readPosition);
         if (head.type() == APPEND) return new Cursor(head.body(), number + readPosition);
         throw new IllegalStateException("Unknown page type.");
@@ -69,7 +69,7 @@ class Page implements Closeable, Flushable {
     public Page remove() throws IOException {
         if (readPosition == writePosition) throw new EOFException();
 
-        if (head == null) head = readPacket();
+        if (head == null) head = readPacket(false);
         readPosition += head.length() + Packet.FLAG_CRC32_LENGTH;
         head = null;
 
@@ -85,13 +85,18 @@ class Page implements Closeable, Flushable {
     private Page append(Packet packet) throws IOException {
         if (readonly) throw new IllegalStateException("Can't append to readonly page.");
         // TODO throw IllegalStateException if buffer size greater than capacity.
-        if (channel == null) channel = new RandomAccessFile(file, "rw").getChannel();
-        writePosition += channel.write(packet.toBuffer());
+        writePosition += channel().write(packet.toBuffer());
         return writePosition < capacity ? this : fixedAndGetNewPage();
     }
 
+    private FileChannel channel() throws FileNotFoundException {
+        if (channel == null)
+            channel = new RandomAccessFile(file, readonly ? "r" : "rw").getChannel();
+        return channel;
+    }
+
     private Page fixedAndGetNewPage() throws IOException {
-        channel.close();
+        close();
         channel = null;
         readonly = true;
         return new Page(nextFile(), capacity);
@@ -101,15 +106,14 @@ class Page implements Closeable, Flushable {
         return new File(file.getParentFile(), number + writePosition + "");
     }
 
-    private Packet readPacket() throws IOException {
-        if (channel == null) channel = new FileInputStream(file).getChannel();
+    private Packet readPacket(boolean validate) throws IOException {
         for (int i = 1; ; i++) {
-            channel.position(readPosition);
-            ByteBuffer buffer = ByteBuffer.allocate(PAGE_SIZE * i);
-            channel.read(buffer);
+            channel().position(readPosition);
+            ByteBuffer buffer = ByteBuffer.allocate(READ_BUFFER_SIZE * i);
+            channel().read(buffer);
             buffer.flip();
             try {
-                return Packet.readFrom(buffer, false);
+                return Packet.readFrom(buffer, validate);
             } catch (IllegalArgumentException ignored) {
                 // TODO auto resize allocating
             }
@@ -158,4 +162,19 @@ class Page implements Closeable, Flushable {
         channel = null;
     }
 
+    public long recoverAndGetLastCheckpoint() throws IOException {
+        long lastCheckpoint = -1L;
+        while (readPosition < writePosition) {
+            try {
+                Packet packet = readPacket(true);
+                if (packet.type() == SAVING) lastCheckpoint = packet.body().getLong(0);
+                readPosition += Packet.FLAG_CRC32_LENGTH + packet.length();
+            } catch (Exception e) {
+                channel.truncate(readPosition);
+                break;
+            }
+        }
+        readPosition = 0;
+        return lastCheckpoint;
+    }
 }
