@@ -1,5 +1,6 @@
 /*
  * Copyright 2012 zhongl
+ *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -38,21 +39,22 @@ public class PageTest extends FileBase {
         int capacity = Page.FLAG_CRC32_LENGTH + 2;
 
         page = new Page(file, capacity);
-        ByteBuffer buffer = ByteBuffer.wrap(new byte[] {1});
+        ByteBuffer event = ByteBuffer.wrap(new byte[] {1});
 
-        assertThat(page.append(buffer.duplicate()), is(page));
+        assertThat(page.append(event.duplicate()), is(page));
 
-        Page newPage = page.append(buffer.duplicate());
+        Page newPage = page.append(event.duplicate());
         assertThat(newPage, is(not(page)));
 
-        newPage.append(buffer.duplicate());
+        newPage.append(event.duplicate());
         assertThat(new File(dir, 2 * (Page.FLAG_CRC32_LENGTH + 1) + "").exists(), is(true));
 
         Cursor cursor = page.head();
-        assertThat(cursor.get(), is(buffer));
+        assertThat(cursor.get(), is(event));
 
         assertThat(page.remove(), is(page));
         assertThat(page.remove(), is(newPage));
+        assertThat(file.exists(), is(false));
 
         newPage.close();
     }

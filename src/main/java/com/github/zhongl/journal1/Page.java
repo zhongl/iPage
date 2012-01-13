@@ -1,5 +1,6 @@
 /*
  * Copyright 2012 zhongl
+ *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -47,12 +48,12 @@ class Page implements Closeable, Flushable {
         this.readPosition = 0;
     }
 
-    public Page append(ByteBuffer buffer) throws IOException {
+    public Page append(ByteBuffer event) throws IOException {
         if (readonly) throw new IllegalStateException("Can't append to readonly page.");
-        // TODO throw IllegalStateException if buffer size greater than capacity.
+        // TODO throw IllegalStateException if event size greater than capacity.
         if (channel == null) channel = new RandomAccessFile(file, "rw").getChannel();
 
-        writePosition += channel.write(wrap(buffer));
+        writePosition += channel.write(wrap(event));
 
         if (writePosition < capacity) return this;
 
@@ -113,8 +114,15 @@ class Page implements Closeable, Flushable {
         buffer.get(); // skip flag
         buffer.getLong(); // skip crc32
         readPosition += buffer.getInt() + FLAG_CRC32_LENGTH;
+
         if (readPosition < file.length()) return this;
-        if (readPosition == file.length()) return new Page(nextFile(), capacity);
+
+        if (readPosition == file.length()) {
+            close();
+            file.delete();
+            return new Page(nextFile(), capacity);
+        }
+
         throw new IllegalStateException("Forwarded read position should not greater than file length");
     }
 
