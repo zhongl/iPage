@@ -29,7 +29,7 @@ class Page implements Closeable, Flushable {
     static final byte APPEND = (byte) 1;
     static final byte SAVING = (byte) 0;
 
-    static final int PAGE_SIZE = Integer.getInteger("ipage.io.page.size", 4096);
+    static final int PAGE_SIZE = Integer.getInteger("ipage.read.page.size", 4096);
 
     private final File file;
     private final int capacity;
@@ -40,7 +40,6 @@ class Page implements Closeable, Flushable {
     private volatile int readPosition;
     private volatile boolean readonly;
     private volatile Packet head;
-
 
     public Page(File file, int capacity) {
         this.file = file;
