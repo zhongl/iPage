@@ -31,7 +31,6 @@ import static org.junit.Assert.fail;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class PageTest extends FileBase {
 
-
     @Test
     public void usage() throws Exception {
         dir = testDir("usage");

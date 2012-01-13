@@ -18,11 +18,13 @@ package com.github.zhongl.journal1;
 
 import com.google.common.primitives.Longs;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+@NotThreadSafe
 class Page implements Closeable, Flushable {
     static final byte APPEND = (byte) 1;
     static final byte SAVING = (byte) 0;
@@ -44,7 +46,6 @@ class Page implements Closeable, Flushable {
         this.file = file;
         this.capacity = capacity;
         this.number = Long.parseLong(this.file.getName());
-
         this.readonly = file.exists() && file.length() >= capacity;
         this.writePosition = (int) file.length();
         this.readPosition = 0;
@@ -58,13 +59,39 @@ class Page implements Closeable, Flushable {
         return append(new Packet(SAVING, ByteBuffer.wrap(Longs.toByteArray(cursor.position()))));
     }
 
+    public Cursor head() throws IOException {
+        if (readPosition == writePosition) throw new EOFException();
+        if (head == null) head = readPacket();
+        if (head.type() == SAVING) return new Cursor(ByteBuffer.wrap(new byte[0]), number + readPosition);
+        if (head.type() == APPEND) return new Cursor(head.body(), number + readPosition);
+        throw new IllegalStateException("Unknown page type.");
+    }
+
+    public Page remove() throws IOException {
+        if (readPosition == writePosition) throw new EOFException();
+
+        if (head == null) head = readPacket();
+        readPosition += head.length() + Packet.FLAG_CRC32_LENGTH;
+        head = null;
+
+        if (readPosition < writePosition) return this;
+
+        if (readPosition == writePosition) {
+            return readonly ? deleteAndGetNextPage() : this;
+        }
+
+        throw new IllegalStateException("Forwarded read position should not greater than file length");
+    }
+
     private Page append(Packet packet) throws IOException {
         if (readonly) throw new IllegalStateException("Can't append to readonly page.");
         // TODO throw IllegalStateException if buffer size greater than capacity.
         if (channel == null) channel = new RandomAccessFile(file, "rw").getChannel();
-
         writePosition += channel.write(packet.toBuffer());
-        if (writePosition < capacity) return this;
+        return writePosition < capacity ? this : fixedAndGetNewPage();
+    }
+
+    private Page fixedAndGetNewPage() throws IOException {
         channel.close();
         channel = null;
         readonly = true;
@@ -73,15 +100,6 @@ class Page implements Closeable, Flushable {
 
     private File nextFile() {
         return new File(file.getParentFile(), number + writePosition + "");
-    }
-
-    public Cursor head() throws IOException {
-        if (readPosition == writePosition) throw new EOFException();
-
-        if (head == null) head = readPacket();
-        if (head.type() == SAVING) return new Cursor(ByteBuffer.wrap(new byte[0]), number + readPosition);
-        if (head.type() == APPEND) return new Cursor(head.body(), number + readPosition);
-        throw new IllegalStateException("Unknown page type.");
     }
 
     private Packet readPacket() throws IOException {
@@ -99,23 +117,10 @@ class Page implements Closeable, Flushable {
         }
     }
 
-    public Page remove() throws IOException {
-        if (readPosition == writePosition) throw new EOFException();
-
-        if (head == null) head = readPacket();
-        readPosition += head.length() + Packet.FLAG_CRC32_LENGTH;
-        head = null;
-
-        if (readPosition < writePosition) return this;
-
-        if (readPosition == writePosition) {
-            if (!readonly) return this;
-            close();
-            file.delete();
-            return new Page(nextFile(), capacity);
-        }
-
-        throw new IllegalStateException("Forwarded read position should not greater than file length");
+    private Page deleteAndGetNextPage() throws IOException {
+        close();
+        file.delete();
+        return new Page(nextFile(), capacity);
     }
 
     @Override
