@@ -19,7 +19,6 @@ package com.github.zhongl.journal1;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.zip.CRC32;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class Page implements Closeable, Flushable {
@@ -50,39 +49,24 @@ class Page implements Closeable, Flushable {
         this.readPosition = 0;
     }
 
-    public Page append(ByteBuffer event) throws IOException {
+    public Page append(ByteBuffer buffer) throws IOException {
+        return append(Event.append(buffer));
+    }
+
+    public Page saveCheckpoint(Cursor cursor) throws IOException {
+        return append(Event.saveCheckpoint(cursor));
+    }
+
+    private Page append(Event event) throws IOException {
         if (readonly) throw new IllegalStateException("Can't append to readonly page.");
-        // TODO throw IllegalStateException if event size greater than capacity.
+        // TODO throw IllegalStateException if buffer size greater than capacity.
         if (channel == null) channel = new RandomAccessFile(file, "rw").getChannel();
-
-        writePosition += channel.write(wrap(event));
-
+        writePosition += event.writeTo(channel);
         if (writePosition < capacity) return this;
-
         channel.close();
         channel = null;
         readonly = true;
         return new Page(nextFile(), capacity);
-    }
-
-    private ByteBuffer wrap(ByteBuffer buffer) {
-        ByteBuffer wrapped = ByteBuffer.wrap(new byte[FLAG_CRC32_LENGTH + buffer.limit()]);
-        wrapped.put(APPEND);
-        wrapped.putLong(crc32(buffer.duplicate()));
-        wrapped.putInt(buffer.limit());
-        wrapped.put(buffer.duplicate());
-        wrapped.flip();
-        return wrapped;
-    }
-
-    private long crc32(ByteBuffer buffer) {
-        CRC32 crc32 = new CRC32();
-        if (buffer.isDirect()) {
-            while (buffer.hasRemaining()) crc32.update(buffer.get());
-        } else {
-            crc32.update(buffer.array());
-        }
-        return crc32.getValue();
     }
 
     private File nextFile() {
@@ -128,18 +112,6 @@ class Page implements Closeable, Flushable {
         }
 
         throw new IllegalStateException("Forwarded read position should not greater than file length");
-    }
-
-    public Page saveCheckpoint(Cursor cursor) throws IOException {
-        if (channel == null) channel = new RandomAccessFile(file, "rw").getChannel();
-
-        writePosition += cursor.writeTo(channel);
-        if (writePosition < capacity) return this;
-
-        channel.close();
-        channel = null;
-        readonly = true;
-        return new Page(nextFile(), capacity);
     }
 
     @Override
