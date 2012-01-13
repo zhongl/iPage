@@ -36,7 +36,7 @@ public class PageTest extends FileBase {
     public void usage() throws Exception {
         dir = testDir("usage");
         File page0File = new File(dir, "0");
-        int capacity = Page.FLAG_CRC32_LENGTH + 9;
+        int capacity = 22;
 
         // page0
         Page page0 = new Page(page0File, capacity);

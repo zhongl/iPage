@@ -16,6 +16,8 @@
 
 package com.github.zhongl.journal1;
 
+import com.google.common.primitives.Longs;
+
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -25,8 +27,6 @@ class Page implements Closeable, Flushable {
     static final byte APPEND = (byte) 1;
     static final byte SAVING = (byte) 0;
 
-    // flag(1) CRC32(8) length(4) bytes
-    static final int FLAG_CRC32_LENGTH = 1 + 8 + 4;
     static final int PAGE_SIZE = Integer.getInteger("ipage.io.page.size", 4096);
 
     private final File file;
@@ -37,6 +37,7 @@ class Page implements Closeable, Flushable {
     private volatile int writePosition;
     private volatile int readPosition;
     private volatile boolean readonly;
+    private volatile Packet head;
 
 
     public Page(File file, int capacity) {
@@ -50,18 +51,19 @@ class Page implements Closeable, Flushable {
     }
 
     public Page append(ByteBuffer buffer) throws IOException {
-        return append(Event.append(buffer));
+        return append(new Packet(APPEND, buffer));
     }
 
     public Page saveCheckpoint(Cursor cursor) throws IOException {
-        return append(Event.saveCheckpoint(cursor));
+        return append(new Packet(SAVING, ByteBuffer.wrap(Longs.toByteArray(cursor.position()))));
     }
 
-    private Page append(Event event) throws IOException {
+    private Page append(Packet packet) throws IOException {
         if (readonly) throw new IllegalStateException("Can't append to readonly page.");
         // TODO throw IllegalStateException if buffer size greater than capacity.
         if (channel == null) channel = new RandomAccessFile(file, "rw").getChannel();
-        writePosition += event.writeTo(channel);
+
+        writePosition += channel.write(packet.toBuffer());
         if (writePosition < capacity) return this;
         channel.close();
         channel = null;
@@ -75,32 +77,34 @@ class Page implements Closeable, Flushable {
 
     public Cursor head() throws IOException {
         if (readPosition == writePosition) throw new EOFException();
-        if (channel == null) channel = new FileInputStream(file).getChannel();
 
-        channel.position(readPosition);
-        ByteBuffer buffer = read(PAGE_SIZE);
-        byte flag = buffer.get();
-        if (flag == SAVING) return new Cursor(ByteBuffer.wrap(new byte[0]), number + readPosition);
-        if (flag == APPEND) return new Cursor(get(buffer), number + readPosition);
-        throw new IllegalStateException("Unknown page flag.");
+        if (head == null) head = readPacket();
+        if (head.type() == SAVING) return new Cursor(ByteBuffer.wrap(new byte[0]), number + readPosition);
+        if (head.type() == APPEND) return new Cursor(head.body(), number + readPosition);
+        throw new IllegalStateException("Unknown page type.");
     }
 
-    private ByteBuffer read(int size) throws IOException {
-        ByteBuffer buffer = ByteBuffer.allocate(size);
-        channel.read(buffer);
-        buffer.flip();
-        return buffer;
+    private Packet readPacket() throws IOException {
+        if (channel == null) channel = new FileInputStream(file).getChannel();
+        for (int i = 1; ; i++) {
+            channel.position(readPosition);
+            ByteBuffer buffer = ByteBuffer.allocate(PAGE_SIZE * i);
+            channel.read(buffer);
+            buffer.flip();
+            try {
+                return Packet.readFrom(buffer, false);
+            } catch (IllegalArgumentException ignored) {
+                // TODO auto resize allocating
+            }
+        }
     }
 
     public Page remove() throws IOException {
         if (readPosition == writePosition) throw new EOFException();
 
-        if (channel == null) channel = new FileInputStream(file).getChannel();
-        channel.position(readPosition);
-        ByteBuffer buffer = read(PAGE_SIZE);
-        buffer.get(); // skip flag
-        buffer.getLong(); // skip crc32
-        readPosition += buffer.getInt() + FLAG_CRC32_LENGTH;
+        if (head == null) head = readPacket();
+        readPosition += head.length() + Packet.FLAG_CRC32_LENGTH;
+        head = null;
 
         if (readPosition < writePosition) return this;
 
@@ -148,22 +152,6 @@ class Page implements Closeable, Flushable {
         if (channel == null) return;
         channel.close();
         channel = null;
-    }
-
-    private ByteBuffer get(ByteBuffer buffer) throws IOException {
-        buffer.getLong(); // skip crc32
-        int length = buffer.getInt();
-        if (length <= buffer.remaining()) {
-            buffer.limit(buffer.position() + length);
-            return buffer.slice();
-        }
-        if (length > buffer.remaining() && buffer.limit() == buffer.capacity()) {
-            int more = length - buffer.remaining();
-            ByteBuffer result = ByteBuffer.allocate(length);
-            result.put(buffer).put(read(more));
-            return result;
-        }
-        throw new IllegalStateException("Invalid length while reading page.");
     }
 
 }

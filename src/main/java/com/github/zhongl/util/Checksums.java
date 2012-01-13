@@ -1,0 +1,37 @@
+/*
+ * Copyright 2012 zhongl
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
+package com.github.zhongl.util;
+
+import java.nio.ByteBuffer;
+import java.util.zip.CRC32;
+
+/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+public class Checksums {
+    public static void validate(ByteBuffer buffer, long checksum) {
+        if (checksum(buffer) != checksum) throw new IllegalStateException("Invalid buffer content.");
+    }
+
+    public static long checksum(ByteBuffer buffer) {
+        CRC32 crc32 = new CRC32();
+        if (buffer.isDirect()) {
+            while (buffer.hasRemaining()) crc32.update(buffer.get());
+        } else {
+            crc32.update(buffer.array());
+        }
+        return crc32.getValue();
+    }
+}
