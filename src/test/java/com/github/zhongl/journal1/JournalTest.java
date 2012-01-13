@@ -19,6 +19,7 @@ package com.github.zhongl.journal1;
 import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 
+import java.io.File;
 import java.nio.ByteBuffer;
 
 import static org.mockito.Mockito.*;
@@ -27,10 +28,10 @@ import static org.mockito.Mockito.*;
 public class JournalTest extends FileBase {
 
     @Test
-    public void normal() throws Exception {
-        dir = testDir("normal");
+    public void usage() throws Exception {
+        dir = testDir("usage");
 
-        Journal journal = Journal.open(dir, 10);
+        Journal journal = Journal.open(dir, 4096);
 
         byte[] bytes = "something".getBytes();
 
@@ -46,51 +47,65 @@ public class JournalTest extends FileBase {
         journal.applyTo(handler);
         verify(handler, times(1)).handle(buffer); // no buffer for applying
 
+        journal.applyTo(handler);
+        verify(handler, times(1)).handle(buffer); // ignore eof
+
         journal.close();
     }
 
-    /*
+    @Test
+    public void loadOnePage() throws Exception {
+        dir = testDir("loadOnePage");
 
-    Event : {CRC32, Type, length, boby}
+        int capacity = 4096;
+        Page page = new Page(new File(dir, "0"), capacity);
 
-    journal : {[Event|LastHead]...}
+        ByteBuffer buffer0 = ByteBuffer.wrap("0".getBytes());
+        page.append(buffer0);
+        ByteBuffer buffer1 = ByteBuffer.wrap("1".getBytes());
+        page.append(buffer1);
 
+        Cursor head = page.head();
+        page.remove();
+        page.saveCheckpoint(head.position());
+        page.close();
 
-    {EEEEELEEEELLLLL}
+        Journal journal = Journal.open(dir, capacity);
 
-    Directory {
-        0, 1*PAGE_SIZE, 2*PAGE_SIZE, ..., n*PAGE_SIZE
+        ByteBufferHandler handler = mock(ByteBufferHandler.class);
+        journal.applyTo(handler);
+        verify(handler, times(1)).handle(buffer1);
 
-        |---------|---------|---------|---------|
-
+        journal.close();
     }
 
-    class Journal(Directory, EventAccessor){
-        Cursor head
+    @Test
+    public void loadFullPageAndEmptyPage() throws Exception {
+        dir = testDir("loadFullPageAndEmptyPage");
+
+        int capacity = 45;
+        Page page = new Page(new File(dir, "0"), capacity);
+
+        ByteBuffer buffer0 = ByteBuffer.wrap("0".getBytes());
+        page.append(buffer0);
+        ByteBuffer buffer1 = ByteBuffer.wrap("1".getBytes());
+        page.append(buffer1);
+
+        Cursor head = page.head();
+        page.remove();
+        page.saveCheckpoint(head.position());
+
+        page.close();
+
+        new File(dir, "49").createNewFile();
+
+        Journal journal = Journal.open(dir, capacity);
+
+        ByteBufferHandler handler = mock(ByteBufferHandler.class);
+        journal.applyTo(handler);
+        verify(handler, times(1)).handle(buffer1);
+
+        journal.close();
     }
-
-    journal.append(event) {
-        tailPage = tailPage.append(event)
-    }
-
-    book.append(event)
-
-    page.append(event) {
-        event.writeTo(channel)
-    }
-
-    journal.applyBy(handler) throws Exception {
-        handler.handle(headPage.head().event())
-        headPage = headPage.remove()
-        tailPage = tailPage.saveCheckpoint(headPage.head())
-    }
-
-    journal.close()
-
-    case Append_Event:
-    case Delete_Event:
-
-
-    */
 
 }

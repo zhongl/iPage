@@ -121,9 +121,13 @@ class Page implements Closeable, Flushable {
     }
 
     private Page deleteAndGetNextPage() throws IOException {
+        delete();
+        return new Page(nextFile(), capacity);
+    }
+
+    public void delete() throws IOException {
         close();
         file.delete();
-        return new Page(nextFile(), capacity);
     }
 
     @Override
@@ -176,5 +180,19 @@ class Page implements Closeable, Flushable {
         }
         readPosition = 0;
         return lastCheckpoint;
+    }
+
+    public long number() {
+        return number;
+    }
+
+    public void setHead(long position) {
+        readPosition = (int) (position - number());
+    }
+
+    public int compareTo(long position) {
+        if (position < number()) return 1;
+        if (position >= number() + writePosition) return -1;
+        return 0;
     }
 }

@@ -23,6 +23,7 @@ import com.github.zhongl.util.Transformer;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -40,19 +41,43 @@ public class Journal implements Closeable {
         this.last = last;
     }
 
-    public static Journal open(File dir, final int pageCapacity) throws IOException {
-        LinkedList<Page> pages = new FilesLoader<Page>(dir, new NumberNamedFilterAndComparator(), new Transformer<Page>() {
-            @Override
-            public Page transform(File file, boolean last) throws IOException {
-                return new Page(file, pageCapacity);
-            }
-        }).loadTo(new LinkedList<Page>());
+    public Journal(Page page) {
+        this(page, page);
+    }
 
-        Page last = pages.getLast();
-        long position = last.recoverAndGetLastCheckpoint();
-        Page tail = null;
-        Page head = null;
-        return new Journal(head, last);
+    public static Journal open(File dir, final int pageCapacity) throws IOException {
+        LinkedList<Page> pages = new FilesLoader<Page>(
+                dir,
+                new NumberNamedFilterAndComparator(),
+                new Transformer<Page>() {
+
+                    @Override
+                    public Page transform(File file, boolean last) throws IOException {
+                        return new Page(file, pageCapacity);
+                    }
+                }).loadTo(new LinkedList<Page>());
+
+        if (pages.isEmpty()) return new Journal(new Page(new File(dir, "0"), pageCapacity));
+
+        long lastCheckpoint = lastCheckpointOf(pages);
+
+        Page first = pages.get(pageIndex(lastCheckpoint, pages));
+        first.setHead(lastCheckpoint);
+        first.remove();
+        return new Journal(first, pages.getLast());
+    }
+
+    private static long lastCheckpointOf(LinkedList<Page> pages) throws IOException {
+        long lastCheckpoint = 0L;
+        for (int i = pages.size() - 1; i >= 0; i--) {
+            Page page = pages.get(i);
+            long checkpoint = page.recoverAndGetLastCheckpoint();
+            if (checkpoint >= 0) {
+                lastCheckpoint = checkpoint;
+                break;
+            }
+        }
+        return lastCheckpoint;
     }
 
     public void append(ByteBuffer buffer) throws IOException {
@@ -66,8 +91,25 @@ public class Journal implements Closeable {
     }
 
     public void applyTo(ByteBufferHandler handler) throws Exception {
-        handler.handle(first.head().get());
-        first = first.remove();
-        last = last.saveCheckpoint(first.head().position());
+        try {
+            Cursor head = first.head();
+            handler.handle(head.get());
+            first = first.remove();
+            if (head.get().limit() > 0)
+                last = last.saveCheckpoint(head.position());
+        } catch (EOFException ignored) { }
+    }
+
+    private static int pageIndex(long position, LinkedList<Page> pages) {
+        int low = 0, high = pages.size() - 1;
+        while (low <= high) { // binary search
+            int mid = (low + high) >>> 1;
+
+            int cmp = pages.get(mid).compareTo(position);
+            if (cmp < 0) low = mid + 1;
+            else if (cmp > 0) high = mid - 1;
+            else return mid;
+        }
+        return -(low + 1);
     }
 }
