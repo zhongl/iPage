@@ -17,52 +17,79 @@
 package com.github.zhongl.journal1;
 
 import com.github.zhongl.util.FileBase;
-import org.junit.After;
 import org.junit.Test;
 
+import java.io.EOFException;
 import java.io.File;
 import java.nio.ByteBuffer;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class PageTest extends FileBase {
 
-    private Page page;
 
     @Test
-    public void main() throws Exception {
-        dir = testDir("main");
-        file = new File(dir, "0");
-        int capacity = Page.FLAG_CRC32_LENGTH + 2;
+    public void usage() throws Exception {
+        dir = testDir("usage");
+        File page0File = new File(dir, "0");
+        int capacity = Page.FLAG_CRC32_LENGTH + 9;
 
-        page = new Page(file, capacity);
+        // page0
+        Page page0 = new Page(page0File, capacity);
         ByteBuffer event = ByteBuffer.wrap(new byte[] {1});
 
-        assertThat(page.append(event.duplicate()), is(page));
+        assertThat(page0.append(event.duplicate()), is(page0));
 
-        Page newPage = page.append(event.duplicate());
-        assertThat(newPage, is(not(page)));
+        // page1
+        Page page1 = page0.append(event.duplicate());
+        assertThat(page1, is(not(page0)));
 
-        newPage.append(event.duplicate());
-        assertThat(new File(dir, 2 * (Page.FLAG_CRC32_LENGTH + 1) + "").exists(), is(true));
+        page1.append(event.duplicate());
+        File page1File = new File(dir, 28 + "");
+        assertThat(page1File.exists(), is(true));
 
-        Cursor cursor = page.head();
+        Cursor cursor = page0.head();
         assertThat(cursor.get(), is(event));
 
-        assertThat(page.remove(), is(page));
-        assertThat(page.remove(), is(newPage));
-        assertThat(file.exists(), is(false));
+        assertThat(page0.remove(), is(page0));
+        // page2
+        Page page2 = page1.saveCheckpoint(cursor);
+        assertThat(page2, is(not(page1)));
 
-        newPage.close();
+        cursor = page0.head();
+        assertThat(cursor.get(), is(event));
+
+        assertThat(page0.remove(), is(page1));
+        assertThat(page0File.exists(), is(false));
+
+        page2.saveCheckpoint(cursor);
+        File page2File = new File(dir, 63 + "");
+        assertThat(page2File.exists(), is(true));
+
+        cursor = page1.head();
+        assertThat(cursor.get(), is(event));
+        assertThat(page1.remove(), is(page1));
+
+        cursor = page1.head();
+        assertThat(cursor.get(), is(ByteBuffer.wrap(new byte[0]))); // assert cursor skip checkpoint
+
+        assertThat(page1.remove(), is(page2));
+        assertThat(page1File.exists(), is(false));
+
+        cursor = page2.head();
+        assertThat(cursor.get(), is(ByteBuffer.wrap(new byte[0]))); // assert cursor skip checkpoint
+        assertThat(page2.remove(), is(page2));
+
+        try {
+            page2.head();
+            fail("Should EOF.");
+        } catch (EOFException e) { }
+
+        page2.close();
     }
 
-    @Override
-    @After
-    public void tearDown() throws Exception {
-        if (page != null) page.close();
-        super.tearDown();
-    }
 }

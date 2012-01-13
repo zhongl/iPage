@@ -32,17 +32,19 @@ class Page implements Closeable, Flushable {
 
     private final File file;
     private final int capacity;
-    private final boolean readonly;
     private final long number;
 
     private volatile FileChannel channel;
     private volatile int writePosition;
     private volatile int readPosition;
+    private volatile boolean readonly;
+
 
     public Page(File file, int capacity) {
         this.file = file;
         this.capacity = capacity;
         this.number = Long.parseLong(this.file.getName());
+
         this.readonly = file.exists() && file.length() >= capacity;
         this.writePosition = (int) file.length();
         this.readPosition = 0;
@@ -59,6 +61,7 @@ class Page implements Closeable, Flushable {
 
         channel.close();
         channel = null;
+        readonly = true;
         return new Page(nextFile(), capacity);
     }
 
@@ -87,18 +90,15 @@ class Page implements Closeable, Flushable {
     }
 
     public Cursor head() throws IOException {
+        if (readPosition == writePosition) throw new EOFException();
         if (channel == null) channel = new FileInputStream(file).getChannel();
-        for (; ; ) {
-            channel.position(readPosition);
-            ByteBuffer buffer = read(PAGE_SIZE);
-            byte flag = buffer.get();
-            if (flag == SAVING) {
-                skip(buffer);
-                continue;
-            }
-            if (flag == APPEND) return new Cursor(get(buffer), number + readPosition);
-            throw new IllegalStateException("Unknown page flag.");
-        }
+
+        channel.position(readPosition);
+        ByteBuffer buffer = read(PAGE_SIZE);
+        byte flag = buffer.get();
+        if (flag == SAVING) return new Cursor(ByteBuffer.wrap(new byte[0]), number + readPosition);
+        if (flag == APPEND) return new Cursor(get(buffer), number + readPosition);
+        throw new IllegalStateException("Unknown page flag.");
     }
 
     private ByteBuffer read(int size) throws IOException {
@@ -109,15 +109,19 @@ class Page implements Closeable, Flushable {
     }
 
     public Page remove() throws IOException {
+        if (readPosition == writePosition) throw new EOFException();
+
+        if (channel == null) channel = new FileInputStream(file).getChannel();
         channel.position(readPosition);
         ByteBuffer buffer = read(PAGE_SIZE);
         buffer.get(); // skip flag
         buffer.getLong(); // skip crc32
         readPosition += buffer.getInt() + FLAG_CRC32_LENGTH;
 
-        if (readPosition < file.length()) return this;
+        if (readPosition < writePosition) return this;
 
-        if (readPosition == file.length()) {
+        if (readPosition == writePosition) {
+            if (!readonly) return this;
             close();
             file.delete();
             return new Page(nextFile(), capacity);
@@ -134,6 +138,7 @@ class Page implements Closeable, Flushable {
 
         channel.close();
         channel = null;
+        readonly = true;
         return new Page(nextFile(), capacity);
     }
 
@@ -151,6 +156,17 @@ class Page implements Closeable, Flushable {
     }
 
     @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder();
+        sb.append("Page");
+        sb.append("{file=").append(file);
+        sb.append(", writePosition=").append(writePosition);
+        sb.append(", readPosition=").append(readPosition);
+        sb.append('}');
+        return sb.toString();
+    }
+
+    @Override
     public void flush() throws IOException {
         if (channel != null) channel.force(false);
     }
@@ -160,11 +176,6 @@ class Page implements Closeable, Flushable {
         if (channel == null) return;
         channel.close();
         channel = null;
-    }
-
-    private void skip(ByteBuffer buffer) {
-        buffer.getLong(); // skip crc32
-        readPosition += buffer.getInt() + FLAG_CRC32_LENGTH;
     }
 
     private ByteBuffer get(ByteBuffer buffer) throws IOException {
