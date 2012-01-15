@@ -17,7 +17,6 @@
 package com.github.zhongl.kvengine;
 
 import com.github.zhongl.nio.CommonAccessors;
-import com.github.zhongl.index.Md5Key;
 import com.github.zhongl.util.FileBase;
 import org.junit.After;
 import org.junit.Test;
@@ -32,7 +31,7 @@ import static org.junit.Assert.assertThat;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class KVEngineTest extends FileBase {
 
-    protected BlockingKVEngine<byte[]> engine;
+    protected BlockingKVEngine engine;
 
     @Test
     public void putAndGetAndRemove() throws Exception {
@@ -60,7 +59,13 @@ public class KVEngineTest extends FileBase {
     public void iterator() throws Exception {
         dir = testDir("valueIterator");
 
-        newEngineAndStartup();
+        engine = new BlockingKVEngine(
+                KVEngine.baseOn(dir)
+                        .groupCommit(true)
+                        .flushElapseMilliseconds(10L)
+                        .valueAccessor(CommonAccessors.BYTES)
+                        .build());
+        engine.startup();
 
         byte[] value0 = "value0".getBytes();
         engine.put(Md5Key.generate(value0), value0);
@@ -71,23 +76,24 @@ public class KVEngineTest extends FileBase {
 
 
         byte[] value3 = "value3".getBytes();
-        assertThat(engine.put(Md5Key.generate(value0), value3),is(value0));
+        assertThat(engine.put(Md5Key.generate(value0), value3), is(value0));
         engine.remove(Md5Key.generate(value1));
 
         Iterator<byte[]> iterator = engine.valueIterator();
-        assertThat(iterator.next(), is(value2));
         assertThat(iterator.next(), is(value3));
+        assertThat(iterator.next(), is(value2));
         assertThat(iterator.hasNext(), is(false));
     }
 
     @After
     public void tearDown() throws Exception {
+        super.tearDown();
         if (engine != null) engine.shutdown();
     }
 
     private void newEngineAndStartup() throws IOException {
-        engine = new BlockingKVEngine<byte[]>(
-                KVEngine.<byte[]>baseOn(dir)
+        engine = new BlockingKVEngine(
+                KVEngine.baseOn(dir)
                         .groupCommit(false)
                         .flushElapseMilliseconds(10L)
                         .valueAccessor(CommonAccessors.BYTES)

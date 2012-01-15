@@ -16,38 +16,38 @@
 
 package com.github.zhongl.kvengine;
 
-import com.github.zhongl.nio.Accessor;
 import com.github.zhongl.builder.*;
-import com.github.zhongl.index.Index;
-import com.github.zhongl.index.Md5Key;
-import com.github.zhongl.ipage.Cursor;
-import com.github.zhongl.ipage.IPage;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import com.github.zhongl.nio.Accessor;
 import com.google.common.util.concurrent.FutureCallback;
+import org.iq80.leveldb.*;
+import org.iq80.leveldb.impl.Iq80DBFactory;
+import org.iq80.leveldb.impl.WriteBatchImpl;
+import org.iq80.leveldb.util.Slice;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @ThreadSafe
-public class KVEngine<T> extends Engine implements AutoGarbageCollectable<Entry<T>> {
-    static final String IPAGE_DIR = "ipage";
-    static final String INDEX_DIR = "index";
+public class KVEngine extends Engine {
 
     private static final TimeUnit DEFAULT_TIME_UNIT = TimeUnit.MILLISECONDS;
 
-    private final AutoGarbageCollector autoGarbageCollector = new AutoGarbageCollector(this);
-    private final DataIntegrity dataIntegrity;
-    private final Operation<T> operation;
-    private final boolean startAutoGarbageCollectOnStartup;
+    private final DB db;
+    private final Group group;
+    private final CallByCountOrElapse callByCountOrElapse;
+    private final Map<byte[], byte[]> cache;
+    private volatile WriteBatch writeBatch;
 
     KVEngine(int backlog,
              File dir,
-             Accessor<T> valueAccessor,
+             Accessor<?> valueAccessor,
              long maxChunkIdleTimeMillis,
              int maximizeChunkCapacity,
              long minimzieCollectLength,
@@ -57,159 +57,195 @@ public class KVEngine<T> extends Engine implements AutoGarbageCollectable<Entry<
              boolean groupCommit,
              boolean startAutoGarbageCollectOnStartup) {
 
-        // TODO refactor this method
         super(flushElapseMilliseconds / 2, DEFAULT_TIME_UNIT, backlog);
 
-        this.startAutoGarbageCollectOnStartup = startAutoGarbageCollectOnStartup;
-
-
-        boolean exists = dir.exists();
-        dir.mkdirs();
-        Preconditions.checkArgument(dir.isDirectory(), "%s should be a directory", dir);
-
-        final IPage<Entry<T>> iPage = IPage.<Entry<T>>baseOn(new File(dir, IPAGE_DIR))
-                .maxChunkIdleTimeMillis(maxChunkIdleTimeMillis)
-                .minimizeCollectLength(minimzieCollectLength)
-                .accessor(new EntryAccessor<T>(valueAccessor))
-                .maximizeChunkCapacity(maximizeChunkCapacity)
-                .build();
-
-        final Index index = Index.baseOn(new File(dir, INDEX_DIR)).initialBucketSize(initialBucketSize).build();
-
-        dataIntegrity = new DataIntegrity(dir);
-
-        if (exists && !dataIntegrity.validate()) new Recovery(index, iPage).run();
-
-        CallByCountOrElapse callByCountOrElapse = new CallByCountOrElapse(flushCount, flushElapseMilliseconds, new Callable<Object>() {
-
+        Options option = new Options();
+        cache = new ConcurrentHashMap<byte[], byte[]>();
+        try {
+            db = new Iq80DBFactory().open(dir, option);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        group = groupCommit ? Group.newInstance() : Group.NULL;
+        callByCountOrElapse = new CallByCountOrElapse(flushCount, flushElapseMilliseconds, new Callable<Object>() {
             @Override
             public Object call() throws Exception {
-                iPage.flush();
-                index.flush();
-                return null;
+                db.write(writeBatch, new WriteOptions().sync(true));
+
+                ((WriteBatchImpl) writeBatch).forEach(new WriteBatchImpl.Handler() {
+                    @Override
+                    public void put(Slice key, Slice value) {
+                        cache.remove(key.getBytes());
+                    }
+
+                    @Override
+                    public void delete(Slice key) { }
+                });
+
+                writeBatch = db.createWriteBatch();
+
+                return null;  // TODO call
             }
         });
-
-        operation = new Operation<T>(iPage, index, groupCommit ? Group.newInstance() : Group.NULL, callByCountOrElapse);
-    }
-
-    @VisibleForTesting
-    KVEngine(long pollTimeout, int backlog, DataIntegrity dataIntegrity, Operation<T> operation) {
-        super(pollTimeout, DEFAULT_TIME_UNIT, backlog);
-        this.dataIntegrity = dataIntegrity;
-        this.operation = operation;
-        startAutoGarbageCollectOnStartup = false;
+        writeBatch = db.createWriteBatch();
     }
 
     @Override
     public void startup() {
         super.startup();
-        if (startAutoGarbageCollectOnStartup) autoGarbageCollector.start();
     }
 
     @Override
     public void shutdown() throws InterruptedException {
-        autoGarbageCollector.stop();
         super.shutdown();
+        cache.clear();
+        db.close();
+    }
+
+    private void tryGroupCommitByElapse() {
         try {
-            operation.close();
-            dataIntegrity.safeClose();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            if (callByCountOrElapse.tryCallByElapse()) group.commit();
+        } catch (Throwable t) {
+            group.rollback(t);
+            t.printStackTrace();  // TODO log
         }
     }
 
-    public static <T> Builder<T> baseOn(File dir) {
-        Builder<T> builder = Builders.newInstanceOf(Builder.class);
+    private void tryGroupCommitByCount() {
+        try {
+            if (callByCountOrElapse.tryCallByCount()) group.commit();
+        } catch (Throwable t) {
+            group.rollback(t);
+            t.printStackTrace();  // TODO log
+        }
+    }
+
+    public static Builder baseOn(File dir) {
+        Builder builder = Builders.newInstanceOf(Builder.class);
         builder.dir(dir);
         return builder;
     }
 
     // TODO @Count monitor
     // TODO @Elapse monitor
-    public boolean put(Md5Key key, T value, FutureCallback<T> callback) {
-        return submit(operation.put(key, value, callback));
+    public boolean put(final Md5Key key, final byte[] value, FutureCallback<byte[]> callback) {
+        return submit(new Task<byte[]>(group.decorate(callback)) {
+            @Override
+            protected byte[] execute() throws Throwable {
+                group.register(callback);
+                byte[] prevalue = get(key);
+                cache.put(key.toBytes(), value);
+                writeBatch.put(key.toBytes(), value);
+                tryGroupCommitByCount();
+                return prevalue;
+            }
+        });
     }
 
-    public boolean get(Md5Key key, FutureCallback<T> callback) {
-        return submit(operation.get(key, callback));
+    public boolean get(final Md5Key key, FutureCallback<byte[]> callback) {
+        return submit(new Task<byte[]>(callback) {
+            @Override
+            protected byte[] execute() throws Throwable {
+                return get(key);
+            }
+        });
     }
 
-    public boolean remove(Md5Key key, FutureCallback<T> callback) {
-        return submit(operation.remove(key, callback));
+    private byte[] get(Md5Key key) {
+        byte[] value = cache.get(key.toBytes());
+        if (value != null) return value;
+        return db.get(key.toBytes());
+    }
+
+    public boolean remove(final Md5Key key, FutureCallback<byte[]> callback) {
+        return submit(new Task<byte[]>(group.decorate(callback)) {
+            @Override
+            protected byte[] execute() throws Throwable {
+                group.register(callback);
+                byte[] value = get(key);
+                cache.remove(key.toBytes());
+                writeBatch.delete(key.toBytes());
+                tryGroupCommitByCount();
+                return value;
+            }
+        });
     }
 
     @Override
-    public boolean next(Cursor<Entry<T>> cursor, FutureCallback<Cursor<Entry<T>>> callback) {
-        return submit(operation.next(cursor, callback));
+    protected void hearbeat() { tryGroupCommitByElapse(); }
+
+    public synchronized Iterator<byte[]> iterator() {
+        final DBIterator iterator = db.iterator();
+        return new Iterator<byte[]>() {
+            @Override
+            public boolean hasNext() {
+                return iterator.hasNext();
+            }
+
+            @Override
+            public byte[] next() {
+                return iterator.next().getValue();
+            }
+
+            @Override
+            public void remove() { }
+        };
     }
 
-    @Override
-    protected void hearbeat() { operation.tryGroupCommitByElapse(); }
-
-    @Override
-    public boolean garbageCollect(long begin, long end, FutureCallback<Long> longCallback) {
-        return submit(operation.garbageCollect(begin, end, longCallback));
-    }
-
-    public void startAutoGarbageCollect() { autoGarbageCollector.start(); }
-
-    public void stopAutoGarbageCollect() { autoGarbageCollector.stop(); }
-
-    public static interface Builder<T> extends BuilderConvention {
+    public static interface Builder extends BuilderConvention {
 
         @ArgumentIndex(0)
         @DefaultValue("256")
         @GreaterThan("0")
-        Builder<T> backlog(int value);
+        Builder backlog(int value);
 
         @ArgumentIndex(1)
         @NotNull
-        Builder<T> dir(File value);
+        Builder dir(File value);
 
         @ArgumentIndex(2)
         @NotNull
-        Builder<T> valueAccessor(Accessor<T> value);
+        Builder valueAccessor(Accessor value);
 
         @ArgumentIndex(3)
         @DefaultValue("4000")
         @GreaterThanOrEqual("1000")
-        Builder<T> maxChunkIdleTimeMillis(long value);
+        Builder maxChunkIdleTimeMillis(long value);
 
         @ArgumentIndex(4)
         @DefaultValue("67108864") // 64M
         @GreaterThanOrEqual("4096")
-        Builder<T> maximizeChunkCapacity(int value);
+        Builder maximizeChunkCapacity(int value);
 
         @ArgumentIndex(5)
         @DefaultValue("67108864") // 64M
         @GreaterThanOrEqual("4096")
-        Builder<T> minimzieCollectLength(long value);
+        Builder minimzieCollectLength(long value);
 
         @ArgumentIndex(6)
         @DefaultValue("1024")
         @GreaterThan("0")
-        Builder<T> initialBucketSize(int value);
+        Builder initialBucketSize(int value);
 
         @ArgumentIndex(7)
         @DefaultValue("10000")
         @GreaterThan("0")
-        Builder<T> flushCount(int value);
+        Builder flushCount(int value);
 
         @ArgumentIndex(8)
         @DefaultValue("1000")
         @GreaterThan("0")
-        Builder<T> flushElapseMilliseconds(long value);
+        Builder flushElapseMilliseconds(long value);
 
         @ArgumentIndex(9)
         @DefaultValue("false")
-        Builder<T> groupCommit(boolean value);
+        Builder groupCommit(boolean value);
 
         @ArgumentIndex(10)
         @DefaultValue("false")
-        Builder<T> startAutoGarbageCollectOnStartup(boolean value);
+        Builder startAutoGarbageCollectOnStartup(boolean value);
 
-        KVEngine<T> build();
+        KVEngine build();
 
     }
 }

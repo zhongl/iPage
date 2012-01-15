@@ -16,8 +16,6 @@
 
 package com.github.zhongl.kvengine;
 
-import com.github.zhongl.index.Md5Key;
-
 import javax.annotation.concurrent.ThreadSafe;
 
 import static com.google.common.base.Preconditions.checkNotNull;

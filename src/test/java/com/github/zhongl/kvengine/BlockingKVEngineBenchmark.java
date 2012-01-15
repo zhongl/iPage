@@ -18,7 +18,6 @@ package com.github.zhongl.kvengine;
 
 import com.github.zhongl.benchmarker.*;
 import com.github.zhongl.nio.CommonAccessors;
-import com.github.zhongl.index.Md5Key;
 import com.github.zhongl.util.FileBase;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
@@ -45,7 +44,7 @@ public class BlockingKVEngineBenchmark extends FileBase {
     public static final boolean GROUP_COMMIT = Boolean.getBoolean(PROPERTY_PREFIX + ".group.commit");
     public static final boolean AUTO_GC = Boolean.getBoolean(PROPERTY_PREFIX + ".auto.gc");
 
-    private BlockingKVEngine<byte[]> engine;
+    private BlockingKVEngine engine;
 
     @After
     public void tearDown() throws Exception {
@@ -59,8 +58,8 @@ public class BlockingKVEngineBenchmark extends FileBase {
 
         super.setUp();
         dir = testDir("benchmark");
-        engine = new BlockingKVEngine<byte[]>(
-                KVEngine.<byte[]>baseOn(dir)
+        engine = new BlockingKVEngine(
+                KVEngine.baseOn(dir)
                         .initialBucketSize(BUCKET_SIZE)
                         .flushCount(FLUSH_COUNT)
                         .flushElapseMilliseconds(FLUSH_ELAPSE)

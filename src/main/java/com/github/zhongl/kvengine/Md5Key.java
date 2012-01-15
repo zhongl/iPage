@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.index;
+package com.github.zhongl.kvengine;
 
 import com.github.zhongl.nio.AbstractAccessor;
 import com.github.zhongl.nio.Accessor;
@@ -65,6 +65,10 @@ public class Md5Key {
     @Override
     public int hashCode() {
         return Arrays.hashCode(md5Bytes);
+    }
+
+    public byte[] toBytes() {
+        return md5Bytes;
     }
 
     private static class InnerAccessor extends AbstractAccessor<Md5Key> {
