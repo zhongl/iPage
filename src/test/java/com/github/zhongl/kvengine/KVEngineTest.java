@@ -67,6 +67,9 @@ public class KVEngineTest extends FileBase {
                         .build());
         engine.startup();
 
+        Iterator<byte[]> iterator = engine.valueIterator();
+        assertThat(iterator.hasNext(), is(false));
+
         byte[] value0 = "value0".getBytes();
         engine.put(Md5Key.generate(value0), value0);
         byte[] value1 = "value1".getBytes();
@@ -74,12 +77,18 @@ public class KVEngineTest extends FileBase {
         byte[] value2 = "value2".getBytes();
         engine.put(Md5Key.generate(value2), value2);
 
+        iterator = engine.valueIterator();
+
+        assertThat(iterator.next(), is(value0));
+        assertThat(iterator.next(), is(value1));
+        assertThat(iterator.next(), is(value2));
 
         byte[] value3 = "value3".getBytes();
         engine.put(Md5Key.generate(value0), value3);
         engine.remove(Md5Key.generate(value1));
 
-        Iterator<byte[]> iterator = engine.valueIterator();
+        iterator = engine.valueIterator();
+
         assertThat(iterator.next(), is(value3));
         assertThat(iterator.next(), is(value2));
         assertThat(iterator.hasNext(), is(false));
