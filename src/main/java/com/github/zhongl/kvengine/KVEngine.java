@@ -133,11 +133,12 @@ public class KVEngine extends Engine {
             @Override
             protected byte[] execute() throws Throwable {
                 group.register(callback);
-                byte[] prevalue = get(key);
+                //                byte[] prevalue = get(key);
                 cache.put(key.toBytes(), value);
                 writeBatch.put(key.toBytes(), value);
                 tryGroupCommitByCount();
-                return prevalue;
+                //                return prevalue;
+                return null;
             }
         });
     }

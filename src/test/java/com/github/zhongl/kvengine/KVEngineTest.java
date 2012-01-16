@@ -76,7 +76,7 @@ public class KVEngineTest extends FileBase {
 
 
         byte[] value3 = "value3".getBytes();
-        assertThat(engine.put(Md5Key.generate(value0), value3), is(value0));
+        engine.put(Md5Key.generate(value0), value3);
         engine.remove(Md5Key.generate(value1));
 
         Iterator<byte[]> iterator = engine.valueIterator();
