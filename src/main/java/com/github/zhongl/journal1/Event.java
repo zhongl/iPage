@@ -21,29 +21,29 @@ import com.github.zhongl.util.Checksums;
 import java.nio.ByteBuffer;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-class Packet {
+class Event {
     static final int FLAG_CRC32_LENGTH = 1 + 8 + 4;
 
     private final ByteBuffer body;
-    private final byte flag;
+    private final byte typeCode;
 
-    public static Packet readFrom(ByteBuffer raw, boolean validate) {
+    public static Event readFrom(ByteBuffer raw, boolean validate) {
         byte flag = raw.get();
         long checksum = raw.getLong();
         int length = raw.getInt();
         raw.limit(raw.position() + length);
         ByteBuffer body = raw.slice();
         if (validate) Checksums.validate(body.duplicate(), checksum);
-        return new Packet(flag, body);
+        return new Event(flag, body);
     }
 
-    Packet(byte flag, ByteBuffer body) {
-        this.flag = flag;
+    Event(byte typeCode, ByteBuffer body) {
+        this.typeCode = typeCode;
         this.body = body;
     }
 
     public byte type() {
-        return flag;
+        return typeCode;
     }
 
     public long checksum() {

@@ -39,7 +39,7 @@ class Page implements Closeable, Flushable {
     private volatile int writePosition;
     private volatile int readPosition;
     private volatile boolean readonly;
-    private volatile Packet head;
+    private volatile Event head;
 
     public Page(File file, int capacity) {
         this.file = file;
@@ -51,11 +51,11 @@ class Page implements Closeable, Flushable {
     }
 
     public Page append(ByteBuffer buffer) throws IOException {
-        return append(new Packet(APPEND, buffer));
+        return append(new Event(APPEND, buffer));
     }
 
     public Page saveCheckpoint(long position) throws IOException {
-        return append(new Packet(SAVING, ByteBuffer.wrap(Longs.toByteArray(position))));
+        return append(new Event(SAVING, ByteBuffer.wrap(Longs.toByteArray(position))));
     }
 
     public Cursor head() throws IOException {
@@ -70,7 +70,7 @@ class Page implements Closeable, Flushable {
         if (readPosition == writePosition) throw new EOFException();
 
         if (head == null) head = readPacket(false);
-        readPosition += head.length() + Packet.FLAG_CRC32_LENGTH;
+        readPosition += head.length() + Event.FLAG_CRC32_LENGTH;
         head = null;
 
         if (readPosition < writePosition) return this;
@@ -82,10 +82,10 @@ class Page implements Closeable, Flushable {
         throw new IllegalStateException("Forwarded read position should not greater than file length");
     }
 
-    private Page append(Packet packet) throws IOException {
+    private Page append(Event event) throws IOException {
         if (readonly) throw new IllegalStateException("Can't append to readonly page.");
         // TODO throw IllegalStateException if buffer size greater than capacity.
-        writePosition += channel().write(packet.toBuffer());
+        writePosition += channel().write(event.toBuffer());
         return writePosition < capacity ? this : fixedAndGetNewPage();
     }
 
@@ -106,14 +106,14 @@ class Page implements Closeable, Flushable {
         return new File(file.getParentFile(), number + writePosition + "");
     }
 
-    private Packet readPacket(boolean validate) throws IOException {
+    private Event readPacket(boolean validate) throws IOException {
         for (int i = 1; ; i++) {
             channel().position(readPosition);
             ByteBuffer buffer = ByteBuffer.allocate(READ_BUFFER_SIZE * i);
             channel().read(buffer);
             buffer.flip();
             try {
-                return Packet.readFrom(buffer, validate);
+                return Event.readFrom(buffer, validate);
             } catch (IllegalArgumentException ignored) {
                 // TODO auto resize allocating
             }
@@ -170,9 +170,9 @@ class Page implements Closeable, Flushable {
         long lastCheckpoint = -1L;
         while (readPosition < writePosition) {
             try {
-                Packet packet = readPacket(true);
-                if (packet.type() == SAVING) lastCheckpoint = packet.body().getLong(0);
-                readPosition += Packet.FLAG_CRC32_LENGTH + packet.length();
+                Event event = readPacket(true);
+                if (event.type() == SAVING) lastCheckpoint = event.body().getLong(0);
+                readPosition += Event.FLAG_CRC32_LENGTH + event.length();
             } catch (Exception e) {
                 channel.truncate(readPosition);
                 break;
