@@ -14,7 +14,7 @@ public class LengthCodec extends DecoratedCodec {
 
     public ByteBuffer encode(Object instance) {
         ByteBuffer body = delegate.encode(instance);
-        int length = body.limit() - body.position();
+        int length = ByteBuffers.lengthOf(body);
         ByteBuffer encoded = ByteBuffer.allocate(LENGTH_LENGTH + length);
         encoded.putInt(length).put(body).flip();
         return encoded;

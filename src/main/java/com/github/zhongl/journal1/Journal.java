@@ -17,10 +17,7 @@
 package com.github.zhongl.journal1;
 
 
-import com.github.zhongl.codec.Codec;
-import com.github.zhongl.util.FilesLoader;
-import com.github.zhongl.util.NumberNamedFilterAndComparator;
-import com.github.zhongl.util.Transformer;
+import com.github.zhongl.codec.*;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
@@ -28,101 +25,92 @@ import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.LinkedList;
+import java.util.Arrays;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
 public class Journal implements Closeable {
+    private final Pages pages;
 
-    private volatile Page first;
-    private volatile Page last;
-    private Applicable<?> applicable;
-
-    public Journal(Page first, Page last) {
-        this.first = first;
-        this.last = last;
+    public Journal(File dir, Codec... compoundCodecs) {
+        Codec[] codecs = Arrays.copyOf(compoundCodecs, compoundCodecs.length + 1);
+        codecs[compoundCodecs.length] = Checkpoint.CODEC;
+        Codec codec = ComposedCodecBuilder.compose(new CompoundCodec(codecs))
+                .with(ChecksumCodec.class)
+                .with(LengthCodec.class)
+                .build();
+        pages = new Pages(dir, codec);
+        tryRecover();
     }
 
-    public Journal(Page page) {
-        this(page, page);
+    public long append(final Object event, boolean force) {
+        return pages.append(event, force);
     }
 
-    public Journal(File dir, Applicable<?> applicable, Codec... compoundCodecs) {
-        this.applicable = applicable;
-
-
+    public void saveCheckpoint(long number) {
+        pages.append(new Checkpoint(number), true); // TODO try append but not force.
+        pages.trimBefore(number);
     }
 
-    public static Journal open(File dir, final int pageCapacity) throws IOException {
-        LinkedList<Page> pages = new FilesLoader<Page>(
-                dir,
-                new NumberNamedFilterAndComparator(),
-                new Transformer<Page>() {
-
-                    @Override
-                    public Page transform(File file, boolean last) throws IOException {
-                        return new Page(file, pageCapacity);
-                    }
-                }).loadTo(new LinkedList<Page>());
-
-        if (pages.isEmpty()) return new Journal(new Page(new File(dir, "0"), pageCapacity));
-
-        long lastCheckpoint = lastCheckpointOf(pages);
-
-        Page first = pages.get(pageIndex(lastCheckpoint, pages));
-        first.setHead(lastCheckpoint);
-        first.remove();
-        return new Journal(first, pages.getLast());
-    }
-
-    private static long lastCheckpointOf(LinkedList<Page> pages) throws IOException {
-        long lastCheckpoint = 0L;
-        for (int i = pages.size() - 1; i >= 0; i--) {
-            Page page = pages.get(i);
-            long checkpoint = page.recoverAndGetLastCheckpoint();
-            if (checkpoint >= 0) {
-                lastCheckpoint = checkpoint;
-                break;
+    public void replayTo(Applicable<?> applicable) {
+        try {
+            for (Cursor cursor = pages.head(); ; cursor = pages.next(cursor)) {
+                if (cursor.get() instanceof Checkpoint) continue;
+                apply(cursor, applicable);
             }
+        } catch (EOFException ignore) {
+            pages.reset();
         }
-        return lastCheckpoint;
-    }
-
-    public void append(ByteBuffer buffer) throws IOException {
-        last = last.append(buffer);
     }
 
     @Override
     public void close() throws IOException {
-        first.close();
-        last.close();
+        pages.close();
     }
 
-    public void applyTo(ByteBufferHandler handler) throws Exception {
-        try {
-            Cursor head = first.head();
-            handler.handle(head.get());
-            first = first.remove();
-            if (head.get().limit() > 0)
-                last = last.saveCheckpoint(head.position());
-        } catch (EOFException ignored) { }
+    private void tryRecover() {
+        pages.trimBefore(pages.last(Checkpoint.class).number);
     }
 
-    private static int pageIndex(long position, LinkedList<Page> pages) {
-        int low = 0, high = pages.size() - 1;
-        while (low <= high) { // binary search
-            int mid = (low + high) >>> 1;
+    private void apply(final Cursor cursor, Applicable<?> applicable) {
+        applicable.apply(new Record() {
+            @Override
+            public long number() {
+                return cursor.position();
+            }
 
-            int cmp = pages.get(mid).compareTo(position);
-            if (cmp < 0) low = mid + 1;
-            else if (cmp > 0) high = mid - 1;
-            else return mid;
-        }
-        return -(low + 1);
+            @Override
+            public <T> T content() {
+                return (T) cursor.get();
+            }
+        });
     }
 
-    public void append(Object event, boolean force) {
+    private final static class Checkpoint {
 
-        // TODO append
+        public static final Codec CODEC = new Codec() {
+            @Override
+            public ByteBuffer encode(Object instance) {
+                Checkpoint checkpoint = (Checkpoint) instance;
+                ByteBuffer buffer = ByteBuffer.allocate(8);
+                buffer.putLong(0, checkpoint.number);
+                return buffer;
+            }
+
+            @Override
+            public Checkpoint decode(ByteBuffer buffer) {
+                return new Checkpoint(buffer.getLong(0));
+            }
+
+            @Override
+            public boolean supports(Class<?> type) {
+                return Checkpoint.class.equals(type);
+            }
+        };
+
+        private final long number;
+
+        public Checkpoint(long number) { this.number = number; }
+
     }
 }

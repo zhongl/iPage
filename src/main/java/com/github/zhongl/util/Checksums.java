@@ -16,6 +16,8 @@
 
 package com.github.zhongl.util;
 
+import com.github.zhongl.codec.ByteBuffers;
+
 import java.nio.ByteBuffer;
 import java.util.zip.CRC32;
 
@@ -26,8 +28,32 @@ public class Checksums {
     }
 
     public static long checksum(ByteBuffer buffer) {
+        return checksum_bytes(buffer);
+    }
+
+    static long checksum_1b1(ByteBuffer buffer) {
         CRC32 crc32 = new CRC32();
         while (buffer.hasRemaining()) crc32.update(buffer.get());
+        return crc32.getValue();
+    }
+
+    static long checksum_direct_or_bytes(ByteBuffer buffer) {
+        CRC32 crc32 = new CRC32();
+        if (buffer.isDirect()) {
+            while (buffer.hasRemaining()) crc32.update(buffer.get());
+        } else {
+            byte[] bytes = buffer.array();
+            crc32.update(bytes, buffer.position(), ByteBuffers.lengthOf(buffer));
+        }
+        return crc32.getValue();
+    }
+
+    static long checksum_bytes(ByteBuffer buffer) {
+        int len = ByteBuffers.lengthOf(buffer);
+        byte[] bytes = new byte[len];
+        buffer.get(bytes);
+        CRC32 crc32 = new CRC32();
+        crc32.update(bytes);
         return crc32.getValue();
     }
 }

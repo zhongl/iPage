@@ -45,7 +45,7 @@ public class CompoundCodec implements Codec {
     }
 
     private ByteBuffer encode(byte code, ByteBuffer body) {
-        int length = body.limit() - body.position();
+        int length = ByteBuffers.lengthOf(body);
         ByteBuffer encoded = ByteBuffer.allocate(CODE_LENGTH + length);
         encoded.put(code).put(body).flip();
         return encoded;

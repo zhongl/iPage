@@ -12,7 +12,7 @@ public class StringCodec implements Codec {
 
     @Override
     public String decode(ByteBuffer buffer) {
-        int length = buffer.limit() - buffer.position();
+        int length = ByteBuffers.lengthOf(buffer);
         if (buffer.isDirect()) {
             byte[] bytes = new byte[length];
             buffer.get(bytes);

@@ -4,6 +4,8 @@ import com.github.zhongl.util.Checksums;
 
 import java.nio.ByteBuffer;
 
+import static com.github.zhongl.codec.ByteBuffers.lengthOf;
+
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class ChecksumCodec extends DecoratedCodec {
 
@@ -16,8 +18,7 @@ public class ChecksumCodec extends DecoratedCodec {
 
     public ByteBuffer encode(Object instance) {
         ByteBuffer body = delegate.encode(instance);
-        int length = body.limit() - body.position();
-        ByteBuffer encoded = ByteBuffer.allocate(CHECKSUM_LENGTH + length);
+        ByteBuffer encoded = ByteBuffer.allocate(CHECKSUM_LENGTH + lengthOf(body));
         encoded.putLong(Checksums.checksum(body.duplicate())).put(body).flip();
         return encoded;
     }

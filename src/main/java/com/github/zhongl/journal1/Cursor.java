@@ -16,16 +16,13 @@
 
 package com.github.zhongl.journal1;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class Cursor {
-    private final ByteBuffer buffer;
+    private final Object object;
     private final long position;
 
-    public Cursor(ByteBuffer buffer, long position) {
-        this.buffer = buffer;
+    public Cursor(Object object, long position) {
+        this.object = object;
         this.position = position;
     }
 
@@ -33,8 +30,8 @@ class Cursor {
         return position;
     }
 
-    public ByteBuffer get() throws IOException {
-        return buffer;
+    public Object get() {
+        return object;
     }
 
 }

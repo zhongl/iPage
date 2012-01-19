@@ -22,9 +22,6 @@ import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-import java.io.File;
-import java.nio.ByteBuffer;
-
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
@@ -36,74 +33,26 @@ public class JournalTest extends FileBase {
     public void usage() throws Exception {
         dir = testDir("usage");
 
-
         Applicable<?> applicable = mock(Applicable.class);
         Codec codec = new StringCodec();
-        Journal journal = new Journal(dir, applicable, codec);
+        Journal journal = new Journal(dir, codec);
 
-        String value = "value";
-        journal.append(value, true);
+
+        journal.append("1", false);
+        journal.saveCheckpoint(journal.append("2", false));
+        journal.append("3", true);
+
+        journal.close(); // mock crash
+
+        journal = new Journal(dir, codec);
+
+        journal.replayTo(applicable);
 
         ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
         verify(applicable, times(1)).apply(captor.capture());
         Record record = captor.getValue();
         assertThat(record.number(), is(0L));
-        assertThat(record.<String>content(), is(value));
-        journal.close();
-    }
-
-    @Test
-    public void loadOnePage() throws Exception {
-        dir = testDir("loadOnePage");
-
-        int capacity = 4096;
-        Page page = new Page(new File(dir, "0"), capacity);
-
-        ByteBuffer buffer0 = ByteBuffer.wrap("0".getBytes());
-        page.append(buffer0);
-        ByteBuffer buffer1 = ByteBuffer.wrap("1".getBytes());
-        page.append(buffer1);
-
-        Cursor head = page.head();
-        page.remove();
-        page.saveCheckpoint(head.position());
-        page.close();
-
-        Journal journal = Journal.open(dir, capacity);
-
-        ByteBufferHandler handler = mock(ByteBufferHandler.class);
-        journal.applyTo(handler);
-        verify(handler, times(1)).handle(buffer1);
-
-        journal.close();
-    }
-
-    @Test
-    public void loadFullPageAndEmptyPage() throws Exception {
-        dir = testDir("loadFullPageAndEmptyPage");
-
-        int capacity = 45;
-        Page page = new Page(new File(dir, "0"), capacity);
-
-        ByteBuffer buffer0 = ByteBuffer.wrap("0".getBytes());
-        page.append(buffer0);
-        ByteBuffer buffer1 = ByteBuffer.wrap("1".getBytes());
-        page.append(buffer1);
-
-        Cursor head = page.head();
-        page.remove();
-        page.saveCheckpoint(head.position());
-
-        page.close();
-
-        new File(dir, "49").createNewFile();
-
-        Journal journal = Journal.open(dir, capacity);
-
-        ByteBufferHandler handler = mock(ByteBufferHandler.class);
-        journal.applyTo(handler);
-        verify(handler, times(1)).handle(buffer1);
-
+        assertThat(record.<String>content(), is("3"));
         journal.close();
     }
 
