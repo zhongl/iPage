@@ -13,7 +13,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class Codecs {
 
-    static final int CODEC_CODE_CRC32_LENGTH = 1 + 8 + 4;
+    static final int HEAD_LENGTH = 1/*codec_code*/ + 8 /*checksum*/ + 4 /*body_length*/;
 
     private final Map<Class<?>, CodecWithCode> codecMap;
     private final Codec[] codecTable;
@@ -31,37 +31,52 @@ class Codecs {
         codecMap = Collections.unmodifiableMap(map);
     }
 
-    ByteBuffer toBuffer(Object instance) {
+    ByteBuffer encode(Object instance) {
         CodecWithCode codecWithCode = codecMap.get(instance.getClass());
         if (codecWithCode == null)
             throw new IllegalStateException("Can't find the codec of " + instance);
 
-        ByteBuffer buffer = codecWithCode.codec.toBuffer(instance);
-        ByteBuffer packed = ByteBuffer.allocate(CODEC_CODE_CRC32_LENGTH + buffer.limit());
-        packed.put(codecWithCode.code)
-                .putLong(Checksums.checksum(buffer.duplicate())) // TODO use unsign int
-                .putInt(buffer.limit()) // length
-                .put(buffer) // body
+        ByteBuffer body = codecWithCode.codec.encode(instance);
+        ByteBuffer encoded = ByteBuffer.allocate(HEAD_LENGTH + body.limit());
+        encoded.put(codecWithCode.code)
+                .putLong(Checksums.checksum(body.duplicate())) // TODO use unsign int for checksum
+                .putInt(body.limit()) // TODO use varint for length
+                .put(body) // body
                 .flip();
-        return packed;
+        return encoded;
     }
 
-    <T> T toInstance(ByteBuffer buffer) {
-        Codec codec = codecTable[buffer.get()];
-        buffer.getLong();// skip checksum
-        int length = buffer.getInt();
-        buffer.limit(buffer.position() + length);
-        return (T) codec.toInstance(buffer.slice());
+    <T> T decode(ByteBuffer buffer) {
+        return new Decoder(buffer).getValue();
     }
 
-    <T> T validateAndToInstance(ByteBuffer buffer) {
-        Codec codec = codecTable[buffer.get()];
-        long checksum = buffer.getLong();// TODO use unsign int
-        int length = buffer.getInt();
-        buffer.limit(buffer.position() + length);
-        ByteBuffer body = buffer.slice();
-        Checksums.validate(body.duplicate(), checksum);
-        return (T) codec.toInstance(body);
+    <T> T decodeAndValidate(ByteBuffer buffer) {
+        Decoder decoder = new Decoder(buffer);
+        decoder.validate();
+        return decoder.getValue();
+    }
+
+    private class Decoder {
+
+        private final ByteBuffer body;
+        private final long checksum;
+        private final byte codecCode;
+
+        public Decoder(ByteBuffer buffer) {
+            codecCode = buffer.get();
+            checksum = buffer.getLong();
+            int length = buffer.getInt();
+            buffer.limit(buffer.position() + length);
+            body = buffer.slice();
+        }
+
+        public <T> T getValue() {
+            return (T) codecTable[codecCode].decode(body);
+        }
+
+        public void validate() {
+            Checksums.validate(body.duplicate(), checksum);
+        }
     }
 
     private static class CodecWithCode {

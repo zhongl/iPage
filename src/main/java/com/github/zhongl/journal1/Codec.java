@@ -8,9 +8,9 @@ import java.nio.ByteBuffer;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 public interface Codec {
-    ByteBuffer toBuffer(Object instance);
+    ByteBuffer encode(Object instance);
 
-    Object toInstance(ByteBuffer buffer);
+    Object decode(ByteBuffer buffer);
 
     Class<?> supported();
 }

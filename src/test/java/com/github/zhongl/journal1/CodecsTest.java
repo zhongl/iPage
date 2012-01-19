@@ -15,8 +15,8 @@ public class CodecsTest {
     public void register() throws Exception {
         Codecs codecs = new Codecs(new KeyCodec());
         Key instance = new Key(1);
-        ByteBuffer buffer = codecs.toBuffer(instance);
-        assertThat(codecs.<Key>validateAndToInstance(buffer), is(instance));
+        ByteBuffer buffer = codecs.encode(instance);
+        assertThat(codecs.<Key>decodeAndValidate(buffer), is(instance));
     }
 
     class Key {
@@ -48,13 +48,13 @@ public class CodecsTest {
     class KeyCodec implements Codec {
 
         @Override
-        public ByteBuffer toBuffer(Object instance) {
+        public ByteBuffer encode(Object instance) {
             Key key = (Key) instance;
             return ByteBuffer.wrap(Ints.toByteArray(key.i));
         }
 
         @Override
-        public Key toInstance(ByteBuffer buffer) {
+        public Key decode(ByteBuffer buffer) {
             return new Key(buffer.getInt(0));
         }
 

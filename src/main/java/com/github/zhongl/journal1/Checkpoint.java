@@ -22,13 +22,13 @@ class Checkpoint {
 
     public static final Codec CODEC = new Codec() {
         @Override
-        public ByteBuffer toBuffer(Object instance) {
-            return null;  // TODO toBuffer
+        public ByteBuffer encode(Object instance) {
+            return null;  // TODO encode
         }
 
         @Override
-        public Object toInstance(ByteBuffer buffer) {
-            return null;  // TODO toInstance
+        public Object decode(ByteBuffer buffer) {
+            return null;  // TODO decode
         }
 
         @Override
