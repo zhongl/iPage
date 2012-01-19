@@ -18,6 +18,7 @@ package com.github.zhongl.journal1;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class Cursor {
+    public static final Cursor EOF = new Cursor(null, Long.MIN_VALUE);
     private final Object object;
     private final long position;
 

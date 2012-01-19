@@ -18,16 +18,17 @@ package com.github.zhongl.journal1;
 import com.github.zhongl.codec.Codec;
 
 import java.io.Closeable;
-import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
-import java.util.Iterator;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class Pages implements Closeable, Iterable<Object> {
+public class Pages implements Closeable {
+
+    private final Codec codec;
 
     public Pages(File dir, Codec codec) {
         // TODO Pages
+        this.codec = codec;
     }
 
     /**
@@ -48,29 +49,23 @@ public class Pages implements Closeable, Iterable<Object> {
         // TODO close
     }
 
-    public <T> T last(Class<T> type) {
-        // TODO last
-        return null;
-    }
-
     public void trimBefore(long position) {
         // TODO trimBefore
     }
 
-    @Override
-    public Iterator<Object> iterator() {
-        return null;  // TODO iterator
-    }
-
-    public Cursor head() throws EOFException {
+    public Cursor head() {
         return null;  // TODO head
     }
 
-    public Cursor next(Cursor cursor) throws EOFException{
+    public Cursor next(Cursor cursor) {
         return null;  // TODO next 
     }
 
     public void reset() {
         // TODO reset
+    }
+
+    public void trimAfter(long position) {
+        // TODO trimAfter
     }
 }

@@ -21,7 +21,6 @@ import com.github.zhongl.codec.*;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.Closeable;
-import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -36,9 +35,9 @@ public class Journal implements Closeable {
         Codec[] codecs = Arrays.copyOf(compoundCodecs, compoundCodecs.length + 1);
         codecs[compoundCodecs.length] = Checkpoint.CODEC;
         Codec codec = ComposedCodecBuilder.compose(new CompoundCodec(codecs))
-                .with(ChecksumCodec.class)
-                .with(LengthCodec.class)
-                .build();
+                                          .with(ChecksumCodec.class)
+                                          .with(LengthCodec.class)
+                                          .build();
         pages = new Pages(dir, codec);
         tryRecover();
     }
@@ -52,15 +51,13 @@ public class Journal implements Closeable {
         pages.trimBefore(number);
     }
 
-    public void replayTo(Applicable<?> applicable) {
-        try {
-            for (Cursor cursor = pages.head(); ; cursor = pages.next(cursor)) {
-                if (cursor.get() instanceof Checkpoint) continue;
-                apply(cursor, applicable);
-            }
-        } catch (EOFException ignore) {
-            pages.reset();
+    public void replayTo(Applicable applicable) {
+        for (Cursor cursor = pages.head(); cursor != Cursor.EOF; cursor = pages.next(cursor)) {
+            if (cursor.get() instanceof Checkpoint) continue;
+            apply(cursor, applicable);
         }
+        applicable.force();
+        pages.reset();
     }
 
     @Override
@@ -69,10 +66,22 @@ public class Journal implements Closeable {
     }
 
     private void tryRecover() {
-        pages.trimBefore(pages.last(Checkpoint.class).number);
+        long lastCheckpoint = 0L;
+        long lastValidPosition = 0L;
+        for (Cursor cursor = pages.head(); cursor != Cursor.EOF; cursor = pages.next(cursor)) {
+            try {
+                Object object = cursor.get();
+                if (object instanceof Checkpoint) lastCheckpoint = ((Checkpoint) object).number;
+                lastValidPosition = cursor.position();
+            } catch (IllegalStateException e) { // invalid checksum
+                pages.trimAfter(lastValidPosition);
+                break;
+            }
+        }
+        pages.trimBefore(lastCheckpoint);
     }
 
-    private void apply(final Cursor cursor, Applicable<?> applicable) {
+    private void apply(final Cursor cursor, Applicable applicable) {
         applicable.apply(new Record() {
             @Override
             public long number() {
