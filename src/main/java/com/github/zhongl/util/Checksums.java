@@ -22,7 +22,7 @@ import java.util.zip.CRC32;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class Checksums {
     public static void validate(ByteBuffer buffer, long checksum) {
-        if (checksum(buffer) != checksum) throw new IllegalStateException("Invalid buffer content.");
+        if (checksum(buffer) != checksum) throw new IllegalStateException("Invalid checksum.");
     }
 
     public static long checksum(ByteBuffer buffer) {

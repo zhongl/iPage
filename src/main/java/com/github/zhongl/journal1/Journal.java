@@ -17,6 +17,7 @@
 package com.github.zhongl.journal1;
 
 
+import com.github.zhongl.codec.Codec;
 import com.github.zhongl.util.FilesLoader;
 import com.github.zhongl.util.NumberNamedFilterAndComparator;
 import com.github.zhongl.util.Transformer;
@@ -35,6 +36,7 @@ public class Journal implements Closeable {
 
     private volatile Page first;
     private volatile Page last;
+    private Applicable<?> applicable;
 
     public Journal(Page first, Page last) {
         this.first = first;
@@ -43,6 +45,11 @@ public class Journal implements Closeable {
 
     public Journal(Page page) {
         this(page, page);
+    }
+
+    public Journal(File dir, int pageCapacity, Applicable<?> applicable, Codec... codecs) {
+        // TODO Journal
+        this.applicable = applicable;
     }
 
     public static Journal open(File dir, final int pageCapacity) throws IOException {
@@ -111,5 +118,10 @@ public class Journal implements Closeable {
             else return mid;
         }
         return -(low + 1);
+    }
+
+    public void append(Object event, boolean force) {
+
+        // TODO append
     }
 }

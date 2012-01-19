@@ -15,6 +15,8 @@
 
 package com.github.zhongl.journal1;
 
+import com.github.zhongl.codec.Codec;
+
 import java.nio.ByteBuffer;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
@@ -27,13 +29,13 @@ class Checkpoint {
         }
 
         @Override
-        public Object decode(ByteBuffer buffer) {
+        public String decode(ByteBuffer buffer) {
             return null;  // TODO decode
         }
 
         @Override
-        public Class<?> supported() {
-            return Checkpoint.class;
+        public boolean supports(Class<?> type) {
+            return Checkpoint.class.equals(type);
         }
     };
 
