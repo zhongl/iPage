@@ -13,7 +13,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.nio;
+package com.github.zhongl.benchmarks;
 
 import com.github.zhongl.util.DirectByteBufferCleaner;
 import com.github.zhongl.util.FileBase;

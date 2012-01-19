@@ -47,9 +47,10 @@ public class Journal implements Closeable {
         this(page, page);
     }
 
-    public Journal(File dir, int pageCapacity, Applicable<?> applicable, Codec... codecs) {
-        // TODO Journal
+    public Journal(File dir, Applicable<?> applicable, Codec... compoundCodecs) {
         this.applicable = applicable;
+
+
     }
 
     public static Journal open(File dir, final int pageCapacity) throws IOException {

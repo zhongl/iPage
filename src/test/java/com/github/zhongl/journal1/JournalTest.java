@@ -20,11 +20,13 @@ import com.github.zhongl.codec.Codec;
 import com.github.zhongl.codec.StringCodec;
 import com.github.zhongl.util.FileBase;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.io.File;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
@@ -35,28 +37,18 @@ public class JournalTest extends FileBase {
         dir = testDir("usage");
 
 
-        int pageCapacity = 4906;
         Applicable<?> applicable = mock(Applicable.class);
         Codec codec = new StringCodec();
-        Journal journal = new Journal(dir, pageCapacity, applicable, codec);
+        Journal journal = new Journal(dir, applicable, codec);
 
-        byte[] bytes = "something".getBytes();
+        String value = "value";
+        journal.append(value, true);
 
-        ByteBuffer buffer = ByteBuffer.wrap(bytes);
-
-        journal.append(Arrays.asList("1","2"), true);
-
-        ByteBufferHandler handler = mock(ByteBufferHandler.class);
-
-        journal.applyTo(handler);
-        verify(handler, times(1)).handle(buffer);
-
-        journal.applyTo(handler);
-        verify(handler, times(1)).handle(buffer); // no buffer for applying
-
-        journal.applyTo(handler);
-        verify(handler, times(1)).handle(buffer); // ignore eof
-
+        ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
+        verify(applicable, times(1)).apply(captor.capture());
+        Record record = captor.getValue();
+        assertThat(record.number(), is(0L));
+        assertThat(record.<String>content(), is(value));
         journal.close();
     }
 

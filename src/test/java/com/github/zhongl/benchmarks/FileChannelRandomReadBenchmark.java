@@ -14,27 +14,25 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.nio;
+package com.github.zhongl.benchmarks;
 
 import com.github.zhongl.util.FileBase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.util.Random;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl</a> */
-public class FileChannelRandomWriteForceBenchmark extends FileBase {
+public class FileChannelRandomReadBenchmark extends FileBase {
     public static final int ONE_KILO_BYTES = 1024;
     public static final int FOUR = 4;
-    private final int size = Integer.getInteger("forcing.benchmark.size", 1024);
-    private final int pages = Integer.getInteger("forcing.benchmark.pages", 1);
-    private final int averageForceElpasePages = Integer.getInteger("forcing.benchmark.average.force.elpase.pages", 256);
+    private final int size = Integer.getInteger("random.read.benchmark.size", 1024);
+    private final int averageForceElpasePages = Integer.getInteger("random.read.benchmark.average.force.elpase.pages", 256);
     private FileChannel channel;
     private long elapse;
     private Random random;
@@ -45,21 +43,22 @@ public class FileChannelRandomWriteForceBenchmark extends FileBase {
         super.setUp();
         file = testFile("benchmark");
         random = new Random();
-        channel = (FileChannel) Channels.newChannel(new FileOutputStream(file));
-        channel.truncate(size * ONE_KILO_BYTES);
+        channel = new RandomAccessFile(file, "rw").getChannel();
     }
 
     @Test
     public void benchmark() throws Exception {
         for (int i = 0; i < size; i++) {
             byte[] bytes = new byte[1024];
-            int offset = random.nextInt(size) * ONE_KILO_BYTES;
-            channel.position(offset);
+            channel.position(i * ONE_KILO_BYTES);
             channel.write(ByteBuffer.wrap(bytes).putInt(0, i));
-            if ((i + 1) % (FOUR * pages) == 0) flushAndIncreaseElpase();
+        }
+        channel.force(true);
+
+        for (int i = 0; i < size; i++) {
+            read();
             if ((i + 1) % (FOUR * averageForceElpasePages) == 0) printAverageForceElapse(i + 1);
         }
-
     }
 
     private void printAverageForceElapse(int i) {
@@ -67,9 +66,12 @@ public class FileChannelRandomWriteForceBenchmark extends FileBase {
         elapse = 0;
     }
 
-    private void flushAndIncreaseElpase() throws IOException {
+    private void read() throws IOException {
         long begin = System.nanoTime();
-        channel.force(true);
+        byte[] bytes = new byte[1024];
+        int offset = random.nextInt(size) * ONE_KILO_BYTES;
+        channel.position(offset);
+        channel.read(ByteBuffer.wrap(bytes));
         elapse += System.nanoTime() - begin;
     }
 
