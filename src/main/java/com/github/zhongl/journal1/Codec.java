@@ -12,5 +12,5 @@ public interface Codec {
 
     Object toInstance(ByteBuffer buffer);
 
-    boolean supports(Object instance);
+    Class<?> supported();
 }

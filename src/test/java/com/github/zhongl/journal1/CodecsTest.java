@@ -58,8 +58,9 @@ public class CodecsTest {
             return new Key(buffer.getInt(0));
         }
 
-        public boolean supports(Object instance) {
-            return instance.getClass().equals(Key.class);
+        @Override
+        public Class<?> supported() {
+            return Key.class;
         }
     }
 }
