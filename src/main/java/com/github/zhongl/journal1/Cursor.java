@@ -17,12 +17,13 @@
 package com.github.zhongl.journal1;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-class Cursor {
+public class Cursor {
     public static final Cursor EOF = new Cursor(null, Long.MIN_VALUE);
+
     private final Object object;
     private final long position;
 
-    public Cursor(Object object, long position) {
+    Cursor(Object object, long position) {
         this.object = object;
         this.position = position;
     }

@@ -33,7 +33,7 @@ public class JournalTest extends FileBase {
     public void usage() throws Exception {
         dir = testDir("usage");
 
-        Applicable<?> applicable = mock(Applicable.class);
+        Applicable applicable = mock(Applicable.class);
         Codec codec = new StringCodec();
         Journal journal = new Journal(dir, codec);
 
@@ -51,7 +51,7 @@ public class JournalTest extends FileBase {
         ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
         verify(applicable, times(1)).apply(captor.capture());
         Record record = captor.getValue();
-        assertThat(record.number(), is(0L));
+        assertThat(record.offset(), is(0L));
         assertThat(record.<String>content(), is("3"));
         journal.close();
     }

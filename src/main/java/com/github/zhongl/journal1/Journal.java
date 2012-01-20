@@ -29,33 +29,56 @@ import java.util.Arrays;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
 public class Journal implements Closeable {
+    public static final int PAGE_CAPACITY = Integer.getInteger("ipage.journal.page.capacity", 1 << 20 * 64); // 64M
     private final Pages pages;
 
     public Journal(File dir, Codec... compoundCodecs) {
         Codec[] codecs = Arrays.copyOf(compoundCodecs, compoundCodecs.length + 1);
         codecs[compoundCodecs.length] = Checkpoint.CODEC;
         Codec codec = ComposedCodecBuilder.compose(new CompoundCodec(codecs))
-                                          .with(ChecksumCodec.class)
-                                          .with(LengthCodec.class)
-                                          .build();
-        pages = new Pages(dir, codec);
+                .with(ChecksumCodec.class)
+                .with(LengthCodec.class)
+                .build();
+        pages = new Pages(dir, codec, PAGE_CAPACITY);
         tryRecover();
     }
 
+    /**
+     * Append event.
+     *
+     * @param event
+     * @param force event to driver for duration if it's true.
+     *
+     * @return checkpoint offset
+     */
     public long append(final Object event, boolean force) {
-        return pages.append(event, force);
+        Record record = pages.append(event, force);
+        return record.offset() + record.length();
     }
 
+    /**
+     * Save checkpoint and remove applied events before the offset.
+     * <p/>
+     * The checkpoint can be used for recovery if removing failed because of crashing.
+     *
+     * @param number
+     */
     public void saveCheckpoint(long number) {
         pages.append(new Checkpoint(number), true); // TODO try append but not force.
         pages.trimBefore(number);
     }
 
+    /**
+     * Replay unapplied events which after last checkpoint offset to {@link com.github.zhongl.journal1.Applicable}.
+     *
+     * @param applicable
+     */
     public void replayTo(Applicable applicable) {
-        for (Cursor cursor = pages.head(); cursor != Cursor.EOF; cursor = pages.next(cursor)) {
-            if (cursor.get() instanceof Checkpoint) continue;
-            apply(cursor, applicable);
+        for (Record record : pages) {
+            if (record.content() instanceof Checkpoint) continue;
+            applicable.apply(record);
         }
+
         applicable.force();
         pages.reset();
     }
@@ -68,31 +91,18 @@ public class Journal implements Closeable {
     private void tryRecover() {
         long lastCheckpoint = 0L;
         long lastValidPosition = 0L;
-        for (Cursor cursor = pages.head(); cursor != Cursor.EOF; cursor = pages.next(cursor)) {
-            try {
-                Object object = cursor.get();
+
+        try {
+            for (Record record : pages) {
+                Object object = record.content();
                 if (object instanceof Checkpoint) lastCheckpoint = ((Checkpoint) object).number;
-                lastValidPosition = cursor.position();
-            } catch (IllegalStateException e) { // invalid checksum
-                pages.trimAfter(lastValidPosition);
-                break;
+                lastValidPosition = record.offset();
             }
+        } catch (IllegalStateException e) { // invalid checksum
+            pages.trimAfter(lastValidPosition);
         }
+
         pages.trimBefore(lastCheckpoint);
-    }
-
-    private void apply(final Cursor cursor, Applicable applicable) {
-        applicable.apply(new Record() {
-            @Override
-            public long number() {
-                return cursor.position();
-            }
-
-            @Override
-            public <T> T content() {
-                return (T) cursor.get();
-            }
-        });
     }
 
     private final static class Checkpoint {

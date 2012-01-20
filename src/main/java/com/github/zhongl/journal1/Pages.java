@@ -17,18 +17,32 @@ package com.github.zhongl.journal1;
 
 import com.github.zhongl.codec.Codec;
 
-import java.io.Closeable;
 import java.io.File;
-import java.io.IOException;
+import java.util.Iterator;
+import java.util.LinkedList;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class Pages implements Closeable {
+public class Pages implements Closable, Iterable<Record> {
 
-    private final Codec codec;
+    private final LinkedList<Page> pages;
 
-    public Pages(File dir, Codec codec) {
-        // TODO Pages
-        this.codec = codec;
+    public Pages(File dir, Codec codec, int pageCapacity) {
+        pages = loadOrInitialize(dir, codec, pageCapacity);
+    }
+
+    private LinkedList<Page> loadOrInitialize(File dir, Codec codec, int pageCapacity) {
+        LinkedList<Page> list = new LinkedList<Page>();
+        checkArgument(dir.list().length == 0, "TODO load exist pages.");
+
+        if (list.isEmpty()) list.add(newPage(dir, codec, pageCapacity, 0L)); // initialize
+
+        return list;  // TODO loadOrInitialize
+    }
+
+    private Page newPage(File dir, Codec codec, int pageCapacity, long number) {
+        return null;  // TODO newPage
     }
 
     /**
@@ -39,33 +53,53 @@ public class Pages implements Closeable {
      *
      * @return appended position.
      */
-    public long append(Object object, boolean force) {
-        // TODO append
-        return 0L;
-    }
-
-    @Override
-    public void close() throws IOException {
-        // TODO close
-    }
-
-    public void trimBefore(long position) {
-        // TODO trimBefore
-    }
-
-    public Cursor head() {
-        return null;  // TODO head
-    }
-
-    public Cursor next(Cursor cursor) {
-        return null;  // TODO next 
+    public Record append(final Object object, final boolean force) {
+        return pages.getLast().append(object, force, new OverflowCallback() {
+            @Override
+            public void onOverflow() {
+                Page last = pages.getLast();
+                Record tail = last.range().tail();
+                Page newPage = last.newPage(tail.offset() + tail.length());
+                newPage.append(object, force, new OverflowCallback() {
+                    @Override
+                    public void onOverflow() {
+                        throw new IllegalStateException("Object is too big to append to new page.");
+                    }
+                });
+                pages.addLast(newPage);
+            }
+        });
     }
 
     public void reset() {
-        // TODO reset
+        Page newPage = pages.getLast().newPage(0L);
+        for (Page page : pages) page.delete();
+        pages.clear();
+        pages.addLast(newPage);
+    }
+
+    public void trimBefore(long position) {
+        for (Page page : pages) {
+            if(page.range().compareTo(position) < 0) page.delete();
+        }
+
+        // TODO trimBefore
     }
 
     public void trimAfter(long position) {
         // TODO trimAfter
     }
+
+    @Override
+    public void close() {
+        for (Page page : pages) {
+            page.close();
+        }
+    }
+
+    @Override
+    public Iterator<Record> iterator() {
+        return null;  // TODO iterator
+    }
+
 }

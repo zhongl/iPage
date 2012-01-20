@@ -16,19 +16,20 @@
 
 package com.github.zhongl.util;
 
-import com.github.zhongl.codec.ByteBuffers;
-
 import java.nio.ByteBuffer;
 import java.util.zip.CRC32;
+
+import static com.github.zhongl.codec.ByteBuffers.lengthOf;
+import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class Checksums {
     public static void validate(ByteBuffer buffer, long checksum) {
-        if (checksum(buffer) != checksum) throw new IllegalStateException("Invalid checksum.");
+        checkState(checksum(buffer) == checksum, "Invalid checksum.");
     }
 
     public static long checksum(ByteBuffer buffer) {
-        return checksum_bytes(buffer);
+        return checksum_bytes(buffer.duplicate());
     }
 
     static long checksum_1b1(ByteBuffer buffer) {
@@ -43,14 +44,13 @@ public class Checksums {
             while (buffer.hasRemaining()) crc32.update(buffer.get());
         } else {
             byte[] bytes = buffer.array();
-            crc32.update(bytes, buffer.position(), ByteBuffers.lengthOf(buffer));
+            crc32.update(bytes, buffer.position(), lengthOf(buffer));
         }
         return crc32.getValue();
     }
 
     static long checksum_bytes(ByteBuffer buffer) {
-        int len = ByteBuffers.lengthOf(buffer);
-        byte[] bytes = new byte[len];
+        byte[] bytes = new byte[lengthOf(buffer)];
         buffer.get(bytes);
         CRC32 crc32 = new CRC32();
         crc32.update(bytes);
