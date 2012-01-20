@@ -29,4 +29,6 @@ interface Page extends Closable{
     Range range();
 
     Page newPage(long number);
+
+    void trimBefore(long position);
 }

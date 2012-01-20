@@ -1,5 +1,6 @@
 /*
  * Copyright 2012 zhongl
+ *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -79,8 +80,17 @@ public class Pages implements Closable, Iterable<Record> {
     }
 
     public void trimBefore(long position) {
-        for (Page page : pages) {
-            if(page.range().compareTo(position) < 0) page.delete();
+        Iterator<Page> iterator = pages.iterator();
+
+        while (iterator.hasNext()) {
+            Page page = iterator.next();
+            if (page.range().compareTo(position) > 0) break;
+            if (page.range().compareTo(position) == 0) {
+                page.trimBefore(position);
+                continue;
+            }
+            page.delete();
+            iterator.remove();
         }
 
         // TODO trimBefore
