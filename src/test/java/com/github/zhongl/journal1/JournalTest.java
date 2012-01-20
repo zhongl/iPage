@@ -16,8 +16,7 @@
 
 package com.github.zhongl.journal1;
 
-import com.github.zhongl.codec.Codec;
-import com.github.zhongl.codec.StringCodec;
+import com.github.zhongl.codec.*;
 import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -34,19 +33,25 @@ public class JournalTest extends FileBase {
         dir = testDir("usage");
 
         Applicable applicable = mock(Applicable.class);
-        Codec codec = new StringCodec();
-        Journal journal = new Journal(dir, codec);
 
+        Codec codec = ComposedCodecBuilder.compose(new CompoundCodec(new StringCodec()))
+                .with(ChecksumCodec.class)
+                .with(LengthCodec.class)
+                .build();
+
+        Pages pages = mock(Pages.class);
+        
+        Journal journal = new Journal(pages);
 
         journal.append("1", false);
-        journal.saveCheckpoint(journal.append("2", false));
+        journal.erase(journal.append("2", false));
         journal.append("3", true);
 
         journal.close(); // mock crash
 
-        journal = new Journal(dir, codec);
+        journal = new Journal(pages);
 
-        journal.replayTo(applicable);
+        journal.recover(applicable);
 
         ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
         verify(applicable, times(1)).apply(captor.capture());

@@ -19,32 +19,48 @@ package com.github.zhongl.journal1;
 import com.github.zhongl.codec.Codec;
 
 import java.io.File;
-import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class Pages implements Closable, Iterable<Record> {
+public abstract class Pages implements Closable {
 
-    private final LinkedList<Page> pages;
+    private final LinkedList<Page> list;
+    private final File dir;
+    private final Codec codec;
+    private final int pageCapacity;
+    private final DeletingCallback deletingCallback;
 
     public Pages(File dir, Codec codec, int pageCapacity) {
-        pages = loadOrInitialize(dir, codec, pageCapacity);
+        this.dir = dir;
+        this.codec = codec;
+        this.pageCapacity = pageCapacity;
+        list = loadOrInitialize();
+        deletingCallback = new DeletingCallback() {
+            @Override
+            public void onDelete(Page page) { list.remove(page); }
+        };
     }
 
-    private LinkedList<Page> loadOrInitialize(File dir, Codec codec, int pageCapacity) {
-        LinkedList<Page> list = new LinkedList<Page>();
+    private LinkedList<Page> loadOrInitialize() {
+        LinkedList<Page> result = new LinkedList<Page>();
         checkArgument(dir.list().length == 0, "TODO load exist pages.");
 
-        if (list.isEmpty()) list.add(newPage(dir, codec, pageCapacity, 0L)); // initialize
+        if (result.isEmpty()) {
+            result.add(newPage(dir, codec, pageCapacity, 0L, new DeletingCallback() {
+                @Override
+                public void onDelete(Page page) {
+                    list.remove(page);
+                }
+            })); // initialize
+        }
 
-        return list;  // TODO loadOrInitialize
+        return result;  // TODO loadOrInitialize
     }
 
-    private Page newPage(File dir, Codec codec, int pageCapacity, long number) {
-        return null;  // TODO newPage
-    }
+    protected abstract Page newPage(File dir, Codec codec, int pageCapacity, long number, DeletingCallback deletingCallback);
 
     /**
      * Append any object which the {@link com.github.zhongl.codec.Codec} supported.
@@ -54,62 +70,77 @@ public class Pages implements Closable, Iterable<Record> {
      *
      * @return appended position.
      */
-    public Record append(final Object object, final boolean force) {
-        return pages.getLast().append(object, force, new OverflowCallback() {
+    public Record append(Object object, boolean force) {
+        return list.getLast().append(object, force, new OverflowCallback<Object>() {
+
             @Override
-            public void onOverflow() {
-                Page last = pages.getLast();
-                Record tail = last.range().tail();
-                Page newPage = last.newPage(tail.offset() + tail.length());
-                newPage.append(object, force, new OverflowCallback() {
+            public void onOverflow(Object rest, boolean force) {
+                Page newPage = newPage(list.getLast().range().tail());
+                newPage.append(rest, force, new OverflowCallback<Object>() {
                     @Override
-                    public void onOverflow() {
+                    public void onOverflow(Object rest, boolean force) {
                         throw new IllegalStateException("Object is too big to append to new page.");
                     }
                 });
-                pages.addLast(newPage);
+                list.addLast(newPage);
+            }
+        });
+    }
+
+    public List<Record> append(List<Object> objects, boolean force) {
+        return list.getLast().append(objects, force, new OverflowCallback<List<Object>>() {
+
+            @Override
+            public void onOverflow(List<Object> rest, boolean force) {
+                Page newPage = newPage(list.getLast().range().tail());
+                newPage.append(rest, force, new OverflowCallback<List<Object>>() {
+                    @Override
+                    public void onOverflow(List<Object> rest, boolean force) {
+                        throw new IllegalStateException("Objects is too big to append to new page.");
+                    }
+                });
+                list.addLast(newPage);
             }
         });
     }
 
     public void reset() {
-        Page newPage = pages.getLast().newPage(0L);
-        for (Page page : pages) page.delete();
-        pages.clear();
-        pages.addLast(newPage);
-    }
-
-    public void trimBefore(long position) {
-        Iterator<Page> iterator = pages.iterator();
-
-        while (iterator.hasNext()) {
-            Page page = iterator.next();
-            if (page.range().compareTo(position) > 0) break;
-            if (page.range().compareTo(position) == 0) {
-                page.trimBefore(position);
-                continue;
-            }
-            page.delete();
-            iterator.remove();
-        }
-
-        // TODO trimBefore
-    }
-
-    public void trimAfter(long position) {
-        // TODO trimAfter
+        range().remove();
+        list.addLast(newPage(0L));
     }
 
     @Override
     public void close() {
-        for (Page page : pages) {
-            page.close();
-        }
+        for (Page page : list) page.close();
     }
 
-    @Override
-    public Iterator<Record> iterator() {
-        return null;  // TODO iterator
+    public Range range() {
+        long head = list.getFirst().range().head();
+        long tail = list.getLast().range().tail();
+        return new Range(head, tail) {
+            @Override
+            public Record record(long offset) {
+                return null;  // TODO record
+            }
+
+            @Override
+            public Range head(long offset) {
+                return null;  // TODO head
+            }
+
+            @Override
+            public Range tail(long offset) {
+                return null;  // TODO tail
+            }
+
+            @Override
+            public void remove() {
+                // TODO remove
+            }
+        };
     }
 
+    private Page newPage(long number) {
+        return newPage(dir, codec, pageCapacity, number, deletingCallback);
+    }
 }

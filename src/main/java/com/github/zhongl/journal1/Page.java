@@ -16,19 +16,83 @@
 
 package com.github.zhongl.journal1;
 
+import com.github.zhongl.codec.Codec;
+
 import javax.annotation.concurrent.NotThreadSafe;
+import java.io.File;
+import java.util.List;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-interface Page extends Closable{
+abstract class Page implements Closable {
 
-    void delete();
+    protected final File dir;
+    protected final Codec codec;
+    protected final int pageCapacity;
+    protected final long number;
+    protected final DeletingCallback deletingCallback;
 
-    Record append(Object object, boolean force, OverflowCallback overflowCallback);
+    protected Page(File dir, Codec codec, int pageCapacity, long number, DeletingCallback deletingCallback) {
+        this.dir = dir;
+        this.codec = codec;
+        this.pageCapacity = pageCapacity;
+        this.number = number;
+        this.deletingCallback = deletingCallback;
+    }
 
-    Range range();
+    public abstract Record append(Object object, boolean force, OverflowCallback<Object> overflowCallback);
 
-    Page newPage(long number);
+    public abstract List<Record> append(List<Object> objects, boolean force, OverflowCallback<List<Object>> overflowCallback);
 
-    void trimBefore(long position);
+    public Range range() {
+        return new InnerRange(number, number + length());
+    }
+
+    protected abstract long length();
+
+    protected void delete() {
+        if (deleted()) return;
+        implDelete();
+        deletingCallback.onDelete(Page.this);
+    }
+
+    protected abstract boolean deleted();
+
+    protected abstract void implDelete();
+
+    protected abstract Record record(long offset);
+
+    private class InnerRange extends Range {
+
+        protected InnerRange(long head, long tail) {
+            super(head, tail);
+        }
+
+        @Override
+        public Record record(long offset) {
+            checkState(!deleted(), "Page has already deleted.");
+            return Page.this.record(offset);
+        }
+
+        @Override
+        public Range head(long offset) {
+            checkArgument(offset > head() && offset < tail());
+            return new InnerRange(offset, tail());
+        }
+
+        @Override
+        public Range tail(long offset) {
+            checkArgument(offset > head() && offset < tail());
+            return new InnerRange(head(), tail());
+        }
+
+        @Override
+        public void remove() {
+            delete();
+        }
+
+    }
 }

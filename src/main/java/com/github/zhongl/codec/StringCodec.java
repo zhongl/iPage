@@ -23,7 +23,6 @@ public class StringCodec implements Codec {
         }
     }
 
-
     @Override
     public boolean supports(Class<?> type) {
         return String.class.equals(type);

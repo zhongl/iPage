@@ -17,119 +17,63 @@
 package com.github.zhongl.journal1;
 
 
-import com.github.zhongl.codec.*;
+import com.google.common.base.Function;
 
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
-import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-public class Journal implements Closeable {
-    public static final int PAGE_CAPACITY = Integer.getInteger("ipage.journal.page.capacity", 1 << 20 * 64); // 64M
+public class Journal implements Closable {
     private final Pages pages;
 
-    public Journal(File dir, Codec... compoundCodecs) {
-        Codec[] codecs = Arrays.copyOf(compoundCodecs, compoundCodecs.length + 1);
-        codecs[compoundCodecs.length] = Checkpoint.CODEC;
-        Codec codec = ComposedCodecBuilder.compose(new CompoundCodec(codecs))
-                .with(ChecksumCodec.class)
-                .with(LengthCodec.class)
-                .build();
-        pages = new Pages(dir, codec, PAGE_CAPACITY);
-        tryRecover();
-    }
+    public Journal(Pages pages) {this.pages = pages;}
 
     /**
      * Append event.
      *
-     * @param event
+     * @param event is the instance of type which compound {@link com.github.zhongl.codec.Codec}s supported.
      * @param force event to driver for duration if it's true.
      *
-     * @return checkpoint offset
+     * @return last offset.
      */
-    public long append(final Object event, boolean force) {
+    public long append(Object event, boolean force) {
         Record record = pages.append(event, force);
         return record.offset() + record.length();
     }
 
     /**
-     * Save checkpoint and remove applied events before the offset.
-     * <p/>
-     * The checkpoint can be used for recovery if removing failed because of crashing.
+     * Erase events before the offset.
      *
-     * @param number
+     * @param offset of journal.
      */
-    public void saveCheckpoint(long number) {
-        pages.append(new Checkpoint(number), true); // TODO try append but not force.
-        pages.trimBefore(number);
+    public void erase(long offset) {
+        pages.range().tail(offset).remove();
     }
 
     /**
-     * Replay unapplied events which after last checkpoint offset to {@link com.github.zhongl.journal1.Applicable}.
+     * Recover unapplied events to {@link com.github.zhongl.journal1.Applicable}.
      *
-     * @param applicable
+     * @param applicable {@link com.github.zhongl.journal1.Applicable}
      */
-    public void replayTo(Applicable applicable) {
-        for (Record record : pages) {
-            if (record.content() instanceof Checkpoint) continue;
-            applicable.apply(record);
-        }
+    public void recover(final Applicable applicable) {
+        try {
+            pages.range().foreach(new Function<Record, Void>() {
+                @Override
+                public Void apply(@Nullable Record record) {
+                    applicable.apply(record);
+                    return null;
+                }
+            });
+        } catch (IllegalStateException ignored) { /* invalidChecksum */ }
 
         applicable.force();
         pages.reset();
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
         pages.close();
     }
 
-    private void tryRecover() {
-        long lastCheckpoint = 0L;
-        long lastValidPosition = 0L;
-
-        try {
-            for (Record record : pages) {
-                Object object = record.content();
-                if (object instanceof Checkpoint) lastCheckpoint = ((Checkpoint) object).number;
-                lastValidPosition = record.offset();
-            }
-        } catch (IllegalStateException e) { // invalid checksum
-            pages.trimAfter(lastValidPosition);
-        }
-
-        pages.trimBefore(lastCheckpoint);
-    }
-
-    private final static class Checkpoint {
-
-        public static final Codec CODEC = new Codec() {
-            @Override
-            public ByteBuffer encode(Object instance) {
-                Checkpoint checkpoint = (Checkpoint) instance;
-                ByteBuffer buffer = ByteBuffer.allocate(8);
-                buffer.putLong(0, checkpoint.number);
-                return buffer;
-            }
-
-            @Override
-            public Checkpoint decode(ByteBuffer buffer) {
-                return new Checkpoint(buffer.getLong(0));
-            }
-
-            @Override
-            public boolean supports(Class<?> type) {
-                return Checkpoint.class.equals(type);
-            }
-        };
-
-        private final long number;
-
-        public Checkpoint(long number) { this.number = number; }
-
-    }
 }
