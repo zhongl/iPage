@@ -18,7 +18,8 @@ package com.github.zhongl.journal1;
 import java.nio.ByteBuffer;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface ByteBufferHandler {
+public interface Group<T> {
+    Group append(T element);
 
-    void handle(ByteBuffer buffer) throws Exception;
+    ByteBuffer toBuffer();
 }

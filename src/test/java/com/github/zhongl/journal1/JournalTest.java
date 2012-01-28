@@ -16,14 +16,14 @@
 
 package com.github.zhongl.journal1;
 
-import com.github.zhongl.codec.*;
+import com.github.zhongl.codec.StringCodec;
 import com.github.zhongl.util.FileBase;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.*;
+import java.io.File;
+
+import static com.github.zhongl.journal1.Journal.PageFactory;
+import static org.mockito.Mockito.mock;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class JournalTest extends FileBase {
@@ -34,30 +34,32 @@ public class JournalTest extends FileBase {
 
         Applicable applicable = mock(Applicable.class);
 
-        Codec codec = ComposedCodecBuilder.compose(new CompoundCodec(new StringCodec()))
-                .with(ChecksumCodec.class)
-                .with(LengthCodec.class)
-                .build();
+        PageFactory factory = new PageFactory() {
+            @Override
+            public Page readOnlyPage(File file) {
+                return null;  // TODO readOnlyPage
+            }
 
-        Pages pages = mock(Pages.class);
-        
-        Journal journal = new Journal(pages);
+            @Override
+            public Page readWritePage(File file, int capacity) {
+                return null;  // TODO readWritePage
+            }
+        };
+        Journal journal = new Journal(dir, factory, new StringCodec());
 
-        journal.append("1", false);
-        journal.erase(journal.append("2", false));
-        journal.append("3", true);
+        Group<Object> group = journal.createGroup();
+
+        group.append("1");
+        group.append("2");
+
+        journal.erase(journal.commit(group, true));
 
         journal.close(); // mock crash
 
-        journal = new Journal(pages);
+        journal = new Journal(dir, factory, new StringCodec());
 
         journal.recover(applicable);
 
-        ArgumentCaptor<Record> captor = ArgumentCaptor.forClass(Record.class);
-        verify(applicable, times(1)).apply(captor.capture());
-        Record record = captor.getValue();
-        assertThat(record.offset(), is(0L));
-        assertThat(record.<String>content(), is("3"));
         journal.close();
     }
 

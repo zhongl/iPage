@@ -1,6 +1,5 @@
 /*
  * Copyright 2012 zhongl
- *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -16,24 +15,14 @@
 
 package com.github.zhongl.journal1;
 
+import com.github.zhongl.util.FileBase;
+import org.junit.Test;
+
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class Cursor {
-    public static final Cursor EOF = new Cursor(null, Long.MIN_VALUE);
+public class MappedBufferPageTest extends FileBase {
 
-    private final Object object;
-    private final long position;
-
-    Cursor(Object object, long position) {
-        this.object = object;
-        this.position = position;
+    @Test
+    public void main() throws Exception {
+        file = testFile("main");
     }
-
-    public long position() {
-        return position;
-    }
-
-    public Object get() {
-        return object;
-    }
-
 }

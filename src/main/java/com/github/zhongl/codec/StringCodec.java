@@ -19,7 +19,9 @@ public class StringCodec implements Codec {
             return new String(bytes);
         } else {
             byte[] bytes = buffer.array();
-            return new String(bytes, buffer.position(), length);
+            int offset = buffer.position();
+            buffer.position(offset + length);
+            return new String(bytes, offset, length);
         }
     }
 

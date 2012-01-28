@@ -18,13 +18,15 @@ package com.github.zhongl.journal1;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public interface Applicable {
     /**
-     * Apply {@link com.github.zhongl.journal1.Journal} {@link com.github.zhongl.journal1.Record}.
+     * Apply a record from {@link com.github.zhongl.journal1.Journal} with it's offset.
      *
-     * @param record
-     *
-     * @return true means need save applied point.
+     * @param record indicate an operation.
      */
-    boolean apply(Record record);
+    void apply(Object record);
 
+    /** @return offset of last applied checkpoint. */
+    long lastCheckpoint();
+
+    /** Ensure all records have been applied , then Journal could be erased. */
     void force();
 }

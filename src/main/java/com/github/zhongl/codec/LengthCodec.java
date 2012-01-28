@@ -25,9 +25,8 @@ public class LengthCodec extends DecoratedCodec {
         int length = buffer.getInt();
         ByteBuffer body = buffer.duplicate();
         body.limit(buffer.position() + length);
+        buffer.position(body.limit());
         return delegate.decode(body);
     }
-
-
 
 }

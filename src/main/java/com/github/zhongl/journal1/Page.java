@@ -1,6 +1,5 @@
 /*
  * Copyright 2012 zhongl
- *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -16,83 +15,40 @@
 
 package com.github.zhongl.journal1;
 
-import com.github.zhongl.codec.Codec;
+import java.nio.ByteBuffer;
 
-import javax.annotation.concurrent.NotThreadSafe;
-import java.io.File;
-import java.util.List;
+/**
+ * {@link com.github.zhongl.journal1.Page} is a high level abstract entity focus on IO manipulation.
+ *
+ * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
+ */
+public interface Page extends Closable, Comparable<Long> {
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
+    public long offset();
 
-/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-@NotThreadSafe
-abstract class Page implements Closable {
+    public int length();
 
-    protected final File dir;
-    protected final Codec codec;
-    protected final int pageCapacity;
-    protected final long number;
-    protected final DeletingCallback deletingCallback;
+    /**
+     * Append buffer to page.
+     *
+     * @param buffer   to appending.
+     * @param force    to driver if it is true.
+     * @param callback for appending overflow.
+     *
+     * @return offset after appended.
+     */
+    public int append(ByteBuffer buffer, boolean force, OverflowCallback callback);
 
-    protected Page(File dir, Codec codec, int pageCapacity, long number, DeletingCallback deletingCallback) {
-        this.dir = dir;
-        this.codec = codec;
-        this.pageCapacity = pageCapacity;
-        this.number = number;
-        this.deletingCallback = deletingCallback;
-    }
+    /**
+     * Slice a readonly {@link java.nio.ByteBuffer} by offset and length.
+     *
+     * @param offset of buffer in page.
+     * @param length of buffer in page.
+     *
+     * @return readonly {@link java.nio.ByteBuffer}
+     */
+    public ByteBuffer slice(int offset, int length);
 
-    public abstract Record append(Object object, boolean force, OverflowCallback<Object> overflowCallback);
-
-    public abstract List<Record> append(List<Object> objects, boolean force, OverflowCallback<List<Object>> overflowCallback);
-
-    public Range range() {
-        return new InnerRange(number, number + length());
-    }
-
-    protected abstract long length();
-
-    protected void delete() {
-        if (deleted()) return;
-        implDelete();
-        deletingCallback.onDelete(Page.this);
-    }
-
-    protected abstract boolean deleted();
-
-    protected abstract void implDelete();
-
-    protected abstract Record record(long offset);
-
-    private class InnerRange extends Range {
-
-        protected InnerRange(long head, long tail) {
-            super(head, tail);
-        }
-
-        @Override
-        public Record record(long offset) {
-            checkState(!deleted(), "Page has already deleted.");
-            return Page.this.record(offset);
-        }
-
-        @Override
-        public Range head(long offset) {
-            checkArgument(offset > head() && offset < tail());
-            return new InnerRange(offset, tail());
-        }
-
-        @Override
-        public Range tail(long offset) {
-            checkArgument(offset > head() && offset < tail());
-            return new InnerRange(head(), tail());
-        }
-
-        @Override
-        public void remove() {
-            delete();
-        }
-
-    }
+    /** Delete bytes of page on the driver. */
+    public void delete();
 }
