@@ -14,10 +14,10 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.journal1;
+package com.github.zhongl.ex.journal;
 
 
-import com.github.zhongl.codec.*;
+import com.github.zhongl.ex.codec.*;
 import com.github.zhongl.util.FilesLoader;
 import com.github.zhongl.util.NumberNamedFilterAndComparator;
 import com.github.zhongl.util.Transformer;
@@ -87,9 +87,9 @@ public class Journal implements Closable {
     }
 
     /**
-     * Recover unapplied events to {@link com.github.zhongl.journal1.Applicable}.
+     * Recover unapplied events to {@link com.github.zhongl.ex.journal.Applicable}.
      *
-     * @param applicable {@link com.github.zhongl.journal1.Applicable}
+     * @param applicable {@link com.github.zhongl.ex.journal.Applicable}
      */
     public void recover(final Applicable applicable) {
         try {
@@ -155,7 +155,7 @@ public class Journal implements Closable {
     private class InnerGroup implements Group<Object> {
         @Override
         public Group append(Object element) {
-            return null;  // TODO append
+            return null;  // TODO commit
         }
 
         @Override

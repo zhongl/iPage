@@ -13,16 +13,13 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.journal1;
+package com.github.zhongl.ex.page;
 
-import com.github.zhongl.util.FileBase;
-import org.junit.Test;
+import java.nio.ByteBuffer;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class MappedBufferPageTest extends FileBase {
+public interface Group<K, V> {
+    Group append(K key, V value);
 
-    @Test
-    public void main() throws Exception {
-        file = testFile("main");
-    }
+    ByteBuffer toBuffer();
 }

@@ -13,7 +13,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.journal1;
+package com.github.zhongl.ex.journal;
 
 import com.github.zhongl.util.DirectByteBufferCleaner;
 import com.google.common.cache.*;

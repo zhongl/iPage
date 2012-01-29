@@ -1,4 +1,4 @@
-package com.github.zhongl.codec;
+package com.github.zhongl.ex.codec;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -14,15 +14,15 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.journal1;
+package com.github.zhongl.ex.journal;
 
-import com.github.zhongl.codec.StringCodec;
+import com.github.zhongl.ex.codec.StringCodec;
 import com.github.zhongl.util.FileBase;
 import org.junit.Test;
 
 import java.io.File;
 
-import static com.github.zhongl.journal1.Journal.PageFactory;
+import static com.github.zhongl.ex.journal.Journal.PageFactory;
 import static org.mockito.Mockito.mock;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */

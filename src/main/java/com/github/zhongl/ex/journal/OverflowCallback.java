@@ -1,4 +1,4 @@
-package com.github.zhongl.journal1;
+package com.github.zhongl.ex.journal;
 
 import java.nio.ByteBuffer;
 

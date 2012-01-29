@@ -13,20 +13,13 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.journal1;
+package com.github.zhongl.ex.journal;
+
+import java.nio.ByteBuffer;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface Applicable {
-    /**
-     * Apply a record from {@link com.github.zhongl.journal1.Journal} with it's offset.
-     *
-     * @param record indicate an operation.
-     */
-    void apply(Object record);
+public interface Group<T> {
+    Group append(T element);
 
-    /** @return offset of last applied checkpoint. */
-    long lastCheckpoint();
-
-    /** Ensure all records have been applied , then Journal could be erased. */
-    void force();
+    ByteBuffer toBuffer();
 }

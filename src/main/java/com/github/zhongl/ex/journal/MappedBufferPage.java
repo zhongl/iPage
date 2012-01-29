@@ -13,9 +13,9 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.journal1;
+package com.github.zhongl.ex.journal;
 
-import com.github.zhongl.codec.ByteBuffers;
+import com.github.zhongl.ex.codec.ByteBuffers;
 import com.google.common.io.Closeables;
 
 import java.io.FileNotFoundException;
