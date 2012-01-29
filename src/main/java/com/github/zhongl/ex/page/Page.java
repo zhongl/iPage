@@ -23,8 +23,7 @@ import com.github.zhongl.ex.journal.OverflowCallback;
  *
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
-public interface Page<K, V> extends Closable, Comparable<K> {
-
+public interface Page extends Closable {
 
     /**
      * Commit group to page.
@@ -32,15 +31,12 @@ public interface Page<K, V> extends Closable, Comparable<K> {
      * @param group    to appending.
      * @param force    to driver if it is true.
      * @param callback for appending overflow.
-     *
-     * @return offset after appended.
      */
-    public int commit(Group<Long, String> group, boolean force, OverflowCallback callback);
+    void commit(Group group, boolean force, OverflowCallback callback);
 
     /** Delete bytes of page on the driver. */
-    public void delete();
+    void delete();
 
-    Group<K, V> newGroup();
+    Group newGroup();
 
-    V get(K key);
 }

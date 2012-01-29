@@ -13,11 +13,24 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ex.page;
+package com.github.zhongl.ex.nio;
 
-import java.nio.ByteBuffer;
+import java.io.File;
+import java.nio.channels.FileChannel;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface Group {
-    <T> Cursor<T> append(T object);
+public class FileChannels {
+
+    public static FileChannel getOrOpen(File file) {
+        // TODO getOrOpen
+        return null;
+    }
+
+    public static void closeChannelOf(File file) {
+        // TODO close
+    }
+
+    public static void closeAll() {
+        // TODO closeAll
+    }
 }
