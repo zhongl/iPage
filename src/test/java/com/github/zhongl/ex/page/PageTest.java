@@ -1,32 +1,45 @@
 package com.github.zhongl.ex.page;
 
+import com.github.zhongl.ex.codec.Codec;
+import com.github.zhongl.ex.codec.ComposedCodecBuilder;
+import com.github.zhongl.ex.codec.LengthCodec;
+import com.github.zhongl.ex.codec.StringCodec;
 import com.github.zhongl.util.FileTestContext;
 import org.junit.After;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 
+import static com.github.zhongl.ex.page.OverflowCallback.OverflowThrowing;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class PageTest extends FileTestContext {
+public class PageTest extends FileTestContext {
 
     private Page page;
 
-    protected abstract Page newPage() throws IOException;
+    private Page newPage() throws IOException {
+        dir = testDir("fcp");
+        Codec codec = ComposedCodecBuilder.compose(new StringCodec())
+                                          .with(LengthCodec.class)
+                                          .build();
+        return new Page(new File(dir, "0"), 0L, 4096, codec) {
+            @Override
+            protected Batch newBatch(File file, Codec codec) {
+                return new DefaultBatch(file, codec);
+            }
+        };
+    }
 
     @Test
     public void get() throws Exception {
         page = newPage();
 
-        Group group = page.newGroup();
         String one = "1";
 
-        Cursor<String> cursor = group.append(one);
-        assertThat(cursor.get(), is(one));
-
-        page.commit(group, true, new OverflowCallback.OverflowThrowing());
+        Cursor<String> cursor = page.append(one, true, new OverflowThrowing());
         assertThat(cursor.get(), is(one));
 
         page.close();
@@ -37,13 +50,8 @@ public abstract class PageTest extends FileTestContext {
     @Test(expected = IllegalStateException.class)
     public void getAfterDeleted() throws Exception {
         page = newPage();
-
-        Group group = page.newGroup();
-        Cursor<String> cursor = group.append("value");
-        page.commit(group, true, new OverflowCallback.OverflowThrowing());
-
-        page.delete();
-
+        Cursor<String> cursor = page.append("value", true, new OverflowThrowing());
+        page.file().delete();
         cursor.get();
     }
 

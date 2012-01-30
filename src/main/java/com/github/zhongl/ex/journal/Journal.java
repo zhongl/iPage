@@ -19,6 +19,8 @@ package com.github.zhongl.ex.journal;
 
 import com.github.zhongl.ex.codec.*;
 import com.github.zhongl.ex.nio.Closable;
+import com.github.zhongl.ex.page.Batch;
+import com.github.zhongl.ex.page.Page;
 import com.github.zhongl.util.FilesLoader;
 import com.github.zhongl.util.NumberNamedFilterAndComparator;
 import com.github.zhongl.util.Transformer;
@@ -27,7 +29,6 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.LinkedList;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
@@ -40,6 +41,8 @@ public class Journal implements Closable {
     private final File dir;
     private final PageFactory factory;
     private final LinkedList<Page> pages;
+    private long revision;
+    private Batch group;
 
     public Journal(File dir, PageFactory factory, Codec... codecs) throws IOException {
         this.dir = dir;
@@ -59,32 +62,45 @@ public class Journal implements Closable {
                 new Transformer<Page>() {
                     @Override
                     public Page transform(File file, boolean last) throws IOException {
-                        return last ? factory.readWritePage(file, CAPACITY) : factory.readOnlyPage(file);
+                        return factory.newPage(file, CAPACITY, codec);
                     }
                 }).loadTo(new LinkedList<Page>());
 
-        if (list.isEmpty()) list.add(factory.readWritePage(new File(dir, "0"), CAPACITY));
+        if (list.isEmpty()) list.add(factory.newPage(new File(dir, "0"), CAPACITY, codec));
         return list;
     }
 
-    public interface PageFactory {
-        Page readOnlyPage(File file);
+    public long append(Object event, boolean force) throws IOException {
+        Record record = new Record(++revision, event);
+        group.append(record);
+        if (force) {
+        }
+        return record.revision();
+    }
 
-        Page readWritePage(File file, int capacity);
+    public interface PageFactory {
+
+        Page newPage(File file, int capacity, Codec codec);
     }
 
     /**
-     * Erase events before the offset.
+     * Erase events before the revision.
      *
-     * @param offset of journal.
+     * @param revision of journal.
      */
-    public void erase(long offset) {
-        int index = Collections.binarySearch(pages, offset);
-        removeFromHeadTo(index);
+    public void eraseBy(long revision) {
+        int size = pages.size();
+        for (int i = 0; revisionRangeOf(pages.peek()).compareTo(revision) < 0 && i < size; i++) {
+//            pages.remove().delete();
+        }
+    }
+
+    private RevisionRange revisionRangeOf(Page page) {
+        return new RevisionRange(page);
     }
 
     private void removeFromHeadTo(int index) {
-        for (int i = 0; i < index; i++) pages.remove().delete();
+//        for (int i = 0; i < index; i++) pages.remove().delete();
     }
 
     /**
@@ -93,8 +109,9 @@ public class Journal implements Closable {
      * @param applicable {@link com.github.zhongl.ex.journal.Applicable}
      */
     public void recover(final Applicable applicable) {
+        eraseBy(applicable.lastCheckpoint());
         try {
-            int index = Collections.binarySearch(pages, applicable.lastCheckpoint());
+            int index = 1/*Collections.binarySearch(pages, applicable.lastCheckpoint())*/;
             for (Page page : pages.subList(index, pages.size())) apply(applicable, page);
         } catch (IllegalStateException ignored) { /* invalidChecksum */ }
 
@@ -104,14 +121,14 @@ public class Journal implements Closable {
 
     private void apply(Applicable applicable, Page page) {
         int offset = 0;
-        int length = page.length();
-
-        if (applicable.lastCheckpoint() > page.offset()) {
-            offset = (int) (applicable.lastCheckpoint() - page.offset());
-            length -= offset;
-        }
-
-        apply(applicable, page.slice(offset, length));
+//        int length = page.length();
+//
+//        if (applicable.lastCheckpoint() > page.offset()) {
+//            offset = (int) (applicable.lastCheckpoint() - page.offset());
+//            length -= offset;
+//        }
+//
+//        apply(applicable, page.slice(offset, length));
     }
 
     private void apply(Applicable applicable, ByteBuffer buffer) {
@@ -129,30 +146,6 @@ public class Journal implements Closable {
         return new InnerGroup();
     }
 
-    /**
-     * Commit a group of events.
-     *
-     * @param group of events.
-     * @param force to driver if it is true.
-     *
-     * @return offset of committed.
-     */
-    public long commit(Group group, boolean force) {
-        int appended = pages.getLast().append(group.toBuffer(), force, new OverflowCallback() {
-            @Override
-            public int onOverflow(ByteBuffer rest, boolean force) {
-                Page last = pages.getLast();
-                long offset = last.offset() + last.length();
-                File file = new File(dir, offset + "");
-                Page page = factory.readWritePage(file, CAPACITY);
-                int appended = page.append(rest, force, new OverflowThrowing());
-                pages.addLast(page);
-                return appended;
-            }
-        });
-        return appended + pages.getLast().offset();
-    }
-
     private class InnerGroup implements Group<Object> {
         @Override
         public Group append(Object element) {
@@ -164,4 +157,24 @@ public class Journal implements Closable {
             return null;  // TODO toBuffer
         }
     }
+
+    private class RevisionRange implements Comparable<Long> {
+
+        private final long from;
+        private final long to;
+
+        public RevisionRange(Page page) {
+            File file = page.file();
+            from = Long.parseLong(file.getName());
+            to = file.length() + from;
+        }
+
+        @Override
+        public int compareTo(Long revision) {
+            if (revision >= to) return -1;
+            if (revision < from) return 1;
+            return 0;
+        }
+    }
+
 }

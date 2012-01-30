@@ -16,7 +16,9 @@
 
 package com.github.zhongl.ex.journal;
 
+import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.codec.StringCodec;
+import com.github.zhongl.ex.page.Page;
 import com.github.zhongl.util.FileTestContext;
 import org.junit.Test;
 
@@ -35,24 +37,20 @@ public class JournalTest extends FileTestContext {
         Applicable applicable = mock(Applicable.class);
 
         PageFactory factory = new PageFactory() {
-            @Override
-            public Page readOnlyPage(File file) {
-                return null;  // TODO readOnlyPage
-            }
 
             @Override
-            public Page readWritePage(File file, int capacity) {
+            public Page newPage(File file, int capacity, Codec codec) {
                 return null;  // TODO readWritePage
             }
         };
         Journal journal = new Journal(dir, factory, new StringCodec());
 
-        Group<Object> group = journal.createGroup();
 
-        group.append("1");
-        group.append("2");
+        journal.append("1", false);
 
-        journal.erase(journal.commit(group, true));
+        journal.eraseBy(journal.append("2", true));
+
+        journal.append("3", true);
 
         journal.close(); // mock crash
 

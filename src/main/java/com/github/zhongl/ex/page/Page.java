@@ -15,29 +15,73 @@
 
 package com.github.zhongl.ex.page;
 
+import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.nio.Closable;
+import com.github.zhongl.ex.nio.FileChannels;
 
+import javax.annotation.concurrent.NotThreadSafe;
+import java.io.File;
 import java.io.IOException;
+import java.nio.channels.FileChannel;
+
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * {@link com.github.zhongl.ex.page.Page} is a high level abstract entity focus on IO manipulation.
  *
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
-public interface Page extends Closable {
+@NotThreadSafe
+public abstract class Page implements Closable {
 
-    /**
-     * Commit group to page.
-     *
-     * @param group    to appending.
-     * @param force    to driver if it is true.
-     * @param callback for appending overflow.
-     */
-    void commit(Group group, boolean force, OverflowCallback callback) throws IOException;
+    private final File file;
+    private final long number;
+    private final int capacity;
+    private final Codec codec;
 
-    /** Delete bytes of page on the driver. */
-    void delete();
+    private boolean opened;
+    private Batch currentBatch;
 
-    Group newGroup();
+    protected Page(File file, long number, int capacity, Codec codec) {
+        this.file = file;
+        this.number = number;
+        this.capacity = capacity;
+        this.codec = codec;
+        this.opened = true;
+        currentBatch = newBatch(file, codec);
+        FileChannels.getOrOpen(file); // create file if not exist
+    }
 
+    public <T> Cursor<T> append(T value, boolean force, OverflowCallback callback) throws IOException {
+        checkState(opened);
+
+        FileChannel channel = FileChannels.getOrOpen(file);
+        if (channel.position() > capacity) return callback.onOverflow(value, force);
+
+        Cursor<T> cursor = currentBatch.append(value);
+
+        if (force) {
+            currentBatch.writeTo(channel, true);
+            currentBatch = newBatch(file, codec);
+        }
+
+        return cursor;
+    }
+
+    public File file() {
+        return file;
+    }
+
+    public long number() {
+        return number;
+    }
+
+    @Override
+    public void close() {
+        if (!opened) return;
+        opened = false;
+        FileChannels.closeChannelOf(file);
+    }
+
+    protected abstract Batch newBatch(File file, Codec codec);
 }

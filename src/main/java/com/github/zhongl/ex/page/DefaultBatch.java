@@ -1,7 +1,6 @@
 package com.github.zhongl.ex.page;
 
 import com.github.zhongl.ex.codec.Codec;
-import com.github.zhongl.ex.nio.ChannelWriter;
 import com.github.zhongl.ex.nio.FileChannels;
 import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
 
@@ -9,7 +8,6 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,36 +16,29 @@ import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-class DefaultGroup implements Group {
+class DefaultBatch extends Batch {
 
     private final List<InnerCursor<?>> list;
-    private final File file;
-    private final Codec codec;
 
-    private boolean notWrote = true;
-
-    public DefaultGroup(File file, Codec codec) {
-        this.file = file;
-        this.codec = codec;
+    public DefaultBatch(File file, Codec codec) {
+        super(codec, file);
         list = new ArrayList<InnerCursor<?>>();
     }
 
     @Override
-    public <T> Cursor<T> append(final T object) {
-        checkNotNull(object);
-        checkState(notWrote);
+    protected <T> Cursor<T> createCursor(T object) {
         InnerCursor<T> cursor = new InnerCursor<T>(object);
         this.list.add(cursor);
         return cursor;
     }
 
-    public void writeTo(FileChannel channel, boolean force) throws IOException {
-        notWrote = false;
+    @Override
+    protected ByteBuffer[] getBuffers() throws IOException {
         ByteBuffer[] buffers = new ByteBuffer[list.size()];
         for (int i = 0; i < buffers.length; i++) {
             buffers[i] = list.get(i).encodeObject();
         }
-        ChannelWriter.getInstance().write(channel, buffers, force);
+        return buffers;
     }
 
     private class InnerCursor<T> implements Cursor<T> {
