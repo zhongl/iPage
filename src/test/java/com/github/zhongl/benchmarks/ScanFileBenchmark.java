@@ -16,7 +16,7 @@
 
 package com.github.zhongl.benchmarks;
 
-import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileTestContext;
 import org.junit.Test;
 
 import java.io.BufferedInputStream;
@@ -27,7 +27,7 @@ import java.nio.ByteBuffer;
 import java.text.MessageFormat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class ScanFileBenchmark extends FileBase {
+public class ScanFileBenchmark extends FileTestContext {
 
     @Test
     public void benchmark() throws Exception {

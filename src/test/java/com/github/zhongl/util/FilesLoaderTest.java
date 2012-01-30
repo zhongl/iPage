@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import static org.hamcrest.Matchers.hasItems;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class FilesLoaderTest extends FileBase {
+public class FilesLoaderTest extends FileTestContext {
     @Test
     public void load() throws Exception {
         dir = testDir("load");

@@ -17,7 +17,7 @@
 package com.github.zhongl.ex.journal;
 
 import com.github.zhongl.ex.codec.StringCodec;
-import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileTestContext;
 import org.junit.Test;
 
 import java.io.File;
@@ -26,7 +26,7 @@ import static com.github.zhongl.ex.journal.Journal.PageFactory;
 import static org.mockito.Mockito.mock;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class JournalTest extends FileBase {
+public class JournalTest extends FileTestContext {
 
     @Test
     public void usage() throws Exception {

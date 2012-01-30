@@ -19,7 +19,7 @@ package com.github.zhongl.kvengine;
 import com.github.zhongl.benchmarker.*;
 import com.github.zhongl.index.Md5Key;
 import com.github.zhongl.page.Accessors;
-import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileTestContext;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import org.junit.After;
@@ -33,7 +33,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class BlockingKVEngineBenchmark extends FileBase {
+public class BlockingKVEngineBenchmark extends FileTestContext {
 
     public static final String PROPERTY_PREFIX = "blocking.kvengine.benchmark";
     public static final int TIMES = Integer.getInteger(PROPERTY_PREFIX + ".times", 1000);

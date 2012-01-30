@@ -15,8 +15,9 @@
 
 package com.github.zhongl.ex.page;
 
-import com.github.zhongl.ex.journal.Closable;
-import com.github.zhongl.ex.journal.OverflowCallback;
+import com.github.zhongl.ex.nio.Closable;
+
+import java.io.IOException;
 
 /**
  * {@link com.github.zhongl.ex.page.Page} is a high level abstract entity focus on IO manipulation.
@@ -32,7 +33,7 @@ public interface Page extends Closable {
      * @param force    to driver if it is true.
      * @param callback for appending overflow.
      */
-    void commit(Group group, boolean force, OverflowCallback callback);
+    void commit(Group group, boolean force, OverflowCallback callback) throws IOException;
 
     /** Delete bytes of page on the driver. */
     void delete();

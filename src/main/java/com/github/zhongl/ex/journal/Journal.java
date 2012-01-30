@@ -18,6 +18,7 @@ package com.github.zhongl.ex.journal;
 
 
 import com.github.zhongl.ex.codec.*;
+import com.github.zhongl.ex.nio.Closable;
 import com.github.zhongl.util.FilesLoader;
 import com.github.zhongl.util.NumberNamedFilterAndComparator;
 import com.github.zhongl.util.Transformer;

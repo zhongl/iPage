@@ -17,7 +17,7 @@
 package com.github.zhongl.index;
 
 import com.github.zhongl.sequence.Cursor;
-import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileTestContext;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Longs;
 import org.junit.Test;
@@ -30,7 +30,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class BucketTest extends FileBase {
+public class BucketTest extends FileTestContext {
 
     @Test
     public void validateOrRecoveryIfOnlyCRCBroken() throws Exception {

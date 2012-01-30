@@ -15,11 +15,11 @@
 
 package com.github.zhongl.ex.journal;
 
-import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileTestContext;
 import org.junit.Test;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class MappedBufferPageTest extends FileBase {
+public class MappedBufferPageTest extends FileTestContext {
 
     @Test
     public void main() throws Exception {

@@ -18,7 +18,7 @@ package com.github.zhongl.index;
 
 import com.github.zhongl.benchmarker.*;
 import com.github.zhongl.sequence.Cursor;
-import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileTestContext;
 import com.google.common.primitives.Ints;
 import org.junit.After;
 import org.junit.Test;
@@ -27,7 +27,7 @@ import java.util.Collection;
 import java.util.concurrent.Callable;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class IndexBenchmark extends FileBase {
+public class IndexBenchmark extends FileTestContext {
 
     private Index index;
 

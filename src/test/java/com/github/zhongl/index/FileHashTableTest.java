@@ -17,7 +17,7 @@
 package com.github.zhongl.index;
 
 import com.github.zhongl.sequence.Cursor;
-import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileTestContext;
 import com.google.common.io.Files;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
@@ -35,7 +35,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class FileHashTableTest extends FileBase {
+public class FileHashTableTest extends FileTestContext {
 
     private FileHashTable fileHashTable;
 

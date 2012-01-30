@@ -16,7 +16,7 @@
 package com.github.zhongl.benchmarks;
 
 import com.github.zhongl.util.DirectByteBufferCleaner;
-import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileTestContext;
 import com.google.common.io.Files;
 import org.junit.Test;
 
@@ -32,7 +32,7 @@ import java.security.PrivilegedAction;
 import java.text.MessageFormat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class ForceBenchmark extends FileBase {
+public class ForceBenchmark extends FileTestContext {
 
     private static final int PAGE_SIZE = Integer.getInteger("force.benchmark.page.size", 8192);
     private static final int LENGTH = Integer.getInteger("force.benchmark.MB", 64) * 1024 * 1024;

@@ -1,20 +1,20 @@
 package com.github.zhongl.ex.page;
 
+import com.github.zhongl.util.FileTestContext;
 import org.junit.After;
 import org.junit.Test;
 
-import static com.github.zhongl.ex.journal.OverflowCallback.OverflowThrowing;
+import java.io.IOException;
+
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class PageTest {
+public abstract class PageTest extends FileTestContext {
 
     private Page page;
 
-    protected Page newPage() {
-        return null;  // TODO newPage
-    }
+    protected abstract Page newPage() throws IOException;
 
     @Test
     public void get() throws Exception {
@@ -26,7 +26,7 @@ public class PageTest {
         Cursor<String> cursor = group.append(one);
         assertThat(cursor.get(), is(one));
 
-        page.commit(group, true, new OverflowThrowing());
+        page.commit(group, true, new OverflowCallback.OverflowThrowing());
         assertThat(cursor.get(), is(one));
 
         page.close();
@@ -40,7 +40,7 @@ public class PageTest {
 
         Group group = page.newGroup();
         Cursor<String> cursor = group.append("value");
-        page.commit(group, true, new OverflowThrowing());
+        page.commit(group, true, new OverflowCallback.OverflowThrowing());
 
         page.delete();
 

@@ -17,7 +17,7 @@
 package com.github.zhongl.journal;
 
 import com.github.zhongl.cache.Cache;
-import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileTestContext;
 import com.google.common.io.Files;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
@@ -36,7 +36,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class EventPageTest extends FileBase {
+public class EventPageTest extends FileTestContext {
 
 
     private Cache cache;

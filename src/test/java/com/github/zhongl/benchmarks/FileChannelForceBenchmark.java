@@ -15,7 +15,7 @@
 
 package com.github.zhongl.benchmarks;
 
-import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileTestContext;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,7 +27,7 @@ import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl</a> */
-public class FileChannelForceBenchmark extends FileBase {
+public class FileChannelForceBenchmark extends FileTestContext {
     public static final int ONE_KILO_BYTES = 1024;
     public static final int FOUR = 4;
     private final int size = Integer.getInteger("forcing.benchmark.size", 1024);

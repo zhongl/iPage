@@ -18,7 +18,7 @@ package com.github.zhongl.kvengine;
 
 import com.github.zhongl.index.Md5Key;
 import com.github.zhongl.page.Accessors;
-import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileTestContext;
 import org.junit.After;
 import org.junit.Test;
 
@@ -30,7 +30,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class KVEngineTest extends FileBase {
+public class KVEngineTest extends FileTestContext {
 
     protected BlockingKVEngine<byte[]> engine;
 

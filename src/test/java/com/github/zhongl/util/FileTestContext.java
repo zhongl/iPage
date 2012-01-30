@@ -26,7 +26,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class FileBase {
+public abstract class FileTestContext {
     private static final String BASE_ROOT = "target/tmpTestFiles/";
     protected File file;
     protected File dir;

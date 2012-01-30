@@ -16,7 +16,7 @@
 package com.github.zhongl.ex.page;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface Cursor<T> extends Comparable<Cursor<?>> {
+public interface Cursor<T> {
     T get();
 }
 

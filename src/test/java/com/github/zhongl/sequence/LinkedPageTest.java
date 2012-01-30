@@ -19,7 +19,7 @@ package com.github.zhongl.sequence;
 import com.github.zhongl.page.Accessor;
 import com.github.zhongl.page.Accessors;
 import com.github.zhongl.page.ReadOnlyChannels;
-import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileTestContext;
 import org.junit.After;
 import org.junit.Test;
 
@@ -31,7 +31,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class LinkedPageTest extends FileBase {
+public class LinkedPageTest extends FileTestContext {
 
     private LinkedPage<String> linkedPage;
 

@@ -17,7 +17,7 @@
 package com.github.zhongl.sequence;
 
 import com.github.zhongl.page.Accessors;
-import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileTestContext;
 import org.junit.After;
 import org.junit.Test;
 
@@ -25,7 +25,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class SequenceTest extends FileBase {
+public class SequenceTest extends FileTestContext {
 
     Sequence<String> sequence;
 

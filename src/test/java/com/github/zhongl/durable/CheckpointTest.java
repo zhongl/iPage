@@ -19,7 +19,7 @@ package com.github.zhongl.durable;
 import com.github.zhongl.journal.Event;
 import com.github.zhongl.page.Page;
 import com.github.zhongl.sequence.Cursor;
-import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileTestContext;
 import org.junit.Test;
 
 import java.io.File;
@@ -30,7 +30,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class CheckpointTest extends FileBase {
+public class CheckpointTest extends FileTestContext {
 
     @Test
     public void initialize() throws Exception {

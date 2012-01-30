@@ -17,7 +17,7 @@
 package com.github.zhongl.sequence;
 
 import com.github.zhongl.page.Accessors;
-import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileTestContext;
 import org.junit.Test;
 
 import java.io.File;
@@ -27,7 +27,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class SequenceLoaderTest extends FileBase {
+public class SequenceLoaderTest extends FileTestContext {
     @Test
     public void initializeLoad() throws Exception {
         dir = testDir("initializeLoad");

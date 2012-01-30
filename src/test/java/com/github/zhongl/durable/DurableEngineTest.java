@@ -27,7 +27,7 @@ import com.github.zhongl.page.Page;
 import com.github.zhongl.sequence.Cursor;
 import com.github.zhongl.sequence.Sequence;
 import com.github.zhongl.sequence.SequenceLoader;
-import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileTestContext;
 import com.google.common.util.concurrent.FutureCallback;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -45,7 +45,7 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class DurableEngineTest extends FileBase {
+public class DurableEngineTest extends FileTestContext {
 
     private DurableEngine<String> engine;
 

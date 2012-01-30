@@ -18,7 +18,7 @@ package com.github.zhongl.journal;
 
 import com.github.zhongl.cache.Cache;
 import com.github.zhongl.durable.DurableEngine;
-import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileTestContext;
 import org.junit.After;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -26,7 +26,6 @@ import org.mockito.ArgumentCaptor;
 import java.io.File;
 import java.util.concurrent.CountDownLatch;
 
-import static org.hamcrest.Matchers.any;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.Assert.assertThat;
@@ -34,7 +33,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class JournalTest extends FileBase {
+public class JournalTest extends FileTestContext {
 
     private Journal journal;
 

@@ -16,7 +16,7 @@
 
 package com.github.zhongl.benchmarks;
 
-import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileTestContext;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 import org.junit.Before;
@@ -28,7 +28,7 @@ import java.nio.ByteBuffer;
 import java.util.Random;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl</a> */
-public class FilesRandomWriteForceBenchmark extends FileBase {
+public class FilesRandomWriteForceBenchmark extends FileTestContext {
     public static final int FOUR = 4;
     private final int size = Integer.getInteger("forcing.benchmark.size", 1024);
     private final int averageForceElpasePages = Integer.getInteger("forcing.benchmark.average.force.elpase.pages", 256);

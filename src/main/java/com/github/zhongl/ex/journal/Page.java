@@ -15,6 +15,8 @@
 
 package com.github.zhongl.ex.journal;
 
+import com.github.zhongl.ex.nio.Closable;
+
 import java.nio.ByteBuffer;
 
 /**

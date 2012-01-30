@@ -1,6 +1,6 @@
 package com.github.zhongl.benchmarks;
 
-import com.github.zhongl.util.FileBase;
+import com.github.zhongl.util.FileTestContext;
 import org.junit.Test;
 
 import java.io.FileOutputStream;
@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 import static java.text.MessageFormat.format;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class BestForceSizeBenchmark extends FileBase {
+public class BestForceSizeBenchmark extends FileTestContext {
 
     public static final int BLOCK_SIZE = Integer.getInteger("best.force.size.benchmark.block.size", 4096);
     public static final int SAMPLE_TIMES = Integer.getInteger("best.force.size.benchmark.sample.times", 10);
