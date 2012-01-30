@@ -1,15 +1,31 @@
+/*
+ * Copyright 2012 zhongl
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package com.github.zhongl.ex.page;
 
 import com.github.zhongl.ex.codec.Codec;
-import com.github.zhongl.ex.nio.FileChannels;
-import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
+import com.github.zhongl.ex.nio.ByteBuffers;
+import com.github.zhongl.ex.nio.Forcer;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.channels.FileChannel;
+import java.util.LinkedList;
+import java.util.Queue;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -17,91 +33,91 @@ import static com.google.common.base.Preconditions.checkState;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
 class DefaultBatch extends Batch {
+    protected final Function<Tuple> function;
+    protected final Queue<Runnable> transformingQueue;
 
-    private final List<InnerCursor<?>> list;
+    private final Queue<Tuple> tupleQueue;
 
-    public DefaultBatch(File file, Codec codec) {
-        super(codec, file);
-        list = new ArrayList<InnerCursor<?>>();
+    public DefaultBatch(final File file, int position, final Codec codec, int estimateBufferSize) {
+        super(file, position, codec, estimateBufferSize);
+        this.transformingQueue = new LinkedList<Runnable>();
+
+        this.function = new Function<Tuple>() {
+            @Override
+            public int apply(final Tuple tuple, final int offset) throws IOException {
+                transformingQueue.offer(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        tuple.transformer.transform(new RealCursor<Object>(file, offset, codec));
+                    }
+                });
+
+                ByteBuffer buffer = tuple.buffer;
+                int length = ByteBuffers.lengthOf(buffer);
+                aggregate(buffer);
+                return length;
+            }
+        };
+
+        this.tupleQueue = new LinkedList<Tuple>();
+    }
+
+    protected void onAppend(final ObjectRef<?> objectRef, final Transformer<?> transformer) {
+        tupleQueue.offer(new Tuple(transformer, objectRef.encode()));
+    }
+
+    protected void aggregate() throws IOException {
+        poll(tupleQueue, function);
+    }
+
+    protected final <T> void poll(Queue<T> queue, Function<T> function) throws IOException {
+        int offset = position;
+        for (T e : queue) offset += function.apply(e, offset);
+    }
+
+    protected final void aggregate(ByteBuffer buffer) {
+        if (aggregatedBuffer == null)
+            aggregatedBuffer = ByteBuffer.allocate(this.estimateBufferSize);
+
+        while (true) {
+            aggregatedBuffer.put(buffer);
+            if (!buffer.hasRemaining()) break;
+            aggregatedBuffer.flip();
+            aggregatedBuffer = ByteBuffer.allocate(estimateBufferSize *= 2).put(aggregatedBuffer);
+        }
     }
 
     @Override
-    protected <T> Cursor<T> createCursor(T object) {
-        InnerCursor<T> cursor = new InnerCursor<T>(object);
-        this.list.add(cursor);
-        return cursor;
+    protected <T> Cursor<T> _append(T object) {
+        final ObjectRef<T> objectRef = new ObjectRef<T>(object, codec);
+        final Transformer<T> transformer = new Transformer<T>(objectRef);
+        onAppend(objectRef, transformer);
+        return transformer;
     }
 
     @Override
-    protected ByteBuffer[] getBuffers() throws IOException {
-        ByteBuffer[] buffers = new ByteBuffer[list.size()];
-        for (int i = 0; i < buffers.length; i++) {
-            buffers[i] = list.get(i).encodeObject();
-        }
-        return buffers;
+    protected void _writeAndForceTo(FileChannel channel) throws IOException {
+        aggregate();
+        aggregatedBuffer.flip();
+
+        Forcer.getInstance().force(channel, aggregatedBuffer);
+
+        while (!transformingQueue.isEmpty())
+            transformingQueue.poll().run();
     }
 
-    private class InnerCursor<T> implements Cursor<T> {
-        private final int objectHashCode;
-        private final String objectToString;
-
-        private T object;
-        private Getter<T> getter;
-
-        public InnerCursor(T object) {
-            this.object = object;
-            this.objectHashCode = object.hashCode();
-            this.objectToString = object.toString();
-        }
-
-        @Override
-        public int hashCode() {
-            return objectHashCode;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            InnerCursor that = (InnerCursor) o;
-            return objectToString.equals(that.objectToString);
-        }
-
-        @Override
-        public String toString() {
-            return getClass().getName() + " -> " + objectToString;
-        }
-
-        @Override
-        public T get() {
-            checkState(file.exists());
-            if (object != null) return object;
-            return getter.get();
-        }
-
-        ByteBuffer encodeObject() throws IOException {
-            checkNotNull(object);
-            ByteBuffer buffer = codec.encode(object);
-            long position = FileChannels.getOrOpen(file).position();
-            getter = new Getter<T>(position);
-            object = null;
-            return buffer;
-        }
-
+    interface Function<T> {
+        int apply(T object, int offset) throws IOException;
     }
 
-    private class Getter<T> {
+    protected class Tuple {
+        public final Transformer<?> transformer;
+        public final ByteBuffer buffer;
 
-        private final long position;
-
-        public Getter(long position) {
-            this.position = position;
-        }
-
-        public T get() {
-            ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(file);
-            buffer.position((int) position);
-            return codec.decode(buffer);
+        public Tuple(Transformer<?> transformer, ByteBuffer buffer) {
+            this.transformer = transformer;
+            this.buffer = buffer;
         }
     }
 }

@@ -15,16 +15,21 @@
 
 package com.github.zhongl.ex.page;
 
-import java.io.IOException;
-
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface OverflowCallback<T> {
-    OverflowCallback THROW_BY_OVERFLOW = new OverflowCallback() {
-        @Override
-        public Cursor<Object> onOverflow(Object value, boolean force) throws IOException{
-            throw new IllegalStateException("Oops, value is bigger than page capacity.");
-        }
-    };
+class Transformer<T> implements Cursor<T> {
 
-    Cursor<T> onOverflow(T value, boolean force) throws IOException;
+    private volatile Cursor<?> delegate;
+
+    public Transformer(Cursor<?> delegate) {
+        this.delegate = delegate;
+    }
+
+    public void transform(Cursor<?> delegate) {
+        this.delegate = delegate;
+    }
+
+    @Override
+    public T get() {
+        return (T) delegate.get();
+    }
 }

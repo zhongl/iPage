@@ -15,16 +15,29 @@
 
 package com.github.zhongl.ex.page;
 
-import java.io.IOException;
+import com.github.zhongl.ex.codec.Codec;
+
+import java.nio.ByteBuffer;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface OverflowCallback<T> {
-    OverflowCallback THROW_BY_OVERFLOW = new OverflowCallback() {
-        @Override
-        public Cursor<Object> onOverflow(Object value, boolean force) throws IOException{
-            throw new IllegalStateException("Oops, value is bigger than page capacity.");
-        }
-    };
+class ObjectRef<T> implements Cursor<T> {
 
-    Cursor<T> onOverflow(T value, boolean force) throws IOException;
+    private final T object;
+
+    private final Codec codec;
+
+    ObjectRef(T object, Codec codec) {
+        this.object = object;
+        this.codec = codec;
+    }
+
+    @Override
+    public T get() {
+        return object;
+    }
+
+    public ByteBuffer encode() {
+        return codec.encode(object);
+    }
+
 }

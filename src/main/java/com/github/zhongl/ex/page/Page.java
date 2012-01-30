@@ -48,21 +48,21 @@ public abstract class Page implements Closable {
         this.capacity = capacity;
         this.codec = codec;
         this.opened = true;
-        currentBatch = newBatch(file, codec);
-        FileChannels.getOrOpen(file); // create file if not exist
     }
 
-    public <T> Cursor<T> append(T value, boolean force, OverflowCallback callback) throws IOException {
+    public <T> Cursor<T> append(T value, boolean force, OverflowCallback<T> callback) throws IOException {
         checkState(opened);
 
         FileChannel channel = FileChannels.getOrOpen(file);
+
         if (channel.position() > capacity) return callback.onOverflow(value, force);
+        if (currentBatch == null) currentBatch = newBatch(file, (int) channel.size(), codec, 0);
 
         Cursor<T> cursor = currentBatch.append(value);
 
         if (force) {
-            currentBatch.writeTo(channel, true);
-            currentBatch = newBatch(file, codec);
+            currentBatch.writeAndForceTo(channel);
+            currentBatch = newBatch(file, (int) channel.size(), codec, currentBatch.estimateBufferSize);
         }
 
         return cursor;
@@ -83,5 +83,5 @@ public abstract class Page implements Closable {
         FileChannels.closeChannelOf(file);
     }
 
-    protected abstract Batch newBatch(File file, Codec codec);
+    protected abstract Batch newBatch(File file, int position, Codec codec, int estimateBufferSize);
 }

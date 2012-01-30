@@ -13,18 +13,11 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ex.page;
-
-import java.io.IOException;
+package com.github.zhongl.ex.nio;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface OverflowCallback<T> {
-    OverflowCallback THROW_BY_OVERFLOW = new OverflowCallback() {
-        @Override
-        public Cursor<Object> onOverflow(Object value, boolean force) throws IOException{
-            throw new IllegalStateException("Oops, value is bigger than page capacity.");
-        }
-    };
+public class ChannelForcerTest extends ForcerTest {
 
-    Cursor<T> onOverflow(T value, boolean force) throws IOException;
+    @Override
+    protected Forcer forcer() {return new ChannelForcer();}
 }

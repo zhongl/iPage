@@ -13,18 +13,32 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ex.page;
+package com.github.zhongl.ex.nio;
 
-import java.io.IOException;
+import com.github.zhongl.util.FileAsserter;
+import com.github.zhongl.util.FileTestContext;
+import org.junit.Test;
+
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface OverflowCallback<T> {
-    OverflowCallback THROW_BY_OVERFLOW = new OverflowCallback() {
-        @Override
-        public Cursor<Object> onOverflow(Object value, boolean force) throws IOException{
-            throw new IllegalStateException("Oops, value is bigger than page capacity.");
-        }
-    };
+public abstract class ForcerTest extends FileTestContext {
+    @Test
+    public void write() throws Exception {
+        file = testFile("write");
 
-    Cursor<T> onOverflow(T value, boolean force) throws IOException;
+        FileChannel channel = new RAFileChannel(file);
+        byte[] bytes = {1, 2};
+
+        try {
+            forcer().force(channel, ByteBuffer.wrap(bytes));
+        } finally {
+            channel.close();
+        }
+
+        FileAsserter.assertExist(file).contentIs(bytes);
+    }
+
+    protected abstract Forcer forcer();
 }

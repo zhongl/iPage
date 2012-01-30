@@ -15,16 +15,31 @@
 
 package com.github.zhongl.ex.page;
 
-import java.io.IOException;
+import com.github.zhongl.ex.codec.Codec;
+import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
+
+import java.io.File;
+import java.nio.ByteBuffer;
+
+import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface OverflowCallback<T> {
-    OverflowCallback THROW_BY_OVERFLOW = new OverflowCallback() {
-        @Override
-        public Cursor<Object> onOverflow(Object value, boolean force) throws IOException{
-            throw new IllegalStateException("Oops, value is bigger than page capacity.");
-        }
-    };
+class RealCursor<T> implements Cursor<T> {
+    private final int offset;
+    private final File file;
+    private final Codec codec;
 
-    Cursor<T> onOverflow(T value, boolean force) throws IOException;
+    RealCursor(File file, int offset, Codec codec) {
+        this.file = file;
+        this.offset = offset;
+        this.codec = codec;
+    }
+
+    @Override
+    public T get() {
+        checkState(file.exists());
+        ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(file);
+        buffer.position(offset);
+        return codec.decode(buffer);
+    }
 }

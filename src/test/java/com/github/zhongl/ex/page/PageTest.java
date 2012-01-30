@@ -11,7 +11,7 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 
-import static com.github.zhongl.ex.page.OverflowCallback.OverflowThrowing;
+import static com.github.zhongl.ex.page.OverflowCallback.THROW_BY_OVERFLOW;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
@@ -27,8 +27,8 @@ public class PageTest extends FileTestContext {
                                           .build();
         return new Page(new File(dir, "0"), 0L, 4096, codec) {
             @Override
-            protected Batch newBatch(File file, Codec codec) {
-                return new DefaultBatch(file, codec);
+            protected Batch newBatch(File file, int position, Codec codec, int estimateBufferSize) {
+                return new DefaultBatch(file, position, codec, estimateBufferSize);
             }
         };
     }
@@ -39,7 +39,7 @@ public class PageTest extends FileTestContext {
 
         String one = "1";
 
-        Cursor<String> cursor = page.append(one, true, new OverflowThrowing());
+        Cursor<String> cursor = page.append(one, true, THROW_BY_OVERFLOW);
         assertThat(cursor.get(), is(one));
 
         page.close();
@@ -50,7 +50,7 @@ public class PageTest extends FileTestContext {
     @Test(expected = IllegalStateException.class)
     public void getAfterDeleted() throws Exception {
         page = newPage();
-        Cursor<String> cursor = page.append("value", true, new OverflowThrowing());
+        Cursor<String> cursor = page.append("value", true, THROW_BY_OVERFLOW);
         page.file().delete();
         cursor.get();
     }

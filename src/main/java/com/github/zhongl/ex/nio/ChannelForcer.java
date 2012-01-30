@@ -13,18 +13,18 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ex.page;
+package com.github.zhongl.ex.nio;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface OverflowCallback<T> {
-    OverflowCallback THROW_BY_OVERFLOW = new OverflowCallback() {
-        @Override
-        public Cursor<Object> onOverflow(Object value, boolean force) throws IOException{
-            throw new IllegalStateException("Oops, value is bigger than page capacity.");
-        }
-    };
+class ChannelForcer extends Forcer {
 
-    Cursor<T> onOverflow(T value, boolean force) throws IOException;
+    @Override
+    public void force(FileChannel channel, ByteBuffer buffer) throws IOException {
+        channel.write(buffer);
+        channel.force(false);
+    }
 }

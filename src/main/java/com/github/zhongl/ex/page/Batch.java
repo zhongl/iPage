@@ -16,7 +16,6 @@
 package com.github.zhongl.ex.page;
 
 import com.github.zhongl.ex.codec.Codec;
-import com.github.zhongl.ex.nio.ChannelWriter;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
@@ -30,28 +29,33 @@ import static com.google.common.base.Preconditions.checkState;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
 public abstract class Batch {
-    protected final Codec codec;
-    protected final File file;
 
+    protected final File file;
+    protected final int position;
+    protected final Codec codec;
+    protected ByteBuffer aggregatedBuffer;
+    protected int estimateBufferSize;
     private boolean notWrote = true;
 
-    public Batch(Codec codec, File file) {
-        this.codec = codec;
+    public Batch(final File file, int position, final Codec codec, int estimateBufferSize) {
         this.file = file;
+        this.position = position;
+        this.codec = codec;
+        this.estimateBufferSize = estimateBufferSize < 4096 ? 4096 : estimateBufferSize;
     }
 
     public <T> Cursor<T> append(final T object) {
         checkNotNull(object);
         checkState(notWrote);
-        return createCursor(object);
+        return _append(object);
     }
 
-    void writeTo(FileChannel channel, boolean force) throws IOException {
+    void writeAndForceTo(FileChannel channel) throws IOException {
         notWrote = false;
-        ChannelWriter.getInstance().write(channel, getBuffers(), force);
+        _writeAndForceTo(channel);
     }
 
-    protected abstract <T> Cursor<T> createCursor(T object);
+    protected abstract <T> Cursor<T> _append(T object);
 
-    protected abstract ByteBuffer[] getBuffers() throws IOException;
+    protected abstract void _writeAndForceTo(FileChannel channel) throws IOException;
 }
