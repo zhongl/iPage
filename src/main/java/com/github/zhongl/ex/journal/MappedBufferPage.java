@@ -15,9 +15,7 @@
 
 package com.github.zhongl.ex.journal;
 
-import com.github.zhongl.ex.codec.ByteBuffers;
-import com.github.zhongl.ex.nio.MappedByteBuffers;
-import com.github.zhongl.ex.nio.MappingOptions;
+import com.github.zhongl.ex.nio.ByteBuffers;
 import com.google.common.io.Closeables;
 
 import java.io.FileNotFoundException;

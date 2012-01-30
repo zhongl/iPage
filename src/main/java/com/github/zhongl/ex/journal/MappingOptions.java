@@ -13,7 +13,7 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ex.nio;
+package com.github.zhongl.ex.journal;
 
 import java.io.File;
 import java.nio.channels.FileChannel;

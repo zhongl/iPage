@@ -12,16 +12,16 @@ import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-class FileChannelPage implements Page {
+class DefaultPage implements Page {
 
     private final File file;
     private final int capacity;
     private final Codec codec;
     private final long begin;
 
-    private volatile boolean opened;
+    private boolean opened;
 
-    FileChannelPage(File file, int capacity, Codec codec) {
+    DefaultPage(File file, int capacity, Codec codec) {
         this.file = file;
         this.begin = Long.parseLong(file.getName());
         this.capacity = capacity;
@@ -40,7 +40,7 @@ class FileChannelPage implements Page {
             return;
         }
 
-        ((InnerGroup) group).writeTo(channel, force);
+        ((DefaultGroup) group).writeTo(channel, force);
     }
 
     @Override
@@ -52,7 +52,7 @@ class FileChannelPage implements Page {
     @Override
     public Group newGroup() {
         checkState(opened);
-        return new InnerGroup();
+        return new DefaultGroup(file, codec);
     }
 
     @Override
@@ -60,25 +60,5 @@ class FileChannelPage implements Page {
         FileChannels.closeChannelOf(file);
     }
 
-    @NotThreadSafe
-    private class InnerGroup implements Group {
-
-        @Override
-        public <T> Cursor<T> append(final T object) {
-            return new Cursor<T>() {
-                @Override
-                public T get() {
-                    checkState(file.exists());
-                    return object;
-                }
-            };
-        }
-
-        public void writeTo(FileChannel channel, boolean force) throws IOException {
-            // TODO writeTo
-
-            if (force) channel.force(false);
-        }
-    }
 
 }

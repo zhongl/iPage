@@ -19,7 +19,7 @@ package com.github.zhongl.util;
 import java.nio.ByteBuffer;
 import java.util.zip.CRC32;
 
-import static com.github.zhongl.ex.codec.ByteBuffers.lengthOf;
+import static com.github.zhongl.ex.nio.ByteBuffers.lengthOf;
 import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */

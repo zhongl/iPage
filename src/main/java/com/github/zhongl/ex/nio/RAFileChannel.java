@@ -1,7 +1,6 @@
 package com.github.zhongl.ex.nio;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -15,8 +14,9 @@ import java.nio.channels.WritableByteChannel;
 class RAFileChannel extends FileChannel {
     private final RandomAccessFile file;
 
-    public RAFileChannel(File file) throws FileNotFoundException {
+    public RAFileChannel(File file) throws IOException {
         this.file = new RandomAccessFile(file, "rw");
+        this.file.getChannel().position(this.file.length());
     }
 
     @Override

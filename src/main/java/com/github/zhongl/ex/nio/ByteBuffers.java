@@ -1,4 +1,4 @@
-package com.github.zhongl.ex.codec;
+package com.github.zhongl.ex.nio;
 
 import java.nio.ByteBuffer;
 

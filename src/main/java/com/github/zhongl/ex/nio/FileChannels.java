@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class FileChannels {
 
-    public static final long DURATION = Long.getLong("ipage.filechannel.cache.duration", 1000L);
+    public static final long DURATION = Long.getLong("ipage.channel.cache.duration", 1000L);
 
     private static final Cache<File, FileChannel> CACHE;
 

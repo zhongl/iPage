@@ -13,13 +13,12 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ex.nio;
+package com.github.zhongl.ex.journal;
 
 import com.github.zhongl.util.DirectByteBufferCleaner;
 import com.google.common.cache.*;
 import com.google.common.io.Closeables;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
@@ -63,15 +62,6 @@ public class MappedByteBuffers {
         MappedByteBuffer buffer = CACHE.getUnchecked(mappingOptions);
         if (!buffer.isLoaded()) buffer.load();
         return buffer;
-    }
-
-    public static MappedByteBuffer getOrMap(File file) {
-        // TODO getOrMap
-        return null;
-    }
-
-    public static void clearMappedOf(File file) {
-        // TODO clearMappedOf 
     }
 
     public static void clear(Object key) {

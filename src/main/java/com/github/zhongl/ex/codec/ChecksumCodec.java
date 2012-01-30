@@ -2,7 +2,7 @@ package com.github.zhongl.ex.codec;
 
 import java.nio.ByteBuffer;
 
-import static com.github.zhongl.ex.codec.ByteBuffers.lengthOf;
+import static com.github.zhongl.ex.nio.ByteBuffers.lengthOf;
 import static com.github.zhongl.util.Checksums.checksum;
 import static com.github.zhongl.util.Checksums.validate;
 
