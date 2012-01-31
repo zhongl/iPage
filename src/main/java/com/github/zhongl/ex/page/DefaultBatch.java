@@ -27,9 +27,6 @@ import java.nio.channels.FileChannel;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
-
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
 class DefaultBatch extends Batch {
@@ -80,12 +77,12 @@ class DefaultBatch extends Batch {
         if (aggregatedBuffer == null)
             aggregatedBuffer = ByteBuffer.allocate(this.estimateBufferSize);
 
-        while (true) {
-            aggregatedBuffer.put(buffer);
-            if (!buffer.hasRemaining()) break;
+        while (aggregatedBuffer.remaining() < ByteBuffers.lengthOf(buffer)) {
             aggregatedBuffer.flip();
-            aggregatedBuffer = ByteBuffer.allocate(estimateBufferSize *= 2).put(aggregatedBuffer);
+            aggregatedBuffer = ByteBuffer.allocate(estimateBufferSize *= 2)
+                                         .put(aggregatedBuffer);
         }
+        aggregatedBuffer.put(buffer);
     }
 
     @Override

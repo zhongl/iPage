@@ -32,7 +32,7 @@ public class ParallelEncodeBatch extends DefaultBatch {
     private final static ExecutorService SERVICE;
 
     static {
-        SERVICE = Executors.newCachedThreadPool(new ThreadFactory() {
+        SERVICE = Executors.newFixedThreadPool(2, new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
                 Thread thread = new Thread(r);
@@ -44,7 +44,7 @@ public class ParallelEncodeBatch extends DefaultBatch {
 
     private final Queue<Future<Tuple>> futureQueue;
 
-    public ParallelEncodeBatch(int position, File file, Codec codec, int estimateBufferSize) {
+    public ParallelEncodeBatch(File file, int position, Codec codec, int estimateBufferSize) {
         super(file, position, codec, estimateBufferSize);
         this.futureQueue = new LinkedList<Future<Tuple>>();
     }
