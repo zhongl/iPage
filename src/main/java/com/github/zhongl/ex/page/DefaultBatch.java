@@ -16,6 +16,7 @@
 package com.github.zhongl.ex.page;
 
 import com.github.zhongl.ex.codec.Codec;
+import com.github.zhongl.ex.lang.Tuple;
 import com.github.zhongl.ex.nio.ByteBuffers;
 import com.github.zhongl.ex.nio.Forcer;
 
@@ -27,94 +28,66 @@ import java.nio.channels.FileChannel;
 import java.util.LinkedList;
 import java.util.Queue;
 
+import static com.github.zhongl.ex.nio.ByteBuffers.*;
+
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
 class DefaultBatch extends Batch {
-    protected final Function<Tuple> function;
-    protected final Queue<Runnable> transformingQueue;
-
+    protected final Queue<Runnable> delayTransformQueue;
     private final Queue<Tuple> tupleQueue;
 
     public DefaultBatch(final File file, int position, final Codec codec, int estimateBufferSize) {
         super(file, position, codec, estimateBufferSize);
-        this.transformingQueue = new LinkedList<Runnable>();
-
-        this.function = new Function<Tuple>() {
-            @Override
-            public int apply(final Tuple tuple, final int offset) throws IOException {
-                transformingQueue.offer(new Runnable() {
-
-                    @Override
-                    public void run() {
-                        tuple.transformer.transform(new Reader<Object>(file, offset, codec));
-                    }
-                });
-
-                ByteBuffer buffer = tuple.buffer;
-                int length = ByteBuffers.lengthOf(buffer);
-                aggregate(buffer);
-                return length;
-            }
-        };
-
+        this.delayTransformQueue = new LinkedList<Runnable>();
         this.tupleQueue = new LinkedList<Tuple>();
     }
 
-    protected void onAppend(final ObjectRef<?> objectRef, final Transformer<?> transformer) {
-        tupleQueue.offer(new Tuple(transformer, objectRef.encode()));
-    }
-
-    protected void aggregate() throws IOException {
-        poll(tupleQueue, function);
-    }
-
-    protected final <T> void poll(Queue<T> queue, Function<T> function) throws IOException {
-        int offset = position;
-        for (T e : queue) offset += function.apply(e, offset);
-    }
-
-    protected final void aggregate(ByteBuffer buffer) {
-        if (aggregatedBuffer == null)
-            aggregatedBuffer = ByteBuffer.allocate(this.estimateBufferSize);
-
-        while (aggregatedBuffer.remaining() < ByteBuffers.lengthOf(buffer)) {
-            aggregatedBuffer.flip();
-            aggregatedBuffer = ByteBuffer.allocate(estimateBufferSize *= 2)
-                                         .put(aggregatedBuffer);
-        }
-        aggregatedBuffer.put(buffer);
-    }
-
     @Override
-    protected <T> Cursor<T> _append(T object) {
+    protected final <T> Cursor<T> _append(T object) {
         final ObjectRef<T> objectRef = new ObjectRef<T>(object, codec);
         final Transformer<T> transformer = new Transformer<T>(objectRef);
         onAppend(objectRef, transformer);
         return transformer;
     }
 
+    protected void onAppend(final ObjectRef<?> objectRef, final Transformer<?> transformer) {
+        tupleQueue.offer(new Tuple(transformer, objectRef.encode()));
+    }
+
     @Override
-    protected void _writeAndForceTo(FileChannel channel) throws IOException {
-        aggregate();
-        aggregatedBuffer.flip();
-
-        Forcer.getInstance().force(channel, aggregatedBuffer);
-
-        while (!transformingQueue.isEmpty())
-            transformingQueue.poll().run();
+    protected final int _writeAndForceTo(FileChannel channel) throws IOException {
+        int size = Forcer.getInstance().force(channel, aggregate());
+        while (!delayTransformQueue.isEmpty())
+            delayTransformQueue.poll().run();
+        return size;
     }
 
-    interface Function<T> {
-        int apply(T object, int offset) throws IOException;
-    }
+    private ByteBuffer aggregate() throws IOException {
+        int offset = position;
+        ByteBuffer aggregated = ByteBuffer.allocate(estimateBufferSize);
 
-    protected class Tuple {
-        public final Transformer<?> transformer;
-        public final ByteBuffer buffer;
+        for (Tuple tuple : toAggregatingQueue()) {
+            final Transformer<?> transformer = tuple.get(0);
+            final ByteBuffer buffer = tuple.get(1);
+            final Cursor<Object> reader = new Reader<Object>(file, offset, codec);
 
-        public Tuple(Transformer<?> transformer, ByteBuffer buffer) {
-            this.transformer = transformer;
-            this.buffer = buffer;
+            delayTransformQueue.offer(new Runnable() {
+
+                @Override
+                public void run() {
+                    transformer.transform(reader);
+                }
+            });
+
+            offset = offset + lengthOf(buffer);
+            aggregated = ByteBuffers.aggregate(aggregated, buffer);
         }
+
+        return (ByteBuffer) aggregated.flip();
     }
+
+    protected Iterable<Tuple> toAggregatingQueue() {
+        return tupleQueue;
+    }
+
 }

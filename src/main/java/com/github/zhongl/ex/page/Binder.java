@@ -15,6 +15,7 @@
 
 package com.github.zhongl.ex.page;
 
+import com.github.zhongl.ex.lang.Function;
 import com.github.zhongl.ex.nio.Closable;
 import com.github.zhongl.util.FilesLoader;
 import com.github.zhongl.util.NumberNamedFilterAndComparator;

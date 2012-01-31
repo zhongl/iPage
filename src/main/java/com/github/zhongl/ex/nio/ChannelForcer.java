@@ -23,8 +23,10 @@ import java.nio.channels.FileChannel;
 class ChannelForcer extends Forcer {
 
     @Override
-    public void force(FileChannel channel, ByteBuffer buffer) throws IOException {
-        channel.write(buffer);
+    public int force(FileChannel channel, ByteBuffer buffer) throws IOException {
+        int size = 0;
+        while (buffer.hasRemaining()) size += channel.write(buffer);
         channel.force(false);
+        return size;
     }
 }

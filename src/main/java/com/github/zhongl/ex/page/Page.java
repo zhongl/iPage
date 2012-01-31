@@ -16,6 +16,7 @@
 package com.github.zhongl.ex.page;
 
 import com.github.zhongl.ex.codec.Codec;
+import com.github.zhongl.ex.lang.Function;
 import com.github.zhongl.ex.nio.Closable;
 import com.github.zhongl.ex.nio.FileChannels;
 import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
@@ -63,8 +64,8 @@ public abstract class Page implements Closable {
         Cursor<T> cursor = currentBatch.append(value);
 
         if (force) {
-            currentBatch.writeAndForceTo(channel);
-            currentBatch = newBatch(file, (int) channel.size(), codec, currentBatch.estimateBufferSize);
+            int estimateBufferSize = currentBatch.writeAndForceTo(channel);
+            currentBatch = newBatch(file, (int) channel.size(), codec, estimateBufferSize);
         }
 
         return cursor;

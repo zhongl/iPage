@@ -21,7 +21,7 @@ import java.io.IOException;
 public interface OverflowCallback<T> {
     OverflowCallback THROW_BY_OVERFLOW = new OverflowCallback() {
         @Override
-        public Cursor<Object> onOverflow(Object value, boolean force) throws IOException{
+        public Cursor<Object> onOverflow(Object value, boolean force) throws IOException {
             throw new IllegalStateException("Oops, value is bigger than page capacity.");
         }
     };

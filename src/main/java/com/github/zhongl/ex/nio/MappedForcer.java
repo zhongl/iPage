@@ -26,9 +26,11 @@ import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 class MappedForcer extends Forcer {
 
     @Override
-    public void force(FileChannel channel, ByteBuffer buffer) throws IOException {
-        MappedByteBuffer mappedByteBuffer = channel.map(READ_WRITE, channel.size(), ByteBuffers.lengthOf(buffer));
+    public int force(FileChannel channel, ByteBuffer buffer) throws IOException {
+        int size = ByteBuffers.lengthOf(buffer);
+        MappedByteBuffer mappedByteBuffer = channel.map(READ_WRITE, channel.size(), size);
         mappedByteBuffer.put(buffer);
         mappedByteBuffer.force();
+        return size;
     }
 }

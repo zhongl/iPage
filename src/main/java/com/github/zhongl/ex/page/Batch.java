@@ -20,7 +20,6 @@ import com.github.zhongl.ex.codec.Codec;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -33,15 +32,14 @@ public abstract class Batch {
     protected final File file;
     protected final int position;
     protected final Codec codec;
-    protected ByteBuffer aggregatedBuffer;
-    protected int estimateBufferSize;
     private boolean notWrote = true;
+    protected final int estimateBufferSize;
 
     public Batch(final File file, int position, final Codec codec, int estimateBufferSize) {
         this.file = file;
         this.position = position;
         this.codec = codec;
-        this.estimateBufferSize = estimateBufferSize < 4096 ? 4096 : estimateBufferSize;
+        this.estimateBufferSize = Math.max(4096, estimateBufferSize);
     }
 
     public <T> Cursor<T> append(final T object) {
@@ -50,12 +48,13 @@ public abstract class Batch {
         return _append(object);
     }
 
-    void writeAndForceTo(FileChannel channel) throws IOException {
+    int writeAndForceTo(FileChannel channel) throws IOException {
         notWrote = false;
-        _writeAndForceTo(channel);
+        return _writeAndForceTo(channel);
     }
 
     protected abstract <T> Cursor<T> _append(T object);
 
-    protected abstract void _writeAndForceTo(FileChannel channel) throws IOException;
+    protected abstract int _writeAndForceTo(FileChannel channel) throws IOException;
+
 }

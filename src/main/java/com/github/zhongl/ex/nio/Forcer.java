@@ -40,5 +40,5 @@ public abstract class Forcer {
         return SINGLETON;
     }
 
-    public abstract void force(FileChannel channel, ByteBuffer buffer) throws IOException;
+    public abstract int force(FileChannel channel, ByteBuffer buffer) throws IOException;
 }

@@ -19,6 +19,7 @@ import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.codec.ComposedCodecBuilder;
 import com.github.zhongl.ex.codec.LengthCodec;
 import com.github.zhongl.ex.codec.StringCodec;
+import com.github.zhongl.ex.lang.Function;
 import com.github.zhongl.util.FileTestContext;
 import org.junit.After;
 import org.junit.Test;

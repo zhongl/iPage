@@ -16,11 +16,11 @@
 package com.github.zhongl.ex.page;
 
 import com.github.zhongl.ex.codec.Codec;
-import com.google.common.base.Throwables;
+import com.github.zhongl.ex.lang.Tuple;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
-import java.io.IOException;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.*;
@@ -61,21 +61,32 @@ public class ParallelEncodeBatch extends DefaultBatch {
     }
 
     @Override
-    protected void aggregate() throws IOException {
-        poll(futureQueue, new Function<Future<Tuple>>() {
+    protected Iterable<Tuple> toAggregatingQueue() {
+        return new Iterable<Tuple>() {
             @Override
-            public int apply(Future<Tuple> future, int offset) throws IOException {
-                try {
-                    final Tuple tuple = future.get();
-                    return function.apply(tuple, offset);
-                } catch (InterruptedException e) {
-                    throw new IllegalStateException(e);
-                } catch (ExecutionException e) {
-                    Throwables.propagateIfInstanceOf(e.getCause(), IOException.class);
-                    throw new RuntimeException(e.getCause());
-                }
-            }
-        });
-    }
+            public Iterator<Tuple> iterator() {
+                final Iterator<Future<Tuple>> iterator = futureQueue.iterator();
+                return new Iterator<Tuple>() {
+                    @Override
+                    public boolean hasNext() {
+                        return iterator.hasNext();
+                    }
 
+                    @Override
+                    public Tuple next() {
+                        try {
+                            return iterator.next().get();
+                        } catch (InterruptedException e) {
+                            throw new IllegalStateException(e);
+                        } catch (ExecutionException e) {
+                            throw new RuntimeException(e.getCause());
+                        }
+                    }
+
+                    @Override
+                    public void remove() { }
+                };
+            }
+        };
+    }
 }

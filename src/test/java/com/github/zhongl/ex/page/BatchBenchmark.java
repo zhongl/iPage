@@ -29,7 +29,7 @@ public class BatchBenchmark extends FileTestContext {
                                     .build();
         position = 0;
         valueLength = 4096;
-        size = 1000 ;
+        size = 1000;
     }
 
     @Test
