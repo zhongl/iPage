@@ -94,13 +94,3 @@ class Reader<T> implements Cursor<T>, Comparable<Reader<?>> {
     }
 }
 
-interface CursorFactory {
-
-    <T> Cursor<T> reader(int offset);
-
-    <T> ObjectRef<T> objectRef(T object);
-
-    <T> Proxy<T> transformer(Cursor<T> intiCursor);
-
-}
-

@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public abstract class Binder implements Closable {
@@ -81,16 +82,44 @@ public abstract class Binder implements Closable {
         return new Reader<T>(pages.getFirst(), 0);
     }
 
+    public <T> Cursor<T> head(long number) {
+        return new Reader<T>(pages.get(binarySearchPageIndex(number)), 0);
+    }
+
     public <T> Cursor<T> next(Cursor<?> cursor) {
         checkNotNull(cursor);
         Reader<?> reader = Page.transform(cursor);
-        long location = reader.offset + reader.length();
-        Page page = binarySearch(location);
-        if (page == null) return null;
-        return new Reader<T>(page, (int) (location - page.number()));
+        int location = reader.offset + reader.length();
+
+        if (location < reader.page.file().length())
+            return new Reader<T>(reader.page, location);
+
+        int i = pages.indexOf(reader.page);
+        if (i + 1 == pages.size()) return null;
+        return new Reader<T>(pages.get(i + 1), 0);
     }
 
-    private Page binarySearch(long location) {
+    public void reset() {
+        while (!pages.isEmpty()) removePages();
+        pages.add(newPage(null));
+    }
+
+    public void removePagesFromHeadTo(long number) {
+        int i = binarySearchPageIndex(number);
+        for (int j = 0; j < i; j++) removePages();
+    }
+
+    private void removePages() {
+        Page page = pages.remove();
+        page.close();
+        checkState(page.file().delete());
+    }
+
+    public long roundPageNumber(long number) {
+        return pages.get(binarySearchPageIndex(number)).number();
+    }
+
+    private int binarySearchPageIndex(long number) {
         int i = Collections.binarySearch(new AbstractList<Long>() {
 
             @Override
@@ -102,15 +131,11 @@ public abstract class Binder implements Closable {
             public int size() {
                 return pages.size();
             }
-        }, location);
+        }, number);
 
-        i = -(i + 2);
-        if (i < 0) return null;
-
-        Page page = pages.get(i);
-        if (location >= page.number() + page.file().length()) return null;
-        return page;
+        return -(i + 2);
     }
+
 
     protected abstract Page newPage(File file, long number);
 

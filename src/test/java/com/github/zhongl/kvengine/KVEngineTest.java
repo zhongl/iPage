@@ -73,7 +73,7 @@ public class KVEngineTest extends FileTestContext {
         byte[] value3 = "value3".getBytes();
         assertThat(engine.put(Md5Key.generate(value0), value3), is(value0));
 
-        Thread.sleep(100L); // wait remove and update applied.
+        Thread.sleep(100L); // wait reset and update applied.
 
         Iterator<byte[]> iterator = engine.valueIterator();
         assertThat(iterator.next(), is(value2));

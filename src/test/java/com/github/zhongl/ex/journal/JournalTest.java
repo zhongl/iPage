@@ -16,16 +16,13 @@
 
 package com.github.zhongl.ex.journal;
 
-import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.codec.StringCodec;
-import com.github.zhongl.ex.page.Page;
 import com.github.zhongl.util.FileTestContext;
 import org.junit.Test;
 
-import java.io.File;
-
-import static com.github.zhongl.ex.journal.Journal.PageFactory;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class JournalTest extends FileTestContext {
@@ -34,29 +31,27 @@ public class JournalTest extends FileTestContext {
     public void usage() throws Exception {
         dir = testDir("usage");
 
-        Applicable applicable = mock(Applicable.class);
-
-        PageFactory factory = new PageFactory() {
-
-            @Override
-            public Page newPage(File file, int capacity, Codec codec) {
-                return null;  // TODO readWritePage
-            }
-        };
-        Journal journal = new Journal(dir, factory, new StringCodec());
-
+        Journal journal = new Journal(dir, new StringCodec());
 
         journal.append("1", false);
 
-        journal.eraseBy(journal.append("2", true));
+        long revision = journal.append("2", true);
+
+        journal.eraseBy(revision);
 
         journal.append("3", true);
 
         journal.close(); // mock crash
 
-        journal = new Journal(dir, factory, new StringCodec());
+        journal = new Journal(dir, new StringCodec());
+
+        Applicable applicable = mock(Applicable.class);
+
+        doReturn(revision).when(applicable).lastCheckpoint();
 
         journal.recover(applicable);
+
+        verify(applicable).apply("3");
 
         journal.close();
     }

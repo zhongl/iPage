@@ -25,7 +25,7 @@ import java.util.concurrent.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-class ParallelEncodeBatch extends DefaultBatch {
+public class ParallelEncodeBatch extends DefaultBatch {
 
     private final static ExecutorService SERVICE;
 

@@ -90,18 +90,18 @@ public class IndexTest extends FileTestContext {
         for (int i = 0; i < 164; i++) {
             index.put(Md5Key.generate(Ints.toByteArray(i)), cursor);
         }
-        assertThat(index.remove(Md5Key.generate(Ints.toByteArray(163))), is(cursor)); // remove from index file 1
-        assertThat(index.remove(Md5Key.generate(Ints.toByteArray(162))), is(cursor)); // remove from index file 0
-        assertThat(index.remove(Md5Key.generate(Ints.toByteArray(164))), is(nullValue())); // remove from index file 0
+        assertThat(index.remove(Md5Key.generate(Ints.toByteArray(163))), is(cursor)); // reset from index file 1
+        assertThat(index.remove(Md5Key.generate(Ints.toByteArray(162))), is(cursor)); // reset from index file 0
+        assertThat(index.remove(Md5Key.generate(Ints.toByteArray(164))), is(nullValue())); // reset from index file 0
     }
 
     @Test
     public void removeNonExistKey() throws Exception {
         dir = testDir("removeNonExistKey");
         newIndex();
-        assertThat(index.remove(Md5Key.generate(Ints.toByteArray(0))), is(nullValue())); // remove from empty index
+        assertThat(index.remove(Md5Key.generate(Ints.toByteArray(0))), is(nullValue())); // reset from empty index
         index.put(Md5Key.generate("key".getBytes()), new Cursor(7L));
-        assertThat(index.remove(Md5Key.generate(Ints.toByteArray(1))), is(nullValue())); // remove from non-empty index
+        assertThat(index.remove(Md5Key.generate(Ints.toByteArray(1))), is(nullValue())); // reset from non-empty index
     }
 
     @Test

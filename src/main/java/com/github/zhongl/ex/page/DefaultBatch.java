@@ -30,7 +30,7 @@ import static com.github.zhongl.ex.nio.ByteBuffers.lengthOf;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-class DefaultBatch extends Batch {
+public class DefaultBatch extends Batch {
     protected final int position;
     protected final int estimateBufferSize;
     protected final Queue<Runnable> delayTransformQueue;

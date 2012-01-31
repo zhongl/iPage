@@ -194,7 +194,7 @@ public class FileHashTableTest extends FileTestContext {
         file = testFile("cleanup");
         fileHashTable = new FileHashTable(file, 1);
         Md5Key key = Md5Key.generate("key".getBytes());
-        fileHashTable.remove(key); // test remove a non-exist key with no effect
+        fileHashTable.remove(key); // test reset a non-exist key with no effect
         Cursor offset = new Cursor(7L);
         fileHashTable.put(key, offset);
         fileHashTable.put(key, offset);

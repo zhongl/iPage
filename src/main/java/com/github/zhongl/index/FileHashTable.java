@@ -78,7 +78,7 @@ public final class FileHashTable implements ValidateOrRecover {
     public Cursor remove(Md5Key key) throws IOException {
         Bucket bucket = buckets(hashAndMod(key));
         Cursor cursor = bucket.remove(key);
-        if (cursor != null) { // remove an exist key
+        if (cursor != null) { // reset an exist key
             bucket.updateCRC();
             occupiedSlots--;
         }
