@@ -27,6 +27,7 @@ import java.util.AbstractList;
 import java.util.Collections;
 import java.util.LinkedList;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
@@ -58,32 +59,14 @@ public abstract class Binder implements Closable {
         for (Page page : pages) page.close();
     }
 
-    private LinkedList<Page> loadOrInitialize() throws IOException {
-        LinkedList<Page> list = new FilesLoader<Page>(
-                dir,
-                new NumberNamedFilterAndComparator(),
-                new Transformer<Page>() {
-                    @Override
-                    public Page transform(File file, boolean last) throws IOException {
-                        return newPage(file, Long.parseLong(file.getName()));
-                    }
-                }).loadTo(new LinkedList<Page>());
-
-        if (list.isEmpty()) list.add(newPage(null));
-        return list;
-    }
-
-    private Page newPage(Page last) {
-        long number = newPageNumber(last);
-        return newPage(new File(dir, number + ""), number);
-    }
-
     public <T> Cursor<T> head() {
         return new Reader<T>(pages.getFirst(), 0);
     }
 
     public <T> Cursor<T> head(long number) {
-        return new Reader<T>(pages.get(binarySearchPageIndex(number)), 0);
+        int index = binarySearchPageIndex(number);
+        checkArgument(index >= 0, "Too small number %s.", number);
+        return new Reader<T>(pages.get(index), 0);
     }
 
     public <T> Cursor<T> next(Cursor<?> cursor) {
@@ -115,8 +98,35 @@ public abstract class Binder implements Closable {
         checkState(page.file().delete());
     }
 
+    /**
+     * @param number
+     *
+     * @return exist max page number closed the input number.
+     */
     public long roundPageNumber(long number) {
-        return pages.get(binarySearchPageIndex(number)).number();
+        int index = binarySearchPageIndex(number);
+        checkArgument(index >= 0, "Too small number %s.", number);
+        return pages.get(index).number();
+    }
+
+    private LinkedList<Page> loadOrInitialize() throws IOException {
+        LinkedList<Page> list = new FilesLoader<Page>(
+                dir,
+                new NumberNamedFilterAndComparator(),
+                new Transformer<Page>() {
+                    @Override
+                    public Page transform(File file, boolean last) throws IOException {
+                        return newPage(file, Long.parseLong(file.getName()));
+                    }
+                }).loadTo(new LinkedList<Page>());
+
+        if (list.isEmpty()) list.add(newPage(null));
+        return list;
+    }
+
+    private Page newPage(Page last) {
+        long number = newPageNumber(last);
+        return newPage(new File(dir, number + ""), number);
     }
 
     private int binarySearchPageIndex(long number) {
@@ -135,7 +145,6 @@ public abstract class Binder implements Closable {
 
         return -(i + 2);
     }
-
 
     protected abstract Page newPage(File file, long number);
 
