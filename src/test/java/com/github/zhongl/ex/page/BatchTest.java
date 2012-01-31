@@ -72,8 +72,8 @@ public abstract class BatchTest extends FileTestContext {
         }
 
         @Override
-        public <T> Transformer<T> transformer(final Cursor<T> intiCursor) {
-            return new Transformer<T>(intiCursor);
+        public <T> Proxy<T> transformer(final Cursor<T> intiCursor) {
+            return new Proxy<T>(intiCursor);
         }
     }
 

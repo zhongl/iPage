@@ -16,6 +16,7 @@
 package com.github.zhongl.ex.page;
 
 import com.github.zhongl.ex.codec.Codec;
+import com.github.zhongl.ex.nio.ByteBuffers;
 import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
 
 import java.nio.ByteBuffer;
@@ -27,10 +28,10 @@ public interface Cursor<T> {
     T get();
 }
 
-class Transformer<T> implements Cursor<T> {
-    private volatile Cursor<?> delegate;
+class Proxy<T> implements Cursor<T> {
+    volatile Cursor<?> delegate;
 
-    public Transformer(Cursor<T> intiCursor) {
+    public Proxy(Cursor<T> intiCursor) {
         delegate = intiCursor;
     }
 
@@ -64,9 +65,9 @@ class ObjectRef<T> implements Cursor<T> {
     }
 }
 
-class Reader<T> implements Cursor<T> {
-    private final Page page;
-    private final int offset;
+class Reader<T> implements Cursor<T>, Comparable<Reader<?>> {
+    final Page page;
+    final int offset;
 
     public Reader(Page page, int offset) {
         this.page = page;
@@ -80,6 +81,17 @@ class Reader<T> implements Cursor<T> {
         buffer.position(offset);
         return page.codec().decode(buffer);
     }
+
+    public int length() {
+        return ByteBuffers.lengthOf(page.codec().encode(get()));
+    }
+
+    @Override
+    public int compareTo(Reader<?> o) {
+        long delta = page.number() - o.page.number();
+        if (delta != 0) return (int) delta;
+        return offset - o.offset;
+    }
 }
 
 interface CursorFactory {
@@ -88,7 +100,7 @@ interface CursorFactory {
 
     <T> ObjectRef<T> objectRef(T object);
 
-    <T> Transformer<T> transformer(Cursor<T> intiCursor);
+    <T> Proxy<T> transformer(Cursor<T> intiCursor);
 
 }
 

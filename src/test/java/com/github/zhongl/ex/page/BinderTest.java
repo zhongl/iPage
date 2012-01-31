@@ -19,7 +19,6 @@ import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.codec.ComposedCodecBuilder;
 import com.github.zhongl.ex.codec.LengthCodec;
 import com.github.zhongl.ex.codec.StringCodec;
-import com.github.zhongl.ex.lang.Function;
 import com.github.zhongl.util.FileTestContext;
 import org.junit.After;
 import org.junit.Test;
@@ -56,8 +55,8 @@ public class BinderTest extends FileTestContext {
     }
 
     @Test
-    public void foreach() throws Exception {
-        dir = testDir("foreach");
+    public void iterate() throws Exception {
+        dir = testDir("iterate");
         binder = new InnerBinder(dir);
 
         binder.append("0", false);
@@ -66,39 +65,11 @@ public class BinderTest extends FileTestContext {
 
         final List<String> sList = new ArrayList<String>();
 
-        binder.foreach(new Function<String, Void>() {
-            @Override
-            public Void apply(String input) {
-                sList.add(input);
-                return null;
-            }
-        });
+        for (Cursor<String> cursor = binder.head(); cursor != null; cursor = binder.next(cursor)) {
+            sList.add(cursor.get());
+        }
 
         assertThat(sList, hasItems("0", "1", "2"));
-    }
-
-    @Test
-    public void foreachBetween() throws Exception {
-        dir = testDir("foreachBetween");
-        binder = new InnerBinder(dir);
-
-        binder.append("0", false);
-        Cursor<String> from = binder.append("1", false);
-        binder.append("2", true);
-        Cursor<String> to = binder.append("3", true);
-        binder.append("4", true);
-
-        final List<String> sList = new ArrayList<String>();
-
-        binder.foreachBetween(from, to, new Function<String, Void>() {
-            @Override
-            public Void apply(String input) {
-                sList.add(input);
-                return null;
-            }
-        });
-
-        assertThat(sList, hasItems("1", "2", "3"));
     }
 
     @Override

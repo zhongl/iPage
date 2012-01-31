@@ -15,7 +15,6 @@
 
 package com.github.zhongl.ex.page;
 
-import com.github.zhongl.ex.lang.Function;
 import com.github.zhongl.ex.nio.Closable;
 import com.github.zhongl.util.FilesLoader;
 import com.github.zhongl.util.NumberNamedFilterAndComparator;
@@ -24,7 +23,11 @@ import com.github.zhongl.util.Transformer;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.AbstractList;
+import java.util.Collections;
 import java.util.LinkedList;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public abstract class Binder implements Closable {
@@ -74,16 +77,42 @@ public abstract class Binder implements Closable {
         return newPage(new File(dir, number + ""), number);
     }
 
-    public <T> void foreach(Function<T, Void> function) {
-        for (Page page : pages) page.foreach(function);
+    public <T> Cursor<T> head() {
+        return new Reader<T>(pages.getFirst(), 0);
     }
 
-    public <T> void foreachBetween(Cursor<?> from, Cursor<?> to, Function<T, Void> function) {
-        // TODO foreach
+    public <T> Cursor<T> next(Cursor<?> cursor) {
+        checkNotNull(cursor);
+        Reader<?> reader = Page.transform(cursor);
+        long location = reader.offset + reader.length();
+        Page page = binarySearch(location);
+        if (page == null) return null;
+        return new Reader<T>(page, (int) (location - page.number()));
+    }
+
+    private Page binarySearch(long location) {
+        int i = Collections.binarySearch(new AbstractList<Long>() {
+
+            @Override
+            public Long get(int index) {
+                return pages.get(index).number();
+            }
+
+            @Override
+            public int size() {
+                return pages.size();
+            }
+        }, location);
+
+        i = -(i + 2);
+        if (i < 0) return null;
+
+        Page page = pages.get(i);
+        if (location >= page.number() + page.file().length()) return null;
+        return page;
     }
 
     protected abstract Page newPage(File file, long number);
 
     protected abstract long newPageNumber(@Nullable Page last);
-
 }

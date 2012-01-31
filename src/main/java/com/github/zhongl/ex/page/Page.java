@@ -16,15 +16,12 @@
 package com.github.zhongl.ex.page;
 
 import com.github.zhongl.ex.codec.Codec;
-import com.github.zhongl.ex.lang.Function;
 import com.github.zhongl.ex.nio.Closable;
 import com.github.zhongl.ex.nio.FileChannels;
-import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -53,6 +50,15 @@ public abstract class Page implements Closable {
         this.opened = true;
     }
 
+    static Reader<?> transform(Cursor<?> cursor) {
+        if (cursor instanceof Reader) return (Reader) cursor;
+        if (cursor instanceof Proxy
+                && ((Proxy) cursor).delegate instanceof Reader) {
+            return (Reader) ((Proxy) cursor).delegate;
+        }
+        throw new IllegalArgumentException("Illegal cursor.");
+    }
+
     public <T> Cursor<T> append(T value, boolean force, OverflowCallback<T> callback) throws IOException {
         checkState(opened);
 
@@ -66,10 +72,6 @@ public abstract class Page implements Closable {
 
         if (force) currentBatch = newBatch(new Factory(), size, currentBatch.writeAndForceTo(channel));
         return cursor;
-    }
-
-    public <T> void foreach(Function<T, Void> function) {
-        foreachBetween(0, (int) file.length(), function);
     }
 
     public long number() { return number; }
@@ -87,13 +89,6 @@ public abstract class Page implements Closable {
 
     protected abstract Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize);
 
-    /* [from, to) */
-    private <T> void foreachBetween(int from, int to, Function<T, Void> function) {
-        ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(file);
-        buffer.position(from).limit(to);
-        while (buffer.hasRemaining()) function.apply((T) codec.decode(buffer));
-    }
-
     class Factory implements CursorFactory {
 
         @Override
@@ -107,8 +102,8 @@ public abstract class Page implements Closable {
         }
 
         @Override
-        public <T> Transformer<T> transformer(final Cursor<T> intiCursor) {
-            return new Transformer<T>(intiCursor);
+        public <T> Proxy<T> transformer(final Cursor<T> intiCursor) {
+            return new Proxy<T>(intiCursor);
         }
     }
 

@@ -48,14 +48,14 @@ class DefaultBatch extends Batch {
 
     @Override
     protected final <T> Cursor<T> _append(T object) {
-        final ObjectRef<T> objectRef = cursorFactory.objectRef(object);
-        final Transformer<T> transformer = cursorFactory.transformer(objectRef);
-        onAppend(objectRef, transformer);
-        return transformer;
+        ObjectRef<T> objectRef = cursorFactory.objectRef(object);
+        Proxy<T> proxy = cursorFactory.transformer(objectRef);
+        onAppend(objectRef, proxy);
+        return proxy;
     }
 
-    protected void onAppend(final ObjectRef<?> objectRef, final Transformer<?> transformer) {
-        tupleQueue.offer(new Tuple(transformer, objectRef.encode()));
+    protected void onAppend(final ObjectRef<?> objectRef, final Proxy<?> proxy) {
+        tupleQueue.offer(new Tuple(proxy, objectRef.encode()));
     }
 
     @Override
@@ -71,7 +71,7 @@ class DefaultBatch extends Batch {
         ByteBuffer aggregated = ByteBuffer.allocate(estimateBufferSize);
 
         for (Tuple tuple : toAggregatingQueue()) {
-            final Transformer<?> transformer = tuple.get(0);
+            final Proxy<?> proxy = tuple.get(0);
             final ByteBuffer buffer = tuple.get(1);
             final Cursor<Object> reader = cursorFactory.reader(offset);
 
@@ -79,7 +79,7 @@ class DefaultBatch extends Batch {
 
                 @Override
                 public void run() {
-                    transformer.transform(reader);
+                    proxy.transform(reader);
                 }
             });
 
