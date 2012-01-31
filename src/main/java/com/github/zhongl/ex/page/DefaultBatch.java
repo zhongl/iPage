@@ -15,46 +15,41 @@
 
 package com.github.zhongl.ex.page;
 
-import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.lang.Tuple;
 import com.github.zhongl.ex.nio.ByteBuffers;
 import com.github.zhongl.ex.nio.Forcer;
 
 import javax.annotation.concurrent.NotThreadSafe;
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import static com.github.zhongl.ex.nio.ByteBuffers.*;
+import static com.github.zhongl.ex.nio.ByteBuffers.lengthOf;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
 class DefaultBatch extends Batch {
-    protected final File file;
     protected final int position;
-    protected final Codec codec;
     protected final int estimateBufferSize;
     protected final Queue<Runnable> delayTransformQueue;
 
     private final Queue<Tuple> tupleQueue;
+    private final CursorFactory cursorFactory;
 
-    public DefaultBatch(final File file, int position, final Codec codec, int estimateBufferSize) {
-        this.file = file;
+    public DefaultBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
+        this.cursorFactory = cursorFactory;
         this.position = position;
-        this.codec = codec;
         this.estimateBufferSize = Math.max(4096, estimateBufferSize);
-
         this.delayTransformQueue = new LinkedList<Runnable>();
         this.tupleQueue = new LinkedList<Tuple>();
     }
 
     @Override
     protected final <T> Cursor<T> _append(T object) {
-        final ObjectRef<T> objectRef = new ObjectRef<T>(object, codec);
-        final Transformer<T> transformer = new Transformer<T>(objectRef);
+        final ObjectRef<T> objectRef = cursorFactory.objectRef(object);
+        final Transformer<T> transformer = cursorFactory.transformer(objectRef);
         onAppend(objectRef, transformer);
         return transformer;
     }
@@ -78,7 +73,7 @@ class DefaultBatch extends Batch {
         for (Tuple tuple : toAggregatingQueue()) {
             final Transformer<?> transformer = tuple.get(0);
             final ByteBuffer buffer = tuple.get(1);
-            final Cursor<Object> reader = new Reader<Object>(file, offset, codec);
+            final Cursor<Object> reader = cursorFactory.reader(offset);
 
             delayTransformQueue.offer(new Runnable() {
 

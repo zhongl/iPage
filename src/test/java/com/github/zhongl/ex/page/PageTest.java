@@ -27,8 +27,8 @@ public class PageTest extends FileTestContext {
                                           .build();
         return new Page(new File(dir, "0"), 0L, 4096, codec) {
             @Override
-            protected Batch newBatch(File file, int position, Codec codec, int estimateBufferSize) {
-                return new DefaultBatch(file, position, codec, estimateBufferSize);
+            protected Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
+                return new DefaultBatch(cursorFactory, position, estimateBufferSize);
             }
         };
     }

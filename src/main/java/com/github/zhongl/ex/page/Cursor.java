@@ -18,7 +18,6 @@ package com.github.zhongl.ex.page;
 import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
 
-import java.io.File;
 import java.nio.ByteBuffer;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -28,41 +27,11 @@ public interface Cursor<T> {
     T get();
 }
 
-interface CursorFactory {
-    <T> Cursor<T> reader(Page page, int offset);
-
-    <T> ObjectRef<T> objectRef(T object, Codec codec);
-
-    <T> Transformer<T> transformer(ObjectRef<T> objectRef);
-}
-
-
-class Reader<T> implements Cursor<T> {
-    private final int offset;
-    private final File file;
-    private final Codec codec;
-
-    Reader(File file, int offset, Codec codec) {
-        this.file = file;
-        this.offset = offset;
-        this.codec = codec;
-    }
-
-    @Override
-    public T get() {
-        checkState(file.exists());
-        ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(file);
-        buffer.position(offset);
-        return codec.decode(buffer);
-    }
-}
-
 class Transformer<T> implements Cursor<T> {
-
     private volatile Cursor<?> delegate;
 
-    public Transformer(Cursor<?> delegate) {
-        this.delegate = delegate;
+    public Transformer(Cursor<T> intiCursor) {
+        delegate = intiCursor;
     }
 
     public void transform(Cursor<?> delegate) {
@@ -73,12 +42,11 @@ class Transformer<T> implements Cursor<T> {
     public T get() {
         return (T) delegate.get();
     }
+
 }
 
 class ObjectRef<T> implements Cursor<T> {
-
     private final T object;
-
     private final Codec codec;
 
     ObjectRef(T object, Codec codec) {
@@ -86,15 +54,41 @@ class ObjectRef<T> implements Cursor<T> {
         this.codec = codec;
     }
 
-    @Override
-    public T get() {
-        return object;
-    }
-
     public ByteBuffer encode() {
         return codec.encode(object);
     }
 
+    @Override
+    public T get() {
+        return object;
+    }
 }
 
+class Reader<T> implements Cursor<T> {
+    private final Page page;
+    private final int offset;
+
+    public Reader(Page page, int offset) {
+        this.page = page;
+        this.offset = offset;
+    }
+
+    @Override
+    public T get() {
+        checkState(page.file().exists());
+        ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(page.file());
+        buffer.position(offset);
+        return page.codec().decode(buffer);
+    }
+}
+
+interface CursorFactory {
+
+    <T> Cursor<T> reader(int offset);
+
+    <T> ObjectRef<T> objectRef(T object);
+
+    <T> Transformer<T> transformer(Cursor<T> intiCursor);
+
+}
 

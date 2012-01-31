@@ -56,16 +56,15 @@ public abstract class Page implements Closable {
     public <T> Cursor<T> append(T value, boolean force, OverflowCallback<T> callback) throws IOException {
         checkState(opened);
 
-        FileChannel channel = FileChannels.getOrOpen(file);
-
-        int size = (int) channel.size();
+        final FileChannel channel = FileChannels.getOrOpen(file);
+        final int size = (int) channel.size();
 
         if (size > capacity) return callback.onOverflow(value, force);
-        if (currentBatch == null) currentBatch = newBatch(file, size, codec, 0);
+        if (currentBatch == null) currentBatch = newBatch(new Factory(), size, 0);
 
-        Cursor<T> cursor = currentBatch.append(value);
+        final Cursor<T> cursor = currentBatch.append(value);
 
-        if (force) currentBatch = newBatch(file, size, codec, currentBatch.writeAndForceTo(channel));
+        if (force) currentBatch = newBatch(new Factory(), size, currentBatch.writeAndForceTo(channel));
         return cursor;
     }
 
@@ -74,6 +73,8 @@ public abstract class Page implements Closable {
     }
 
     public long number() { return number; }
+
+    public Codec codec() {return codec;}
 
     public File file() { return file; }
 
@@ -84,7 +85,7 @@ public abstract class Page implements Closable {
         FileChannels.closeChannelOf(file);
     }
 
-    protected abstract Batch newBatch(File file, int position, Codec codec, int estimateBufferSize);
+    protected abstract Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize);
 
     /* [from, to) */
     private <T> void foreachBetween(int from, int to, Function<T, Void> function) {
@@ -92,4 +93,23 @@ public abstract class Page implements Closable {
         buffer.position(from).limit(to);
         while (buffer.hasRemaining()) function.apply((T) codec.decode(buffer));
     }
+
+    class Factory implements CursorFactory {
+
+        @Override
+        public <T> Cursor<T> reader(final int offset) {
+            return new Reader<T>(Page.this, offset);
+        }
+
+        @Override
+        public <T> ObjectRef<T> objectRef(final T object) {
+            return new ObjectRef<T>(object, codec);
+        }
+
+        @Override
+        public <T> Transformer<T> transformer(final Cursor<T> intiCursor) {
+            return new Transformer<T>(intiCursor);
+        }
+    }
+
 }

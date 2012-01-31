@@ -15,14 +15,10 @@
 
 package com.github.zhongl.ex.page;
 
-import com.github.zhongl.ex.codec.Codec;
-
-import java.io.File;
-
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class DefaultBatchTest extends BatchTest {
     @Override
-    protected Batch newBatch(File file, int position, Codec codec, int estimateBufferSize) {
-        return new DefaultBatch(file, position, codec, estimateBufferSize);
+    protected Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
+        return new DefaultBatch(cursorFactory, position, estimateBufferSize);
     }
 }

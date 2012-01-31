@@ -75,7 +75,6 @@ public class BinderTest extends FileTestContext {
         });
 
         assertThat(sList, hasItems("0", "1", "2"));
-
     }
 
     @Test
@@ -99,8 +98,7 @@ public class BinderTest extends FileTestContext {
             }
         });
 
-        assertThat(sList, hasItems("0", "1", "2"));
-
+        assertThat(sList, hasItems("1", "2", "3"));
     }
 
     @Override
@@ -120,8 +118,8 @@ public class BinderTest extends FileTestContext {
         protected Page newPage(File file, long number) {
             return new Page(file, number, 4096, codec) {
                 @Override
-                protected Batch newBatch(File file, int position, Codec codec, int estimateBufferSize) {
-                    return new DefaultBatch(file, position, codec, estimateBufferSize);
+                protected Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
+                    return new DefaultBatch(cursorFactory, position, estimateBufferSize);
                 }
             };
         }

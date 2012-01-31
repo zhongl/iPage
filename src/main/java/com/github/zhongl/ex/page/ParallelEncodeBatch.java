@@ -15,11 +15,9 @@
 
 package com.github.zhongl.ex.page;
 
-import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.lang.Tuple;
 
 import javax.annotation.concurrent.NotThreadSafe;
-import java.io.File;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -44,8 +42,8 @@ class ParallelEncodeBatch extends DefaultBatch {
 
     private final Queue<Future<Tuple>> futureQueue;
 
-    public ParallelEncodeBatch(File file, int position, Codec codec, int estimateBufferSize) {
-        super(file, position, codec, estimateBufferSize);
+    public ParallelEncodeBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
+        super(cursorFactory, position, estimateBufferSize);
         this.futureQueue = new LinkedList<Future<Tuple>>();
     }
 

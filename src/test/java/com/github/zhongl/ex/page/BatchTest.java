@@ -21,21 +21,33 @@ import com.github.zhongl.ex.codec.LengthCodec;
 import com.github.zhongl.ex.codec.StringCodec;
 import com.github.zhongl.ex.nio.FileChannels;
 import com.github.zhongl.util.FileTestContext;
+import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
-
 import static com.github.zhongl.util.FileAsserter.*;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public abstract class BatchTest extends FileTestContext {
+    private Page page = mock(Page.class);
+
+    private Codec codec = ComposedCodecBuilder.compose(new StringCodec())
+                                              .with(LengthCodec.class)
+                                              .build();
+
+    @Override
+    @Before
+    public void setUp() throws Exception {
+        super.setUp();
+        file = testFile("main");
+        doReturn(file).when(page).file();
+        doReturn(codec).when(page).codec();
+    }
+
     @Test
     public void main() throws Exception {
-        file = testFile("main");
-        Codec codec = ComposedCodecBuilder.compose(new StringCodec())
-                                          .with(LengthCodec.class)
-                                          .build();
-        Batch batch = newBatch(file, 0, codec, 4096);
+        Batch batch = newBatch(new Factory(), 0, 4096);
 
         batch.append("1");
         batch.append("2");
@@ -45,5 +57,24 @@ public abstract class BatchTest extends FileTestContext {
         assertExist(file).contentIs(length(1), string("1"), length(1), string("2"));
     }
 
-    protected abstract Batch newBatch(File file, int position, Codec codec, int estimateBufferSize);
+    protected abstract Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize);
+
+    class Factory implements CursorFactory {
+
+        @Override
+        public <T> Cursor<T> reader(final int offset) {
+            return new Reader<T>(page, offset);
+        }
+
+        @Override
+        public <T> ObjectRef<T> objectRef(final T object) {
+            return new ObjectRef<T>(object, codec);
+        }
+
+        @Override
+        public <T> Transformer<T> transformer(final Cursor<T> intiCursor) {
+            return new Transformer<T>(intiCursor);
+        }
+    }
+
 }
