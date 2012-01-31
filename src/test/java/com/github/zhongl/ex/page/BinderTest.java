@@ -25,8 +25,12 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import static com.github.zhongl.util.FileAsserter.*;
+import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
@@ -34,29 +38,14 @@ import static org.junit.Assert.assertThat;
 public class BinderTest extends FileTestContext {
 
     private Binder binder;
+    private final Codec codec = ComposedCodecBuilder.compose(new StringCodec())
+                                                    .with(LengthCodec.class)
+                                                    .build();
 
     @Test
     public void append() throws Exception {
         dir = testDir("append");
-        final Codec codec = ComposedCodecBuilder.compose(new StringCodec())
-                                                .with(LengthCodec.class)
-                                                .build();
-        binder = new Binder(dir) {
-            @Override
-            protected Page newPage(File file, long number) {
-                return new Page(file, number, 4096, codec) {
-                    @Override
-                    protected Batch newBatch(File file, int position, Codec codec, int estimateBufferSize) {
-                        return new DefaultBatch(file, position, codec, estimateBufferSize);
-                    }
-                };
-            }
-
-            @Override
-            protected long newPageNumber(@Nullable Page last) {
-                return last == null ? 0L : last.number() + last.file().length();
-            }
-        };
+        binder = new InnerBinder(dir);
 
         String value = "value";
 
@@ -65,10 +54,80 @@ public class BinderTest extends FileTestContext {
         assertExist(new File(dir, "0")).contentIs(length(5), string(value));
     }
 
+    @Test
+    public void foreach() throws Exception {
+        dir = testDir("foreach");
+        binder = new InnerBinder(dir);
+
+        binder.append("0", false);
+        binder.append("1", false);
+        binder.append("2", true);
+
+        final List<String> sList = new ArrayList<String>();
+
+        binder.foreach(new Function<String, Void>() {
+            @Override
+            public Void apply(String input) {
+                sList.add(input);
+                return null;
+            }
+        });
+
+        assertThat(sList, hasItems("0", "1", "2"));
+
+    }
+
+    @Test
+    public void foreachBetween() throws Exception {
+        dir = testDir("foreachBetween");
+        binder = new InnerBinder(dir);
+
+        binder.append("0", false);
+        Cursor<String> from = binder.append("1", false);
+        binder.append("2", true);
+        Cursor<String> to = binder.append("3", true);
+        binder.append("4", true);
+
+        final List<String> sList = new ArrayList<String>();
+
+        binder.foreachBetween(from, to, new Function<String, Void>() {
+            @Override
+            public Void apply(String input) {
+                sList.add(input);
+                return null;
+            }
+        });
+
+        assertThat(sList, hasItems("0", "1", "2"));
+
+    }
+
     @Override
     @After
     public void tearDown() throws Exception {
         if (binder != null) binder.close();
         super.tearDown();
+    }
+
+    private class InnerBinder extends Binder {
+
+        public InnerBinder(File dir) throws IOException {
+            super(dir);
+        }
+
+        @Override
+        protected Page newPage(File file, long number) {
+            return new Page(file, number, 4096, codec) {
+                @Override
+                protected Batch newBatch(File file, int position, Codec codec, int estimateBufferSize) {
+                    return new DefaultBatch(file, position, codec, estimateBufferSize);
+                }
+            };
+        }
+
+        @Override
+        protected long newPageNumber(@Nullable Page last) {
+            return last == null ? 0L : last.number() + last.file().length();
+        }
     }
 }

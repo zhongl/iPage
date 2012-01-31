@@ -73,11 +73,11 @@ public abstract class Binder implements Closable {
         return newPage(new File(dir, number + ""), number);
     }
 
-    public void foreach(Function function) {
-        // TODO foreach
+    public <T> void foreach(Function<T, Void> function) {
+        for (Page page : pages) page.foreach(function);
     }
 
-    public void foreachBetween(Cursor<?> from, Cursor<?> to, Function function) {
+    public <T> void foreachBetween(Cursor<?> from, Cursor<?> to, Function<T, Void> function) {
         // TODO foreach
     }
 
@@ -85,8 +85,4 @@ public abstract class Binder implements Closable {
 
     protected abstract long newPageNumber(@Nullable Page last);
 
-    /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-    public static interface Function {
-        void apply(Page page);
-    }
 }

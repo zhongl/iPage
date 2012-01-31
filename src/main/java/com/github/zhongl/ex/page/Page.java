@@ -18,10 +18,12 @@ package com.github.zhongl.ex.page;
 import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.nio.Closable;
 import com.github.zhongl.ex.nio.FileChannels;
+import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -84,4 +86,18 @@ public abstract class Page implements Closable {
     }
 
     protected abstract Batch newBatch(File file, int position, Codec codec, int estimateBufferSize);
+
+
+    public <T> void foreach(Function<T, Void> function) {
+        foreachBetween(0, (int) file.length(), function);
+    }
+
+    /*
+     * [from, to)
+     */
+    private <T> void foreachBetween(int from, int to, Function<T, Void> function) {
+        ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(file);
+        buffer.position(from).limit(to);
+        while (buffer.hasRemaining()) function.apply((T) codec.decode(buffer));
+    }
 }

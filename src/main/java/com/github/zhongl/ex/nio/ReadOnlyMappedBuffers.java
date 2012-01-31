@@ -58,11 +58,11 @@ public class ReadOnlyMappedBuffers {
         MappedByteBuffer buffer = CACHE.getUnchecked(file);
         if (ByteBuffers.lengthOf(buffer) == file.length()) {
             if (!buffer.isLoaded()) buffer.load();
-            return buffer;
+            return buffer.duplicate();
         }
 
         clearMappedOf(file);
-        return CACHE.getUnchecked(file);
+        return CACHE.getUnchecked(file).duplicate();
     }
 
     public static void clearMappedOf(File file) {

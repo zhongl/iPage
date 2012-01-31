@@ -46,7 +46,7 @@ class DefaultBatch extends Batch {
 
                     @Override
                     public void run() {
-                        tuple.transformer.transform(new RealCursor<Object>(file, offset, codec));
+                        tuple.transformer.transform(new Reader<Object>(file, offset, codec));
                     }
                 });
 

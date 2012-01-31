@@ -24,12 +24,12 @@ import java.nio.ByteBuffer;
 import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-class RealCursor<T> implements Cursor<T> {
+class Reader<T> implements Cursor<T> {
     private final int offset;
     private final File file;
     private final Codec codec;
 
-    RealCursor(File file, int offset, Codec codec) {
+    Reader(File file, int offset, Codec codec) {
         this.file = file;
         this.offset = offset;
         this.codec = codec;
