@@ -58,26 +58,24 @@ public abstract class Page implements Closable {
 
         FileChannel channel = FileChannels.getOrOpen(file);
 
-        if (channel.position() > capacity) return callback.onOverflow(value, force);
-        if (currentBatch == null) currentBatch = newBatch(file, (int) channel.size(), codec, 0);
+        int size = (int) channel.size();
+
+        if (size > capacity) return callback.onOverflow(value, force);
+        if (currentBatch == null) currentBatch = newBatch(file, size, codec, 0);
 
         Cursor<T> cursor = currentBatch.append(value);
 
-        if (force) {
-            int estimateBufferSize = currentBatch.writeAndForceTo(channel);
-            currentBatch = newBatch(file, (int) channel.size(), codec, estimateBufferSize);
-        }
-
+        if (force) currentBatch = newBatch(file, size, codec, currentBatch.writeAndForceTo(channel));
         return cursor;
     }
 
-    public File file() {
-        return file;
+    public <T> void foreach(Function<T, Void> function) {
+        foreachBetween(0, (int) file.length(), function);
     }
 
-    public long number() {
-        return number;
-    }
+    public long number() { return number; }
+
+    public File file() { return file; }
 
     @Override
     public void close() {
@@ -88,14 +86,7 @@ public abstract class Page implements Closable {
 
     protected abstract Batch newBatch(File file, int position, Codec codec, int estimateBufferSize);
 
-
-    public <T> void foreach(Function<T, Void> function) {
-        foreachBetween(0, (int) file.length(), function);
-    }
-
-    /*
-     * [from, to)
-     */
+    /* [from, to) */
     private <T> void foreachBetween(int from, int to, Function<T, Void> function) {
         ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(file);
         buffer.position(from).limit(to);

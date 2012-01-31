@@ -17,7 +17,10 @@ package com.github.zhongl.ex.nio;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+
+import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public abstract class Forcer {
@@ -41,4 +44,27 @@ public abstract class Forcer {
     }
 
     public abstract int force(FileChannel channel, ByteBuffer buffer) throws IOException;
+}
+
+class MappedForcer extends Forcer {
+
+    @Override
+    public int force(FileChannel channel, ByteBuffer buffer) throws IOException {
+        int size = ByteBuffers.lengthOf(buffer);
+        MappedByteBuffer mappedByteBuffer = channel.map(READ_WRITE, channel.size(), size);
+        mappedByteBuffer.put(buffer);
+        mappedByteBuffer.force();
+        return size;
+    }
+}
+
+class ChannelForcer extends Forcer {
+
+    @Override
+    public int force(FileChannel channel, ByteBuffer buffer) throws IOException {
+        int size = 0;
+        while (buffer.hasRemaining()) size += channel.write(buffer);
+        channel.force(false);
+        return size;
+    }
 }

@@ -15,10 +15,7 @@
 
 package com.github.zhongl.ex.page;
 
-import com.github.zhongl.ex.codec.Codec;
-
 import javax.annotation.concurrent.NotThreadSafe;
-import java.io.File;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 
@@ -29,18 +26,7 @@ import static com.google.common.base.Preconditions.checkState;
 @NotThreadSafe
 public abstract class Batch {
 
-    protected final File file;
-    protected final int position;
-    protected final Codec codec;
     private boolean notWrote = true;
-    protected final int estimateBufferSize;
-
-    public Batch(final File file, int position, final Codec codec, int estimateBufferSize) {
-        this.file = file;
-        this.position = position;
-        this.codec = codec;
-        this.estimateBufferSize = Math.max(4096, estimateBufferSize);
-    }
 
     public <T> Cursor<T> append(final T object) {
         checkNotNull(object);

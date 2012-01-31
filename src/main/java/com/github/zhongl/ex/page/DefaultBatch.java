@@ -33,11 +33,20 @@ import static com.github.zhongl.ex.nio.ByteBuffers.*;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
 class DefaultBatch extends Batch {
+    protected final File file;
+    protected final int position;
+    protected final Codec codec;
+    protected final int estimateBufferSize;
     protected final Queue<Runnable> delayTransformQueue;
+
     private final Queue<Tuple> tupleQueue;
 
     public DefaultBatch(final File file, int position, final Codec codec, int estimateBufferSize) {
-        super(file, position, codec, estimateBufferSize);
+        this.file = file;
+        this.position = position;
+        this.codec = codec;
+        this.estimateBufferSize = Math.max(4096, estimateBufferSize);
+
         this.delayTransformQueue = new LinkedList<Runnable>();
         this.tupleQueue = new LinkedList<Tuple>();
     }
@@ -86,8 +95,5 @@ class DefaultBatch extends Batch {
         return (ByteBuffer) aggregated.flip();
     }
 
-    protected Iterable<Tuple> toAggregatingQueue() {
-        return tupleQueue;
-    }
-
+    protected Iterable<Tuple> toAggregatingQueue() { return tupleQueue; }
 }
