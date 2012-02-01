@@ -20,6 +20,7 @@ package com.github.zhongl.ex.journal;
 import com.github.zhongl.ex.codec.*;
 import com.github.zhongl.ex.nio.Closable;
 import com.github.zhongl.ex.page.*;
+import com.github.zhongl.ex.page.Number;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -34,17 +35,20 @@ public class Journal implements Closable {
 
     private final Binder binder;
 
-    private long revision;
+    private Revision revision;
 
     public Journal(File dir, Codec... codecs) throws IOException {
         final Codec codec = ComposedCodecBuilder.compose(new CompoundCodec(codecs))
                                                 .with(ChecksumCodec.class)
                                                 .with(LengthCodec.class)
                                                 .build();
+
+        revision = new Revision(0L);
+
         binder = new Binder(dir) {
 
             @Override
-            protected Page newPage(File file, long number) {
+            protected Page newPage(File file, Number number) {
                 return new Page(file, number, CAPACITY, codec) {
                     @Override
                     protected Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
@@ -54,16 +58,23 @@ public class Journal implements Closable {
             }
 
             @Override
-            protected long newPageNumber(@Nullable Page last) {
+            protected Number newNumber(@Nullable Page last) {
                 return revision;
+            }
+
+            @Override
+            protected Number parseNumber(String text) {
+                return new Revision(Long.parseLong(text));
             }
         };
 
     }
 
     public long append(Object event, boolean force) throws IOException {
+        long value = revision.value();
         binder.append(event, force);
-        return revision++;
+        revision = revision.increment();
+        return value;
     }
 
     /**
@@ -72,7 +83,7 @@ public class Journal implements Closable {
      * @param revision of journal.
      */
     public void eraseBy(long revision) {
-        binder.removePagesFromHeadTo(revision);
+        binder.removePagesFromHeadTo(new Revision(revision));
     }
 
     /**
@@ -81,14 +92,14 @@ public class Journal implements Closable {
      * @param applicable {@link com.github.zhongl.ex.journal.Applicable}
      */
     public void recover(final Applicable applicable) {
-        long checkpoint = applicable.lastCheckpoint();
-        long revision = binder.roundPageNumber(checkpoint);
+        Revision checkpoint = new Revision(applicable.lastCheckpoint());
+        Revision revision = (Revision) binder.roundPageNumber(checkpoint);
 
         for (Cursor<Object> cursor = binder.head(checkpoint);
              cursor != null;
-             cursor = binder.next(cursor), revision++) {
+             cursor = binder.next(cursor), revision = revision.increment()) {
 
-            if (revision <= checkpoint) continue;
+            if (revision.compareTo(checkpoint) <= 0) continue;
             applicable.apply(cursor.get());
         }
 

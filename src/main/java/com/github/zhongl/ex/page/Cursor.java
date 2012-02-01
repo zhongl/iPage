@@ -88,7 +88,7 @@ class Reader<T> implements Cursor<T>, Comparable<Reader<?>> {
 
     @Override
     public int compareTo(Reader<?> o) {
-        long delta = page.number() - o.page.number();
+        long delta = page.compareTo(o.page);
         if (delta != 0) return (int) delta;
         return offset - o.offset;
     }

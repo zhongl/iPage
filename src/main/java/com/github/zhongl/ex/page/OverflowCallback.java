@@ -18,7 +18,7 @@ package com.github.zhongl.ex.page;
 import java.io.IOException;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface OverflowCallback<T> {
+public interface OverflowCallback {
     OverflowCallback THROW_BY_OVERFLOW = new OverflowCallback() {
         @Override
         public Cursor<Object> onOverflow(Object value, boolean force) throws IOException {
@@ -26,5 +26,5 @@ public interface OverflowCallback<T> {
         }
     };
 
-    Cursor<T> onOverflow(T value, boolean force) throws IOException;
+    <T> Cursor<T> onOverflow(T value, boolean force) throws IOException;
 }

@@ -14,6 +14,7 @@ import java.io.IOException;
 import static com.github.zhongl.ex.page.OverflowCallback.THROW_BY_OVERFLOW;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.mock;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class PageTest extends FileTestContext {
@@ -25,7 +26,7 @@ public class PageTest extends FileTestContext {
         Codec codec = ComposedCodecBuilder.compose(new StringCodec())
                                           .with(LengthCodec.class)
                                           .build();
-        return new Page(new File(dir, "0"), 0L, 4096, codec) {
+        return new Page(new File(dir, "0"), mock(Number.class), 4096, codec) {
             @Override
             protected Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
                 return new DefaultBatch(cursorFactory, position, estimateBufferSize);

@@ -86,7 +86,7 @@ public class BinderTest extends FileTestContext {
         }
 
         @Override
-        protected Page newPage(File file, long number) {
+        protected Page newPage(File file, Number number) {
             return new Page(file, number, 4096, codec) {
                 @Override
                 protected Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
@@ -96,8 +96,14 @@ public class BinderTest extends FileTestContext {
         }
 
         @Override
-        protected long newPageNumber(@Nullable Page last) {
-            return last == null ? 0L : last.number() + last.file().length();
+        protected Number newNumber(@Nullable Page last) {
+            return last == null ? new Offset(0L) : ((Offset) last.number()).add(last.file().length());
         }
+
+        @Override
+        protected Number parseNumber(String text) {
+            return new Offset(Long.parseLong(text));
+        }
+
     }
 }

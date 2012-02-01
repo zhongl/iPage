@@ -32,23 +32,7 @@ import static com.google.common.base.Preconditions.checkState;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @NotThreadSafe
-public abstract class Page implements Closable {
-
-    private final File file;
-    private final long number;
-    private final int capacity;
-    private final Codec codec;
-
-    private boolean opened;
-    private Batch currentBatch;
-
-    protected Page(File file, long number, int capacity, Codec codec) {
-        this.file = file;
-        this.number = number;
-        this.capacity = capacity;
-        this.codec = codec;
-        this.opened = true;
-    }
+public abstract class Page extends Numbered implements Closable {
 
     static Reader<?> transform(Cursor<?> cursor) {
         if (cursor instanceof Reader) return (Reader) cursor;
@@ -59,7 +43,23 @@ public abstract class Page implements Closable {
         throw new IllegalArgumentException("Illegal cursor.");
     }
 
-    public <T> Cursor<T> append(T value, boolean force, OverflowCallback<T> callback) throws IOException {
+    private final File file;
+    private final int capacity;
+
+    private final Codec codec;
+    private boolean opened;
+
+    private Batch currentBatch;
+
+    protected Page(File file, Number number, int capacity, Codec codec) {
+        super(number);
+        this.file = file;
+        this.capacity = capacity;
+        this.codec = codec;
+        this.opened = true;
+    }
+
+    public <T> Cursor<T> append(T value, boolean force, OverflowCallback callback) throws IOException {
         checkState(opened);
 
         final FileChannel channel = FileChannels.getOrOpen(file);
@@ -73,8 +73,6 @@ public abstract class Page implements Closable {
         if (force) currentBatch = newBatch(new Factory(), size, currentBatch.writeAndForceTo(channel));
         return cursor;
     }
-
-    public long number() { return number; }
 
     public Codec codec() {return codec;}
 
