@@ -36,7 +36,7 @@ public abstract class Binder implements Closable {
     protected final Codec codec;
     protected final LinkedList<Page> pages;
 
-    public Binder(File dir, Codec codec) throws IOException {
+    protected Binder(File dir, Codec codec) throws IOException {
         this.dir = dir;
         this.codec = codec;
         this.pages = loadOrInitialize();
