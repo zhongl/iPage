@@ -19,6 +19,7 @@ package com.github.zhongl.ex.index;
 import com.github.zhongl.ex.page.Number;
 
 import javax.annotation.concurrent.ThreadSafe;
+import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -27,7 +28,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @ThreadSafe
-public class Md5Key extends Number {
+public class Md5Key extends Number<Md5Key> {
 
     public static final int BYTE_LENGTH = 16;
 
@@ -35,8 +36,6 @@ public class Md5Key extends Number {
             '4', '5', '6', '7',
             '8', '9', 'a', 'b',
             'c', 'd', 'e', 'f'};
-
-    private final byte[] md5;
 
     public static byte[] md5(byte[] bytes) {
         try {
@@ -53,6 +52,16 @@ public class Md5Key extends Number {
 
     public static Md5Key generate(String s) {
         return generate(s.getBytes());
+    }
+
+    private static byte[] toBytes(String hex) {
+        return Arrays.copyOfRange(new BigInteger(hex, 16).toByteArray(), 1, 17);
+    }
+
+    private final byte[] md5;
+
+    public Md5Key(String hex) {
+        this(toBytes(hex));
     }
 
     public Md5Key(byte[] md5) {
@@ -88,7 +97,7 @@ public class Md5Key extends Number {
     }
 
     @Override
-    public int compareTo(Number o) {
-        return toString().compareTo(o.toString());
+    public int compareTo(Md5Key o) {
+        return new BigInteger(md5).compareTo(new BigInteger(o.md5));
     }
 }

@@ -85,7 +85,7 @@ public abstract class Page extends Numbered implements Closable, CursorFactory {
     }
 
     @Override
-    public Cursor reader(final int offset) {
+    public Reader reader(final int offset) {
         return new Reader(Page.this, offset);
     }
 

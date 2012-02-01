@@ -33,7 +33,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 @NotThreadSafe
 public class Journal implements Closable {
 
-    static final int CAPACITY = (1 << 20) * 64;
+    static final int CAPACITY = Integer.getInteger("ipage.journal.page.capacity", (1 << 20) * 64); // 64MB
 
     private final InnerBinder binder;
 

@@ -72,7 +72,7 @@ public class BatchBenchmark extends FileTestContext implements CursorFactory {
     }
 
     @Override
-    public Cursor reader(final int offset) {
+    public Reader reader(final int offset) {
         return new Reader(page, offset);
     }
 

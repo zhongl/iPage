@@ -60,7 +60,7 @@ public abstract class BatchTest extends FileTestContext implements CursorFactory
     protected abstract Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize);
 
     @Override
-    public Cursor reader(final int offset) {
+    public Reader reader(final int offset) {
         return new Reader(page, offset);
     }
 

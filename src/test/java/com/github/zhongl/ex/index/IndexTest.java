@@ -4,9 +4,11 @@ import com.github.zhongl.ex.lang.Entry;
 import com.github.zhongl.ex.page.Offset;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Iterator;
 
-import static org.mockito.Mockito.mock;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class IndexTest {
@@ -14,10 +16,15 @@ public class IndexTest {
     public void usage() throws Exception {
         Index index = null;
 
+        Md5Key key = Md5Key.generate("k");
+        Offset offset = new Offset(0L);
 
-        Iterator<Entry<Md5Key, Offset>> iterator = mock(Iterator.class);
+        Entry<Md5Key, Offset> entry = new Entry<Md5Key, Offset>(key, offset);
+        Iterator<Entry<Md5Key, Offset>> iterator = Arrays.asList(entry).iterator();
+
         index.merge(iterator);
-        Offset offset = index.get(Md5Key.generate("k"));
+
+        assertThat(index.get(key), is(offset));
     }
 
 }
