@@ -40,18 +40,18 @@ public class PageTest extends FileTestContext {
 
         String one = "1";
 
-        Cursor<String> cursor = page.append(one, true, THROW_BY_OVERFLOW);
-        assertThat(cursor.get(), is(one));
+        Cursor cursor = page.append(one, true, THROW_BY_OVERFLOW);
+        assertThat(cursor.<String>get(), is(one));
 
         page.close();
 
-        assertThat(cursor.get(), is(one));
+        assertThat(cursor.<String>get(), is(one));
     }
 
     @Test(expected = IllegalStateException.class)
     public void getAfterDeleted() throws Exception {
         page = newPage();
-        Cursor<String> cursor = page.append("value", true, THROW_BY_OVERFLOW);
+        Cursor cursor = page.append("value", true, THROW_BY_OVERFLOW);
         page.file().delete();
         cursor.get();
     }

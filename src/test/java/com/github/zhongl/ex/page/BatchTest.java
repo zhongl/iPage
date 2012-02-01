@@ -62,18 +62,18 @@ public abstract class BatchTest extends FileTestContext {
     class Factory implements CursorFactory {
 
         @Override
-        public <T> Cursor<T> reader(final int offset) {
-            return new Reader<T>(page, offset);
+        public Cursor reader(final int offset) {
+            return new Reader(page, offset);
         }
 
         @Override
-        public <T> ObjectRef<T> objectRef(final T object) {
-            return new ObjectRef<T>(object, codec);
+        public ObjectRef objectRef(final Object object) {
+            return new ObjectRef(object, codec);
         }
 
         @Override
-        public <T> Proxy<T> transformer(final Cursor<T> intiCursor) {
-            return new Proxy<T>(intiCursor);
+        public Proxy transformer(final Cursor intiCursor) {
+            return new Proxy(intiCursor);
         }
     }
 

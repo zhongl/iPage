@@ -34,7 +34,7 @@ import static com.google.common.base.Preconditions.checkState;
 @NotThreadSafe
 public abstract class Page extends Numbered implements Closable {
 
-    static Reader<?> transform(Cursor<?> cursor) {
+    static Reader transform(Cursor cursor) {
         if (cursor instanceof Reader) return (Reader) cursor;
         if (cursor instanceof Proxy
                 && ((Proxy) cursor).delegate instanceof Reader) {
@@ -59,7 +59,7 @@ public abstract class Page extends Numbered implements Closable {
         this.opened = true;
     }
 
-    public <T> Cursor<T> append(T value, boolean force, OverflowCallback callback) throws IOException {
+    public <T> Cursor append(T value, boolean force, OverflowCallback callback) throws IOException {
         checkState(opened);
 
         final FileChannel channel = FileChannels.getOrOpen(file);
@@ -68,7 +68,7 @@ public abstract class Page extends Numbered implements Closable {
         if (size > capacity) return callback.onOverflow(value, force);
         if (currentBatch == null) currentBatch = newBatch(new Factory(), size, 0);
 
-        final Cursor<T> cursor = currentBatch.append(value);
+        final Cursor cursor = currentBatch.append(value);
 
         if (force) currentBatch = newBatch(new Factory(), size, currentBatch.writeAndForceTo(channel));
         return cursor;
@@ -90,18 +90,18 @@ public abstract class Page extends Numbered implements Closable {
     class Factory implements CursorFactory {
 
         @Override
-        public <T> Cursor<T> reader(final int offset) {
-            return new Reader<T>(Page.this, offset);
+        public Cursor reader(final int offset) {
+            return new Reader(Page.this, offset);
         }
 
         @Override
-        public <T> ObjectRef<T> objectRef(final T object) {
-            return new ObjectRef<T>(object, codec);
+        public ObjectRef objectRef(final Object object) {
+            return new ObjectRef(object, codec);
         }
 
         @Override
-        public <T> Proxy<T> transformer(final Cursor<T> intiCursor) {
-            return new Proxy<T>(intiCursor);
+        public Proxy transformer(final Cursor intiCursor) {
+            return new Proxy(intiCursor);
         }
     }
 

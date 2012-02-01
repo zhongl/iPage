@@ -48,7 +48,7 @@ public class ParallelEncodeBatch extends DefaultBatch {
     }
 
     @Override
-    protected void onAppend(final ObjectRef<?> objectRef, final Proxy<?> proxy) {
+    protected void onAppend(final ObjectRef objectRef, final Proxy proxy) {
         futureQueue.offer(SERVICE.submit(new Callable<Tuple>() {
             @Override
             public Tuple call() throws Exception {

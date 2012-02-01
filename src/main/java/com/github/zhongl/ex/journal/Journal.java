@@ -95,7 +95,7 @@ public class Journal implements Closable {
         Revision checkpoint = new Revision(applicable.lastCheckpoint());
         Revision revision = (Revision) binder.roundPageNumber(checkpoint);
 
-        for (Cursor<Object> cursor = binder.head(checkpoint);
+        for (Cursor cursor = binder.head(checkpoint);
              cursor != null;
              cursor = binder.next(cursor), revision = revision.increment()) {
 

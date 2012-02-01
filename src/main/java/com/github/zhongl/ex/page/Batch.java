@@ -28,7 +28,7 @@ public abstract class Batch {
 
     private boolean notWrote = true;
 
-    public <T> Cursor<T> append(final T object) {
+    public Cursor append(final Object object) {
         checkNotNull(object);
         checkState(notWrote);
         return _append(object);
@@ -39,7 +39,7 @@ public abstract class Batch {
         return _writeAndForceTo(channel);
     }
 
-    protected abstract <T> Cursor<T> _append(T object);
+    protected abstract Cursor _append(Object object);
 
     protected abstract int _writeAndForceTo(FileChannel channel) throws IOException;
 

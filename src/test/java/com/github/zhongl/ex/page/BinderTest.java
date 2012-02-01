@@ -49,8 +49,8 @@ public class BinderTest extends FileTestContext {
 
         String value = "value";
 
-        Cursor<String> cursor = binder.append(value, true);
-        assertThat(cursor.get(), is(value));
+        Cursor cursor = binder.append(value, true);
+        assertThat(cursor.<String>get(), is(value));
         assertExist(new File(dir, "0")).contentIs(length(5), string(value));
     }
 
@@ -65,8 +65,8 @@ public class BinderTest extends FileTestContext {
 
         final List<String> sList = new ArrayList<String>();
 
-        for (Cursor<String> cursor = binder.head(); cursor != null; cursor = binder.next(cursor)) {
-            sList.add(cursor.get());
+        for (Cursor cursor = binder.head(); cursor != null; cursor = binder.next(cursor)) {
+            sList.add(cursor.<String>get());
         }
 
         assertThat(sList, hasItems("0", "1", "2"));

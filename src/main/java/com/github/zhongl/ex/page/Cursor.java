@@ -24,33 +24,33 @@ import java.nio.ByteBuffer;
 import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface Cursor<T> {
-    T get();
+public interface Cursor {
+    <T> T get();
 }
 
-class Proxy<T> implements Cursor<T> {
-    volatile Cursor<?> delegate;
+class Proxy<T> implements Cursor {
+    volatile Cursor delegate;
 
-    public Proxy(Cursor<T> intiCursor) {
+    public Proxy(Cursor intiCursor) {
         delegate = intiCursor;
     }
 
-    public void transform(Cursor<?> delegate) {
+    public void transform(Cursor delegate) {
         this.delegate = delegate;
     }
 
     @Override
-    public T get() {
+    public <T> T get() {
         return (T) delegate.get();
     }
 
 }
 
-class ObjectRef<T> implements Cursor<T> {
-    private final T object;
+class ObjectRef implements Cursor {
+    private final Object object;
     private final Codec codec;
 
-    ObjectRef(T object, Codec codec) {
+    ObjectRef(Object object, Codec codec) {
         this.object = object;
         this.codec = codec;
     }
@@ -60,12 +60,12 @@ class ObjectRef<T> implements Cursor<T> {
     }
 
     @Override
-    public T get() {
-        return object;
+    public <T> T get() {
+        return (T) object;
     }
 }
 
-class Reader<T> implements Cursor<T>, Comparable<Reader<?>> {
+class Reader implements Cursor, Comparable<Reader> {
     final Page page;
     final int offset;
 
@@ -75,7 +75,7 @@ class Reader<T> implements Cursor<T>, Comparable<Reader<?>> {
     }
 
     @Override
-    public T get() {
+    public <T> T get() {
         checkState(page.file().exists());
         ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(page.file());
         buffer.position(offset);
@@ -87,7 +87,7 @@ class Reader<T> implements Cursor<T>, Comparable<Reader<?>> {
     }
 
     @Override
-    public int compareTo(Reader<?> o) {
+    public int compareTo(Reader o) {
         long delta = page.compareTo(o.page);
         if (delta != 0) return (int) delta;
         return offset - o.offset;

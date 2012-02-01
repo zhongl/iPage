@@ -47,14 +47,14 @@ public class DefaultBatch extends Batch {
     }
 
     @Override
-    protected final <T> Cursor<T> _append(T object) {
-        ObjectRef<T> objectRef = cursorFactory.objectRef(object);
-        Proxy<T> proxy = cursorFactory.transformer(objectRef);
+    protected final Cursor _append(Object object) {
+        ObjectRef objectRef = cursorFactory.objectRef(object);
+        Proxy proxy = cursorFactory.transformer(objectRef);
         onAppend(objectRef, proxy);
         return proxy;
     }
 
-    protected void onAppend(final ObjectRef<?> objectRef, final Proxy<?> proxy) {
+    protected void onAppend(final ObjectRef objectRef, final Proxy proxy) {
         tupleQueue.offer(new Tuple(proxy, objectRef.encode()));
     }
 
@@ -73,7 +73,7 @@ public class DefaultBatch extends Batch {
         for (Tuple tuple : toAggregatingQueue()) {
             final Proxy<?> proxy = tuple.get(0);
             final ByteBuffer buffer = tuple.get(1);
-            final Cursor<Object> reader = cursorFactory.reader(offset);
+            final Cursor reader = cursorFactory.reader(offset);
 
             delayTransformQueue.offer(new Runnable() {
 
