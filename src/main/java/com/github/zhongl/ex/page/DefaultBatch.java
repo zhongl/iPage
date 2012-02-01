@@ -49,7 +49,7 @@ public class DefaultBatch extends Batch {
     @Override
     protected final Cursor _append(Object object) {
         ObjectRef objectRef = cursorFactory.objectRef(object);
-        Proxy proxy = cursorFactory.transformer(objectRef);
+        Proxy proxy = cursorFactory.proxy(objectRef);
         onAppend(objectRef, proxy);
         return proxy;
     }

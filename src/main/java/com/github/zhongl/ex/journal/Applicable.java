@@ -15,6 +15,8 @@
 
 package com.github.zhongl.ex.journal;
 
+import java.io.IOException;
+
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public interface Applicable {
     /**
@@ -22,11 +24,11 @@ public interface Applicable {
      *
      * @param record indicate an operation.
      */
-    void apply(Object record);
+    void apply(Object record) throws IOException;
 
     /** @return offset of last applied checkpoint. */
     long lastCheckpoint();
 
     /** Ensure all records have been applied , then Journal could be erased. */
-    void force();
+    void force() throws IOException;
 }

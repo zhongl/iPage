@@ -15,7 +15,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class BatchBenchmark extends FileTestContext {
+public class BatchBenchmark extends FileTestContext implements CursorFactory {
 
     private Page page = mock(Page.class);
     private int position;
@@ -44,14 +44,14 @@ public class BatchBenchmark extends FileTestContext {
     @Test
     public void defaultBatch() throws Exception {
         file = testFile("defaultBatch");
-        Batch batch = new DefaultBatch(new Factory(), position, valueLength);
+        Batch batch = new DefaultBatch(this, position, valueLength);
         benchmark(batch);
     }
 
     @Test
     public void parallelEncodeBatch() throws Exception {
         file = testFile("parallelEncodeBatch");
-        Batch batch = new ParallelEncodeBatch(new Factory(), position, valueLength);
+        Batch batch = new ParallelEncodeBatch(this, position, valueLength);
         benchmark(batch);
     }
 
@@ -71,23 +71,19 @@ public class BatchBenchmark extends FileTestContext {
         FileChannels.closeChannelOf(file);
     }
 
-    class Factory implements CursorFactory {
-
-        @Override
-        public Cursor reader(final int offset) {
-            return new Reader(page, offset);
-        }
-
-        @Override
-        public  ObjectRef objectRef(final Object object) {
-            return new ObjectRef(object, codec);
-        }
-
-        @Override
-        public  Proxy transformer(final Cursor intiCursor) {
-            return new Proxy(intiCursor);
-        }
+    @Override
+    public Cursor reader(final int offset) {
+        return new Reader(page, offset);
     }
 
+    @Override
+    public ObjectRef objectRef(final Object object) {
+        return new ObjectRef(object, codec);
+    }
+
+    @Override
+    public Proxy proxy(final Cursor intiCursor) {
+        return new Proxy(intiCursor);
+    }
 
 }

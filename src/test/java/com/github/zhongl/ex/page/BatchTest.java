@@ -29,7 +29,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class BatchTest extends FileTestContext {
+public abstract class BatchTest extends FileTestContext implements CursorFactory {
     private Page page = mock(Page.class);
 
     private Codec codec = ComposedCodecBuilder.compose(new StringCodec())
@@ -47,7 +47,7 @@ public abstract class BatchTest extends FileTestContext {
 
     @Test
     public void main() throws Exception {
-        Batch batch = newBatch(new Factory(), 0, 4096);
+        Batch batch = newBatch(this, 0, 4096);
 
         batch.append("1");
         batch.append("2");
@@ -59,22 +59,19 @@ public abstract class BatchTest extends FileTestContext {
 
     protected abstract Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize);
 
-    class Factory implements CursorFactory {
+    @Override
+    public Cursor reader(final int offset) {
+        return new Reader(page, offset);
+    }
 
-        @Override
-        public Cursor reader(final int offset) {
-            return new Reader(page, offset);
-        }
+    @Override
+    public ObjectRef objectRef(final Object object) {
+        return new ObjectRef(object, codec);
+    }
 
-        @Override
-        public ObjectRef objectRef(final Object object) {
-            return new ObjectRef(object, codec);
-        }
-
-        @Override
-        public Proxy transformer(final Cursor intiCursor) {
-            return new Proxy(intiCursor);
-        }
+    @Override
+    public Proxy proxy(final Cursor intiCursor) {
+        return new Proxy(intiCursor);
     }
 
 }

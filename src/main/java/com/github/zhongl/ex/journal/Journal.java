@@ -27,49 +27,36 @@ import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
 import java.io.IOException;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
 public class Journal implements Closable {
 
     static final int CAPACITY = (1 << 20) * 64;
 
-    private final Binder binder;
+    private final InnerBinder binder;
 
     private Revision revision;
 
     public Journal(File dir, Codec... codecs) throws IOException {
-        final Codec codec = ComposedCodecBuilder.compose(new CompoundCodec(codecs))
-                                                .with(ChecksumCodec.class)
-                                                .with(LengthCodec.class)
-                                                .build();
-
         revision = new Revision(0L);
-
-        binder = new Binder(dir) {
-
-            @Override
-            protected Page newPage(File file, Number number) {
-                return new Page(file, number, CAPACITY, codec) {
-                    @Override
-                    protected Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
-                        return new ParallelEncodeBatch(cursorFactory, position, estimateBufferSize);
-                    }
-                };
-            }
-
-            @Override
-            protected Number newNumber(@Nullable Page last) {
-                return revision;
-            }
-
-            @Override
-            protected Number parseNumber(String text) {
-                return new Revision(Long.parseLong(text));
-            }
-        };
-
+        binder = new InnerBinder(dir, ComposedCodecBuilder.compose(new CompoundCodec(codecs))
+                                                          .with(ChecksumCodec.class)
+                                                          .with(LengthCodec.class)
+                                                          .build());
     }
 
+    /**
+     * Append an event.
+     *
+     * @param event of operation.
+     * @param force to driver.
+     *
+     * @return checkpoint
+     * @throws IOException
+     * @see Applicable
+     */
     public long append(Object event, boolean force) throws IOException {
         long value = revision.value();
         binder.append(event, force);
@@ -90,10 +77,12 @@ public class Journal implements Closable {
      * Recover unapplied events to {@link com.github.zhongl.ex.journal.Applicable}.
      *
      * @param applicable {@link com.github.zhongl.ex.journal.Applicable}
+     *
+     * @throws java.io.IOException
      */
-    public void recover(final Applicable applicable) {
+    public void recover(final Applicable applicable) throws IOException {
         Revision checkpoint = new Revision(applicable.lastCheckpoint());
-        Revision revision = (Revision) binder.roundPageNumber(checkpoint);
+        Revision revision = binder.roundRevision(checkpoint);
 
         for (Cursor cursor = binder.head(checkpoint);
              cursor != null;
@@ -112,4 +101,47 @@ public class Journal implements Closable {
         binder.close();
     }
 
+    private class InnerBinder extends Binder {
+
+        public InnerBinder(File dir, Codec codec) throws IOException {
+            super(dir, codec);
+        }
+
+        @Override
+        protected Page newPage(File file, Number number, Codec codec) {
+            return new Page(file, number, CAPACITY, codec) {
+                @Override
+                protected Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
+                    return new ParallelEncodeBatch(cursorFactory, position, estimateBufferSize);
+                }
+            };
+        }
+
+        @Override
+        protected Number newNumber(@Nullable Page last) {
+            return revision;
+        }
+
+        @Override
+        protected Number parseNumber(String text) {
+            return new Revision(Long.parseLong(text));
+        }
+
+        void reset() {
+            while (!pages.isEmpty()) removeHeadPage();
+            pages.add(newPage(null));
+        }
+
+        void removePagesFromHeadTo(Number number) {
+            int i = binarySearchPageIndex(number);
+            for (int j = 0; j < i; j++) removeHeadPage();
+        }
+
+        Revision roundRevision(Number number) {
+            int index = binarySearchPageIndex(number);
+            checkArgument(index >= 0, "Too small number %s.", number);
+            return (Revision) pages.get(index).number();
+        }
+
+    }
 }

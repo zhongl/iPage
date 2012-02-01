@@ -7,6 +7,6 @@ public interface CursorFactory {
 
     ObjectRef objectRef(Object object);
 
-    Proxy transformer(Cursor intiCursor);
+    Proxy proxy(Cursor intiCursor);
 
 }

@@ -45,7 +45,7 @@ public class BinderTest extends FileTestContext {
     @Test
     public void append() throws Exception {
         dir = testDir("append");
-        binder = new InnerBinder(dir);
+        binder = new InnerBinder(dir, codec);
 
         String value = "value";
 
@@ -57,7 +57,7 @@ public class BinderTest extends FileTestContext {
     @Test
     public void iterate() throws Exception {
         dir = testDir("iterate");
-        binder = new InnerBinder(dir);
+        binder = new InnerBinder(dir, codec);
 
         binder.append("0", false);
         binder.append("1", false);
@@ -81,13 +81,13 @@ public class BinderTest extends FileTestContext {
 
     private class InnerBinder extends Binder {
 
-        public InnerBinder(File dir) throws IOException {
-            super(dir);
+        public InnerBinder(File dir, Codec codec) throws IOException {
+            super(dir, codec);
         }
 
         @Override
-        protected Page newPage(File file, Number number) {
-            return new Page(file, number, 4096, codec) {
+        protected Page newPage(File file, Number number, Codec codec) {
+            return new Page(file, number, 4096, InnerBinder.this.codec) {
                 @Override
                 protected Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
                     return new DefaultBatch(cursorFactory, position, estimateBufferSize);

@@ -32,7 +32,7 @@ import static com.google.common.base.Preconditions.checkState;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @NotThreadSafe
-public abstract class Page extends Numbered implements Closable {
+public abstract class Page extends Numbered implements Closable, CursorFactory {
 
     static Reader transform(Cursor cursor) {
         if (cursor instanceof Reader) return (Reader) cursor;
@@ -45,7 +45,6 @@ public abstract class Page extends Numbered implements Closable {
 
     private final File file;
     private final int capacity;
-
     private final Codec codec;
     private boolean opened;
 
@@ -66,11 +65,11 @@ public abstract class Page extends Numbered implements Closable {
         final int size = (int) channel.size();
 
         if (size > capacity) return callback.onOverflow(value, force);
-        if (currentBatch == null) currentBatch = newBatch(new Factory(), size, 0);
+        if (currentBatch == null) currentBatch = newBatch(this, size, 0);
 
         final Cursor cursor = currentBatch.append(value);
 
-        if (force) currentBatch = newBatch(new Factory(), size, currentBatch.writeAndForceTo(channel));
+        if (force) currentBatch = newBatch(this, size, currentBatch.writeAndForceTo(channel));
         return cursor;
     }
 
@@ -85,24 +84,21 @@ public abstract class Page extends Numbered implements Closable {
         FileChannels.closeChannelOf(file);
     }
 
-    protected abstract Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize);
-
-    class Factory implements CursorFactory {
-
-        @Override
-        public Cursor reader(final int offset) {
-            return new Reader(Page.this, offset);
-        }
-
-        @Override
-        public ObjectRef objectRef(final Object object) {
-            return new ObjectRef(object, codec);
-        }
-
-        @Override
-        public Proxy transformer(final Cursor intiCursor) {
-            return new Proxy(intiCursor);
-        }
+    @Override
+    public Cursor reader(final int offset) {
+        return new Reader(Page.this, offset);
     }
+
+    @Override
+    public ObjectRef objectRef(final Object object) {
+        return new ObjectRef(object, codec);
+    }
+
+    @Override
+    public Proxy proxy(final Cursor intiCursor) {
+        return new Proxy(intiCursor);
+    }
+
+    protected abstract Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize);
 
 }

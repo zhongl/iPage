@@ -15,6 +15,7 @@
 
 package com.github.zhongl.ex.page;
 
+import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.nio.Closable;
 import com.github.zhongl.util.FilesLoader;
 import com.github.zhongl.util.FilterAndComparator;
@@ -32,10 +33,12 @@ import static com.google.common.base.Preconditions.*;
 public abstract class Binder implements Closable {
 
     protected final File dir;
+    protected final Codec codec;
     protected final LinkedList<Page> pages;
 
-    public Binder(File dir) throws IOException {
+    public Binder(File dir, Codec codec) throws IOException {
         this.dir = dir;
+        this.codec = codec;
         this.pages = loadOrInitialize();
     }
 
@@ -56,17 +59,17 @@ public abstract class Binder implements Closable {
         for (Page page : pages) page.close();
     }
 
-    public <T> Cursor head() {
-        return new Reader(pages.getFirst(), 0);
+    public Cursor head() {
+        return pages.getFirst().reader(0);
     }
 
-    public <T> Cursor head(Number number) {
+    public Cursor head(Number number) {
         int index = binarySearchPageIndex(number);
         checkArgument(index >= 0, "Too small number %s.", number);
-        return new Reader(pages.get(index), 0);
+        return pages.get(index).reader(0);
     }
 
-    public <T> Cursor next(Cursor cursor) {
+    public Cursor next(Cursor cursor) {
         checkNotNull(cursor);
         Reader reader = Page.transform(cursor);
         int location = reader.offset + reader.length();
@@ -79,32 +82,27 @@ public abstract class Binder implements Closable {
         return new Reader(pages.get(i + 1), 0);
     }
 
-    public void reset() {
-        while (!pages.isEmpty()) removePages();
-        pages.add(newPage(null));
-    }
-
-    public void removePagesFromHeadTo(Number number) {
-        int i = binarySearchPageIndex(number);
-        for (int j = 0; j < i; j++) removePages();
-    }
-
-    private void removePages() {
+    protected void removeHeadPage() {
         Page page = pages.remove();
         page.close();
         checkState(page.file().delete());
     }
 
-    /**
-     * @param number
-     *
-     * @return exist max page number closed the input number.
-     */
-    public Number roundPageNumber(Number number) {
-        int index = binarySearchPageIndex(number);
-        checkArgument(index >= 0, "Too small number %s.", number);
-        return pages.get(index).number();
+    protected Page newPage(Page last) {
+        Number number = newNumber(last);
+        return newPage(new File(dir, number.toString()), number, codec);
     }
+
+    protected int binarySearchPageIndex(Number number) {
+        int i = Collections.binarySearch(pages, new Numbered(number) {});
+        return -(i + 2);
+    }
+
+    protected abstract Page newPage(File file, Number number, Codec codec);
+
+    protected abstract Number newNumber(@Nullable Page last);
+
+    protected abstract Number parseNumber(String text);
 
     private LinkedList<Page> loadOrInitialize() throws IOException {
         LinkedList<Page> list = new FilesLoader<Page>(
@@ -128,7 +126,7 @@ public abstract class Binder implements Closable {
                 new Transformer<Page>() {
                     @Override
                     public Page transform(File file, boolean last) throws IOException {
-                        return newPage(file, parseNumber(file.getName()));
+                        return newPage(file, parseNumber(file.getName()), codec);
                     }
                 }
         ).loadTo(new LinkedList<Page>());
@@ -136,20 +134,4 @@ public abstract class Binder implements Closable {
         if (list.isEmpty()) list.add(newPage(null));
         return list;
     }
-
-    private Page newPage(Page last) {
-        Number number = newNumber(last);
-        return newPage(new File(dir, number.toString()), number);
-    }
-
-    private int binarySearchPageIndex(Number number) {
-        int i = Collections.binarySearch(pages, new Numbered(number) {});
-        return -(i + 2);
-    }
-
-    protected abstract Page newPage(File file, Number number);
-
-    protected abstract Number newNumber(@Nullable Page last);
-
-    protected abstract Number parseNumber(String text);
 }
