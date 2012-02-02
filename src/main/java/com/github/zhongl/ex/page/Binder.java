@@ -95,7 +95,7 @@ public abstract class Binder implements Closable {
 
     protected int binarySearchPageIndex(Number number) {
         int i = Collections.binarySearch(pages, new Numbered(number) {});
-        return -(i + 2);
+        return i < 0 ? -(i + 2) : i;
     }
 
     protected abstract Page newPage(File file, Number number, Codec codec);
