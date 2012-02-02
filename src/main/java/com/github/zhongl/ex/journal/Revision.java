@@ -43,4 +43,17 @@ class Revision extends Number<Revision> {
     public int compareTo(Revision o) {
         return value.compareTo(o.value);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Revision revision = (Revision) o;
+        return value.equals(revision.value);
+    }
+
+    @Override
+    public int hashCode() {
+        return value.hashCode();
+    }
 }

@@ -17,10 +17,20 @@ package com.github.zhongl.ex.page;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class Offset extends Number<Offset> {
+    public static final Offset NIL = null;
+
     private final Long value;
 
-    public Offset(Long value) {
+    public Offset(long value) {
         this.value = value;
+    }
+
+    public Offset add(long length) {
+        return new Offset(value + length);
+    }
+
+    public long value() {
+        return value;
     }
 
     @Override
@@ -28,12 +38,21 @@ public class Offset extends Number<Offset> {
         return value.toString();
     }
 
-    public Offset add(long length) {
-        return new Offset(value + length);
-    }
-
     @Override
     public int compareTo(Offset o) {
         return value.compareTo(o.value);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Offset offset = (Offset) o;
+        return value.equals(offset.value);
+    }
+
+    @Override
+    public int hashCode() {
+        return value.hashCode();
     }
 }

@@ -16,6 +16,7 @@
 package com.github.zhongl.ex.page;
 
 import com.github.zhongl.ex.lang.Tuple;
+import com.google.common.collect.AbstractIterator;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Iterator;
@@ -63,26 +64,19 @@ public class ParallelEncodeBatch extends DefaultBatch {
         return new Iterable<Tuple>() {
             @Override
             public Iterator<Tuple> iterator() {
-                final Iterator<Future<Tuple>> iterator = futureQueue.iterator();
-                return new Iterator<Tuple>() {
+                return new AbstractIterator<Tuple>() {
                     @Override
-                    public boolean hasNext() {
-                        return iterator.hasNext();
-                    }
-
-                    @Override
-                    public Tuple next() {
+                    protected Tuple computeNext() {
                         try {
-                            return iterator.next().get();
+                            Future<Tuple> future = futureQueue.poll();
+                            return future == null ? endOfData() : future.get();
                         } catch (InterruptedException e) {
                             throw new IllegalStateException(e);
                         } catch (ExecutionException e) {
                             throw new RuntimeException(e.getCause());
                         }
-                    }
 
-                    @Override
-                    public void remove() { }
+                    }
                 };
             }
         };

@@ -53,6 +53,7 @@ public class FileChannels {
 
     public static void closeChannelOf(File file) {
         CACHE.invalidate(file);
+        CACHE.cleanUp();
     }
 
     public static void closeAll() {

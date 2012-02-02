@@ -16,14 +16,15 @@ public class ByteBuffers {
 
     public static ByteBuffer aggregate(ByteBuffer aggregated, ByteBuffer more) {
         checkNotNull(aggregated);
-        checkArgument(lengthOf(aggregated) > 0);
+        checkArgument(aggregated.capacity() > 0);
         checkNotNull(more);
 
         int lengthOfMore = lengthOf(more);
 
-        while (aggregated.remaining() < lengthOfMore)
+        while (aggregated.remaining() < lengthOfMore) {
+            aggregated.flip();
             aggregated = allocate(aggregated.capacity() * 2).put(aggregated);
-
+        }
         return aggregated.put(more);
     }
 

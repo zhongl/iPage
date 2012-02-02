@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.io.Closeables.closeQuietly;
 
 /**
  * {@link com.github.zhongl.ex.page.Page} is a high level abstract entity focus on IO manipulation.
@@ -52,6 +53,7 @@ public abstract class Page extends Numbered implements Closable, CursorFactory {
 
     protected Page(File file, Number number, int capacity, Codec codec) {
         super(number);
+        createIfNotExist(file);
         this.file = file;
         this.capacity = capacity;
         this.codec = codec;
@@ -64,9 +66,12 @@ public abstract class Page extends Numbered implements Closable, CursorFactory {
         final FileChannel channel = FileChannels.getOrOpen(file);
         final int size = (int) channel.size();
 
-        if (size > capacity) return callback.onOverflow(value, force);
-        if (currentBatch == null) currentBatch = newBatch(this, size, 0);
+        if (checkOverflow(size, capacity)) {
+            currentBatch = newBatch(this, size, currentBatch.writeAndForceTo(channel));
+            return callback.onOverflow(value, force);
+        }
 
+        if (currentBatch == null) currentBatch = newBatch(this, size, 0);
         final Cursor cursor = currentBatch.append(value);
 
         if (force) currentBatch = newBatch(this, size, currentBatch.writeAndForceTo(channel));
@@ -81,11 +86,13 @@ public abstract class Page extends Numbered implements Closable, CursorFactory {
     public void close() {
         if (!opened) return;
         opened = false;
+        closeQuietly(FileChannels.getOrOpen(file)); // ensure close file channel.
         FileChannels.closeChannelOf(file);
     }
 
     @Override
     public Reader reader(final int offset) {
+        if (file().length() == 0) return null;
         return new Reader(Page.this, offset);
     }
 
@@ -99,6 +106,13 @@ public abstract class Page extends Numbered implements Closable, CursorFactory {
         return new Proxy(intiCursor);
     }
 
+    protected boolean checkOverflow(int size, int capacity) { return size > capacity; }
+
     protected abstract Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize);
+
+    private void createIfNotExist(File file) {
+        if (file.exists()) return;
+        file.getParentFile().mkdirs();
+    }
 
 }

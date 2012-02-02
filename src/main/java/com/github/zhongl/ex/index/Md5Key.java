@@ -31,6 +31,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 public class Md5Key extends Number<Md5Key> {
 
     public static final int BYTE_LENGTH = 16;
+    public static final Md5Key MIN = new Md5Key(new byte[BYTE_LENGTH]);
 
     private static final char HEX_DIGITS[] = {'0', '1', '2', '3',
             '4', '5', '6', '7',
@@ -54,19 +55,19 @@ public class Md5Key extends Number<Md5Key> {
         return generate(s.getBytes());
     }
 
-    private static byte[] toBytes(String hex) {
-        return Arrays.copyOfRange(new BigInteger(hex, 16).toByteArray(), 1, 17);
-    }
-
     private final byte[] md5;
+    final BigInteger bigInteger;
 
     public Md5Key(String hex) {
-        this(toBytes(hex));
+        checkArgument(hex.length() == BYTE_LENGTH * 2, "Invalid md5 string length %s", hex.length());
+        this.bigInteger = new BigInteger(hex, 16);
+        this.md5 = Arrays.copyOfRange(bigInteger.toByteArray(), 1, 17);
     }
 
     public Md5Key(byte[] md5) {
-        checkArgument(md5.length == BYTE_LENGTH, "Invalid generate bytes length %s", md5.length);
+        checkArgument(md5.length == BYTE_LENGTH, "Invalid md5 bytes length %s", md5.length);
         this.md5 = md5;
+        bigInteger = new BigInteger(1, md5);
     }
 
     public byte[] bytes() {
@@ -98,6 +99,6 @@ public class Md5Key extends Number<Md5Key> {
 
     @Override
     public int compareTo(Md5Key o) {
-        return new BigInteger(md5).compareTo(new BigInteger(o.md5));
+        return bigInteger.compareTo(o.bigInteger);
     }
 }

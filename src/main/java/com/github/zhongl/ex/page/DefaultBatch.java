@@ -31,16 +31,16 @@ import static com.github.zhongl.ex.nio.ByteBuffers.lengthOf;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
 public class DefaultBatch extends Batch {
-    protected final int position;
+    protected final int start;
     protected final int estimateBufferSize;
     protected final Queue<Runnable> delayTransformQueue;
 
     private final Queue<Tuple> tupleQueue;
     private final CursorFactory cursorFactory;
 
-    public DefaultBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
+    public DefaultBatch(CursorFactory cursorFactory, int start, int estimateBufferSize) {
         this.cursorFactory = cursorFactory;
-        this.position = position;
+        this.start = start;
         this.estimateBufferSize = Math.max(4096, estimateBufferSize);
         this.delayTransformQueue = new LinkedList<Runnable>();
         this.tupleQueue = new LinkedList<Tuple>();
@@ -67,23 +67,22 @@ public class DefaultBatch extends Batch {
     }
 
     private ByteBuffer aggregate() throws IOException {
-        int offset = position;
+        int position = start;
         ByteBuffer aggregated = ByteBuffer.allocate(estimateBufferSize);
 
         for (Tuple tuple : toAggregatingQueue()) {
             final Proxy<?> proxy = tuple.get(0);
             final ByteBuffer buffer = tuple.get(1);
-            final Cursor reader = cursorFactory.reader(offset);
 
+            final int offset = position;
             delayTransformQueue.offer(new Runnable() {
-
                 @Override
                 public void run() {
-                    proxy.transform(reader);
+                    proxy.transform(cursorFactory.reader(offset));
                 }
             });
 
-            offset = offset + lengthOf(buffer);
+            position = position + lengthOf(buffer);
             aggregated = ByteBuffers.aggregate(aggregated, buffer);
         }
 
