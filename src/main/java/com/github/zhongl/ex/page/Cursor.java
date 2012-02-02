@@ -28,7 +28,7 @@ public interface Cursor {
     <T> T get();
 }
 
-class Proxy<T> implements Cursor {
+class Proxy implements Cursor {
     volatile Cursor delegate;
 
     public Proxy(Cursor intiCursor) {
@@ -65,7 +65,7 @@ class ObjectRef implements Cursor {
     }
 }
 
-class Reader implements Cursor, Comparable<Reader> {
+class Reader implements Cursor {
     final Page page;
     final int offset;
 
@@ -86,11 +86,5 @@ class Reader implements Cursor, Comparable<Reader> {
         return ByteBuffers.lengthOf(page.codec().encode(get()));
     }
 
-    @Override
-    public int compareTo(Reader o) {
-        long delta = page.compareTo(o.page);
-        if (delta != 0) return (int) delta;
-        return offset - o.offset;
-    }
 }
 

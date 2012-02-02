@@ -20,7 +20,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.math.BigInteger;
+import java.text.MessageFormat;
 import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class Md5KeyCompareToBenchmark {
@@ -65,10 +67,28 @@ public class Md5KeyCompareToBenchmark {
         });
     }
 
+    @Test
+    public void bytes() throws Exception {
+
+        final byte[][] bytesArray = new byte[SIZE][];
+        benchmark("biginteger", new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < keys.length; i++) {
+                    bytesArray[i] = keys[i].bytes();
+                }
+                Arrays.sort(bytesArray);
+            }
+        });
+    }
+
     private void benchmark(String name, Runnable runnable) {
         Stopwatch stopwatch = new Stopwatch().start();
         runnable.run();
         stopwatch.stop();
-        System.out.println(name + " : " + stopwatch);
+        System.out.println(MessageFormat.format("{0} : {1}, {2, number}ns",
+                name,
+                stopwatch,
+                stopwatch.elapsedTime(TimeUnit.NANOSECONDS) / SIZE));
     }
 }

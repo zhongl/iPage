@@ -47,8 +47,8 @@ public abstract class Page extends Numbered implements Closable, CursorFactory {
     private final File file;
     private final int capacity;
     private final Codec codec;
-    private boolean opened;
 
+    private boolean opened;
     private Batch currentBatch;
 
     protected Page(File file, Number number, int capacity, Codec codec) {

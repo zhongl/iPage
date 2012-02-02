@@ -54,24 +54,6 @@ public class BinderTest extends FileTestContext {
         assertExist(new File(dir, "0")).contentIs(length(5), string(value));
     }
 
-    @Test
-    public void iterate() throws Exception {
-        dir = testDir("iterate");
-        binder = new InnerBinder(dir, codec);
-
-        binder.append("0", false);
-        binder.append("1", false);
-        binder.append("2", true);
-
-        final List<String> sList = new ArrayList<String>();
-
-        for (Cursor cursor = binder.head(); cursor != null; cursor = binder.next(cursor)) {
-            sList.add(cursor.<String>get());
-        }
-
-        assertThat(sList, hasItems("0", "1", "2"));
-    }
-
     @Override
     @After
     public void tearDown() throws Exception {

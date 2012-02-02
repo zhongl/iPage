@@ -19,6 +19,7 @@ package com.github.zhongl.ex.journal;
 
 import com.github.zhongl.ex.codec.*;
 import com.github.zhongl.ex.nio.Closable;
+import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
 import com.github.zhongl.ex.page.*;
 import com.github.zhongl.ex.page.Number;
 
@@ -26,6 +27,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -82,17 +84,7 @@ public class Journal implements Closable {
      */
     public void recover(final Applicable applicable) throws IOException {
         Revision checkpoint = new Revision(applicable.lastCheckpoint());
-        Revision revision = binder.roundRevision(checkpoint);
-
-        for (Cursor cursor = binder.head(checkpoint);
-             cursor != null;
-             cursor = binder.next(cursor), revision = revision.increment()) {
-
-            if (revision.compareTo(checkpoint) <= 0) continue;
-            applicable.apply(cursor.get());
-        }
-
-        applicable.force();
+        binder.foreachFrom(checkpoint, applicable);
         binder.reset();
     }
 
@@ -137,11 +129,23 @@ public class Journal implements Closable {
             for (int j = 0; j < i; j++) removeHeadPage();
         }
 
-        Revision roundRevision(Number number) {
-            int index = binarySearchPageIndex(number);
-            checkArgument(index >= 0, "Too small number %s.", number);
-            return (Revision) pages.get(index).number();
-        }
+        public void foreachFrom(Revision checkpoint, Applicable applicable) throws IOException {
+            int index = binarySearchPageIndex(checkpoint);
+            checkArgument(index >= 0, "Too small revision %s.", checkpoint);
 
+            Revision revision = (Revision) pages.get(index).number();
+            for (int i = index; i < pages.size(); i++) {
+                ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(pages.get(i).file());
+
+                while (buffer.hasRemaining()) {
+                    Object record = codec.decode(buffer);
+                    if (revision.compareTo(checkpoint) > 0) {
+                        applicable.apply(record);
+                    }
+                    revision = revision.increment();
+                }
+            }
+            applicable.force();
+        }
     }
 }

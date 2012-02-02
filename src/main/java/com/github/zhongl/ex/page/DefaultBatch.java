@@ -71,7 +71,7 @@ public class DefaultBatch extends Batch {
         ByteBuffer aggregated = ByteBuffer.allocate(estimateBufferSize);
 
         for (Tuple tuple : toAggregatingQueue()) {
-            final Proxy<?> proxy = tuple.get(0);
+            final Proxy proxy = tuple.get(0);
             final ByteBuffer buffer = tuple.get(1);
 
             final int offset = position;

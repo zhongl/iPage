@@ -26,15 +26,16 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedList;
+import java.util.List;
 
-import static com.google.common.base.Preconditions.*;
+import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public abstract class Binder implements Closable {
 
     protected final File dir;
     protected final Codec codec;
-    protected final LinkedList<Page> pages;
+    protected final List<Page> pages;
 
     protected Binder(File dir, Codec codec) throws IOException {
         this.dir = dir;
@@ -43,12 +44,12 @@ public abstract class Binder implements Closable {
     }
 
     public <T> Cursor append(T value, boolean force) throws IOException {
-        return pages.getLast().append(value, force, new OverflowCallback() {
+        return last().append(value, force, new OverflowCallback() {
             @Override
             public <T> Cursor onOverflow(T value, boolean force) throws IOException {
-                Page page = newPage(pages.getLast());
+                Page page = newPage(last());
                 Cursor cursor = page.append(value, force, THROW_BY_OVERFLOW);
-                pages.addLast(page);
+                pages.add(page);
                 return cursor;
             }
         });
@@ -59,34 +60,13 @@ public abstract class Binder implements Closable {
         for (Page page : pages) page.close();
     }
 
-    public Cursor head() {
-        return pages.getFirst().reader(0);
-    }
-
-    public Cursor head(Number number) {
-        int index = binarySearchPageIndex(number);
-        checkArgument(index >= 0, "Too small number %s.", number);
-        return pages.get(index).reader(0);
-    }
-
-    public Cursor next(Cursor cursor) {
-        checkNotNull(cursor);
-        Reader reader = Page.transform(cursor);
-        int location = reader.offset + reader.length();
-
-        if (location < reader.page.file().length())
-            return new Reader(reader.page, location);
-
-        int i = pages.indexOf(reader.page);
-        if (i + 1 == pages.size()) return null;
-        return new Reader(pages.get(i + 1), 0);
-    }
-
     protected void removeHeadPage() {
-        Page page = pages.remove();
+        Page page = pages.remove(0);
         page.close();
         checkState(page.file().delete());
     }
+
+    protected Page last() {return pages.get(pages.size() - 1);}
 
     protected Page newPage(Page last) {
         Number number = newNumber(last);

@@ -24,12 +24,11 @@ import static com.google.common.base.Preconditions.checkState;
 @NotThreadSafe
 public class Index implements Closable {
 
-    static final int MAX_ENTRY_SIZE = Integer.getInteger("ipage.index.page.max.entry.size", 1024 * 43);
+    static final int MAX_ENTRY_SIZE = Integer.getInteger("ipage.index.page.max.entry.size", 1024 * 10);
 
     private static final int CAPACITY = MAX_ENTRY_SIZE * EntryCodec.LENGTH;
 
     private InnerBinder currentBinder;
-
 
     public Index(File dir) throws IOException {
         final EntryCodec codec = new EntryCodec();
@@ -171,12 +170,26 @@ public class Index implements Closable {
         @Override
         public Iterator<Entry<Md5Key, Offset>> iterator() {
             return new AbstractIterator<Entry<Md5Key, Offset>>() {
-                Cursor cursor = null;
+                int index = 0;
+                int offset = 0;
 
                 @Override
                 protected Entry<Md5Key, Offset> computeNext() {
-                    cursor = cursor == null ? head() : InnerBinder.this.next(cursor);
-                    return cursor == null ? endOfData() : cursor.<Entry<Md5Key, Offset>>get();
+                    if (index == pages.size()) return endOfData();
+
+                    File file = pages.get(index).file();
+                    if (file.length() == 0) return endOfData();
+
+                    ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(file);
+                    buffer.position(offset);
+                    Entry<Md5Key, Offset> entry = codec.decode(buffer);
+
+                    offset += EntryCodec.LENGTH;
+                    if (offset == file.length()) {
+                        index += 1;
+                        offset = 0;
+                    }
+                    return entry;
                 }
             };
         }
