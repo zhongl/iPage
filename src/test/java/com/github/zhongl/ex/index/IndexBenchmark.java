@@ -18,17 +18,15 @@ package com.github.zhongl.ex.index;
 import com.github.zhongl.ex.lang.Entry;
 import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
 import com.github.zhongl.ex.page.Offset;
+import com.github.zhongl.util.Benchmarks;
 import com.github.zhongl.util.FileTestContext;
-import com.google.common.base.Stopwatch;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class IndexBenchmark extends FileTestContext {
@@ -41,7 +39,7 @@ public class IndexBenchmark extends FileTestContext {
         final Index index = new Index(dir);
 
         final Iterator<Entry<Md5Key, Offset>> sortedIterator1 = randomSortedIterator(0);
-        benchmark("init merge", new Runnable() {
+        Benchmarks.benchmark("init merge", new Runnable() {
             @Override
             public void run() {
                 try {
@@ -50,10 +48,10 @@ public class IndexBenchmark extends FileTestContext {
                     e.printStackTrace();
                 }
             }
-        });
+        }, SIZE);
 
         final Iterator<Entry<Md5Key, Offset>> sortedIterator2 = randomSortedIterator(100);
-        benchmark("cross merge", new Runnable() {
+        Benchmarks.benchmark("cross merge", new Runnable() {
             @Override
             public void run() {
                 try {
@@ -62,31 +60,21 @@ public class IndexBenchmark extends FileTestContext {
                     e.printStackTrace();
                 }
             }
-        });
+        }, SIZE);
 
-        benchmark("get", new Runnable() {
+        Benchmarks.benchmark("get", new Runnable() {
             @Override
             public void run() {
                 for (int i = 0; i < SIZE; i++) {
                     index.get(Md5Key.generate(i + ""));
                 }
             }
-        });
+        }, SIZE);
 
 
         System.out.println(ReadOnlyMappedBuffers.stats());
 
         index.close();
-    }
-
-    private void benchmark(String name, Runnable runnable) {
-        Stopwatch stopwatch = new Stopwatch().start();
-        runnable.run();
-        stopwatch.stop();
-        System.out.println(MessageFormat.format("{0} : {1}, {2, number}ns",
-                name,
-                stopwatch,
-                stopwatch.elapsedTime(TimeUnit.NANOSECONDS) / SIZE));
     }
 
     private Iterator<Entry<Md5Key, Offset>> randomSortedIterator(int start) {

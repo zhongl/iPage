@@ -15,14 +15,14 @@
 
 package com.github.zhongl.ex.index;
 
-import com.google.common.base.Stopwatch;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.math.BigInteger;
-import java.text.MessageFormat;
 import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
+import java.util.Comparator;
+
+import static com.github.zhongl.util.Benchmarks.benchmark;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class Md5KeyCompareToBenchmark {
@@ -49,7 +49,7 @@ public class Md5KeyCompareToBenchmark {
                 }
                 Arrays.sort(strings);
             }
-        });
+        }, SIZE);
     }
 
     @Test
@@ -64,31 +64,31 @@ public class Md5KeyCompareToBenchmark {
                 }
                 Arrays.sort(bigIntegers);
             }
-        });
+        }, SIZE);
     }
 
     @Test
     public void bytes() throws Exception {
 
         final byte[][] bytesArray = new byte[SIZE][];
-        benchmark("biginteger", new Runnable() {
+        benchmark("bytes", new Runnable() {
             @Override
             public void run() {
                 for (int i = 0; i < keys.length; i++) {
                     bytesArray[i] = keys[i].bytes();
                 }
-                Arrays.sort(bytesArray);
+                Arrays.sort(bytesArray, new Comparator<byte[]>() {
+                    @Override
+                    public int compare(byte[] o1, byte[] o2) {
+                        for (int i = 0; i < o1.length; i++) {
+                            byte b = o1[i];
+                            if (o1[i] != o2[i]) return o1[i] > o2[i] ? 1 : -1;
+                        }
+                        return 0;
+                    }
+                });
             }
-        });
+        }, SIZE);
     }
 
-    private void benchmark(String name, Runnable runnable) {
-        Stopwatch stopwatch = new Stopwatch().start();
-        runnable.run();
-        stopwatch.stop();
-        System.out.println(MessageFormat.format("{0} : {1}, {2, number}ns",
-                name,
-                stopwatch,
-                stopwatch.elapsedTime(TimeUnit.NANOSECONDS) / SIZE));
-    }
 }

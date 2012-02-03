@@ -17,7 +17,7 @@ import java.util.Iterator;
 @NotThreadSafe
 public class Index implements Closable {
 
-    static final int MAX_ENTRY_SIZE = Integer.getInteger("ipage.index.page.max.entry.size", 1024 * 10);
+    static final int MAX_ENTRY_SIZE = Integer.getInteger("ipage.index.page.max.entry.size", 1024 * 43);
 
     private Snapshot current;
 
