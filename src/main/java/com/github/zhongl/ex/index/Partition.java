@@ -10,10 +10,11 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.AbstractList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.RandomAccess;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-class Partition extends Page {
+class Partition extends Page implements Iterable<Entry<Md5Key, Offset>> {
     private final Entries entries = new Entries();
 
     private int count;
@@ -41,6 +42,11 @@ class Partition extends Page {
         return entries.get(index).value();
     }
 
+    @Override
+    public Iterator<Entry<Md5Key, Offset>> iterator() {
+        return entries.iterator();
+    }
+
     private Entry<Md5Key, Offset> stub(Md5Key key) {
         return new Entry<Md5Key, Offset>(key, new Offset(-1L));
     }
@@ -56,6 +62,7 @@ class Partition extends Page {
 
         @Override
         public int size() {
+            if (file().length() == 0) return 0;
             return ReadOnlyMappedBuffers.getOrMap(file()).capacity() / EntryCodec.LENGTH;
         }
     }

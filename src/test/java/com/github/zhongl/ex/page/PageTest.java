@@ -5,7 +5,6 @@ import com.github.zhongl.ex.codec.ComposedCodecBuilder;
 import com.github.zhongl.ex.codec.LengthCodec;
 import com.github.zhongl.ex.codec.StringCodec;
 import com.github.zhongl.util.FileTestContext;
-import com.google.common.io.Files;
 import org.junit.After;
 import org.junit.Test;
 
@@ -44,23 +43,6 @@ public class PageTest extends FileTestContext {
         Cursor cursor = page.append("value", true, THROW_BY_OVERFLOW);
         page.file().delete();
         cursor.get();
-    }
-
-    @Test
-    public void transfer() throws Exception {
-        dir = testDir("transfer");
-        page = newPage();
-
-        File src = new File(dir, "src");
-        Files.write("value".getBytes(), src);
-
-        assertThat(page.transferFrom(src, 0L), is(5L));
-
-        Files.write(new byte[4092], src);
-
-        assertThat(page.transferFrom(src, 0L), is(4091L));
-
-        src.delete();
     }
 
     @After

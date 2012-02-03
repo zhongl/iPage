@@ -18,7 +18,6 @@ package com.github.zhongl.ex.page;
 import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.nio.Closable;
 import com.github.zhongl.ex.nio.FileChannels;
-import com.github.zhongl.ex.nio.Transferable;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
@@ -34,7 +33,7 @@ import static com.google.common.io.Closeables.closeQuietly;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @NotThreadSafe
-public abstract class Page extends Numbered implements Closable, CursorFactory, Transferable {
+public abstract class Page extends Numbered implements Closable, CursorFactory {
 
     private final File file;
     private final int capacity;
@@ -68,17 +67,6 @@ public abstract class Page extends Numbered implements Closable, CursorFactory, 
 
         if (force) currentBatch = newBatch(this, size, currentBatch.writeAndForceTo(channel));
         return cursor;
-    }
-
-    @Override
-    public long transferFrom(File file, long offset) throws IOException {
-        FileChannel src = FileChannels.getOrOpen(file);
-        FileChannel dst = FileChannels.getOrOpen(file());
-        long count = Math.min(capacity - file().length(), file.length() - offset);
-        long transfered = 0L;
-        while (transfered < count) transfered += src.transferTo(offset, count, dst);
-        dst.force(false);
-        return transfered;
     }
 
     public Codec codec() {return codec;}

@@ -31,7 +31,7 @@ import java.util.List;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class IndexBenchmark extends FileTestContext {
 
-    public static final int SIZE = FlexIndex.MAX_ENTRY_SIZE * 10;
+    public static final int SIZE = FlexIndex.MAX_ENTRY_SIZE * 2;
 
     @Test
     public void get() throws Exception {

@@ -20,7 +20,6 @@ import com.github.zhongl.ex.codec.ComposedCodecBuilder;
 import com.github.zhongl.ex.codec.LengthCodec;
 import com.github.zhongl.ex.codec.StringCodec;
 import com.github.zhongl.util.FileTestContext;
-import com.google.common.io.Files;
 import org.junit.After;
 import org.junit.Test;
 
@@ -50,20 +49,6 @@ public class BinderTest extends FileTestContext {
         Cursor cursor = binder.append(value, true);
         assertThat(cursor.<String>get(), is(value));
         assertExist(new File(dir, "0")).contentIs(length(5), string(value));
-    }
-
-    @Test
-    public void transfer() throws Exception {
-        dir = testDir("transfer");
-        binder = new InnerBinder(dir, codec);
-
-        File src = new File(dir, "src");
-
-        Files.write(new byte[1024 * 3], src);
-
-        assertThat(binder.transferFrom(src, 0L), is(1024 * 3L));
-        assertThat(binder.transferFrom(src, 0L), is(1024 * 3L));
-
     }
 
     @Override

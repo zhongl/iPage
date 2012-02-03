@@ -7,7 +7,6 @@ import org.junit.After;
 import org.junit.Test;
 
 import java.io.File;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -151,9 +150,7 @@ public class IndexTest extends FileTestContext {
     private Offset value(long v) {return new Offset(v);}
 
     private Md5Key key(int k) {
-        byte[] bytes = new byte[16];
-        ByteBuffer.wrap(bytes).putInt(12, k);
-        return new Md5Key(bytes);
+        return Md5Key.generate(k + "");
     }
 
 }
