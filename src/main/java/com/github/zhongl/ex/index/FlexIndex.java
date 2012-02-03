@@ -49,10 +49,11 @@ public class FlexIndex extends Index {
         @Override
         protected void merge(Iterator<Entry<Md5Key, Offset>> sortedIterator, Snapshot snapshot) throws IOException {
             PeekingIterator<Entry<Md5Key, Offset>> bItr = Iterators.peekingIterator(sortedIterator);
+            PeekingIterator<Entry<Md5Key, Offset>> aItr;
 
             for (Page page : pages) {
                 Partition partition = (Partition) page;
-                PeekingIterator<Entry<Md5Key, Offset>> aItr = Iterators.peekingIterator(partition.iterator());
+                aItr = Iterators.peekingIterator(partition.iterator());
                 merge(aItr, bItr, snapshot);
                 if (aItr.hasNext()) mergeRestOf(aItr, snapshot);
             }

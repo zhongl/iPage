@@ -49,6 +49,7 @@ public abstract class Page extends Numbered implements Closable, CursorFactory {
         this.capacity = capacity;
         this.codec = codec;
         this.opened = true;
+        currentBatch = newBatch(this, (int) file.length(), 0);
     }
 
     public <T> Cursor append(T value, boolean force, OverflowCallback callback) throws IOException {
@@ -58,14 +59,13 @@ public abstract class Page extends Numbered implements Closable, CursorFactory {
         final int size = (int) channel.size();
 
         if (checkOverflow(size, capacity)) {
-            currentBatch = newBatch(this, size, currentBatch.writeAndForceTo(channel));
+            force(channel);
             return callback.onOverflow(value, force);
         }
 
-        if (currentBatch == null) currentBatch = newBatch(this, size, 0);
         final Cursor cursor = currentBatch.append(value);
 
-        if (force) currentBatch = newBatch(this, size, currentBatch.writeAndForceTo(channel));
+        if (force) force(channel);
         return cursor;
     }
 
@@ -98,6 +98,10 @@ public abstract class Page extends Numbered implements Closable, CursorFactory {
     }
 
     protected boolean checkOverflow(int size, int capacity) { return size > capacity; }
+
+    protected final void force(FileChannel channel) throws IOException {
+        currentBatch = newBatch(this, (int) channel.size(), currentBatch.writeAndForceTo(channel));
+    }
 
     protected abstract Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize);
 

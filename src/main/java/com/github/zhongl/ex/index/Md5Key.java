@@ -75,12 +75,12 @@ public class Md5Key extends Number<Md5Key> {
     public Md5Key(String hex) {
         checkArgument(hex.length() == BYTE_LENGTH * 2, "Invalid md5 string length %s", hex.length());
         this.bigInteger = new BigInteger(hex, 16);
-        this.md5 = Arrays.copyOfRange(bigInteger.toByteArray(), 1, 17);
+        this.md5 = toByteArray(bigInteger);
     }
 
     public Md5Key(BigInteger bigInteger) {
         this.bigInteger = bigInteger;
-        this.md5 = Arrays.copyOfRange(bigInteger.toByteArray(), 1, 17);
+        this.md5 = toByteArray(bigInteger);
     }
 
     public Md5Key(byte[] md5) {
@@ -119,5 +119,10 @@ public class Md5Key extends Number<Md5Key> {
     @Override
     public int compareTo(Md5Key o) {
         return bigInteger.compareTo(o.bigInteger);
+    }
+
+    private byte[] toByteArray(BigInteger bigInteger) {
+        byte[] bytes = bigInteger.toByteArray();
+        return bytes.length == 16 ? bytes : Arrays.copyOfRange(bytes, 1, 17);
     }
 }

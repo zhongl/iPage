@@ -83,7 +83,11 @@ abstract class Snapshot extends Binder {
     }
 
     protected final void mergeRestOf(Iterator<Entry<Md5Key, Offset>> iterator, Appendable merged) throws IOException {
-        while (iterator.hasNext()) merged.append(iterator.next(), !iterator.hasNext());
+        while (iterator.hasNext()) {
+            Entry<Md5Key, Offset> entry = iterator.next();
+            if (entry.value() == Offset.NIL) continue;
+            merged.append(entry, !iterator.hasNext());
+        }
     }
 
     protected abstract void merge(Iterator<Entry<Md5Key, Offset>> sortedIterator, Snapshot snapshot) throws IOException;

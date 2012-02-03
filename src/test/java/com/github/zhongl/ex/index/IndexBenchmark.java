@@ -22,6 +22,7 @@ import com.github.zhongl.util.Benchmarks;
 import com.github.zhongl.util.FileTestContext;
 import org.junit.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,17 +30,17 @@ import java.util.Iterator;
 import java.util.List;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class IndexBenchmark extends FileTestContext {
+public abstract class IndexBenchmark extends FileTestContext {
 
     public static final int SIZE = FlexIndex.MAX_ENTRY_SIZE * 2;
 
     @Test
     public void get() throws Exception {
         dir = testDir("get");
-        final Index index = new FlexIndex(dir);
+        final Index index = newIndex(dir);
 
         final Iterator<Entry<Md5Key, Offset>> sortedIterator1 = randomSortedIterator(0);
-        Benchmarks.benchmark("init merge", new Runnable() {
+        Benchmarks.benchmark(getClass().getSimpleName() + "init merge", new Runnable() {
             @Override
             public void run() {
                 try {
@@ -51,7 +52,7 @@ public class IndexBenchmark extends FileTestContext {
         }, SIZE);
 
 
-        Benchmarks.benchmark("get", new Runnable() {
+        Benchmarks.benchmark(getClass().getSimpleName() + "get", new Runnable() {
             @Override
             public void run() {
                 for (int i = 0; i < SIZE; i++) {
@@ -69,10 +70,10 @@ public class IndexBenchmark extends FileTestContext {
     @Test
     public void crossMerge() throws Exception {
         dir = testDir("crossMerge");
-        final Index index = new FlexIndex(dir);
+        final Index index = newIndex(dir);
 
         final Iterator<Entry<Md5Key, Offset>> sortedIterator1 = randomSortedIterator(0);
-        Benchmarks.benchmark("init merge", new Runnable() {
+        Benchmarks.benchmark(getClass().getSimpleName() + "init merge", new Runnable() {
             @Override
             public void run() {
                 try {
@@ -84,7 +85,7 @@ public class IndexBenchmark extends FileTestContext {
         }, SIZE);
 
         final Iterator<Entry<Md5Key, Offset>> sortedIterator2 = randomSortedIterator(FlexIndex.MAX_ENTRY_SIZE * 2 + 1);
-        Benchmarks.benchmark("cross merge", new Runnable() {
+        Benchmarks.benchmark(getClass().getSimpleName() + "cross merge", new Runnable() {
             @Override
             public void run() {
                 try {
@@ -94,7 +95,11 @@ public class IndexBenchmark extends FileTestContext {
                 }
             }
         }, SIZE);
+
+        index.close();
     }
+
+    protected abstract Index newIndex(File dir) throws IOException;
 
     private Iterator<Entry<Md5Key, Offset>> randomSortedIterator(int start) {
         List<Entry<Md5Key, Offset>> entries = new ArrayList<Entry<Md5Key, Offset>>(SIZE);
