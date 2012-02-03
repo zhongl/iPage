@@ -16,7 +16,6 @@
 package com.github.zhongl.ex.page;
 
 import com.github.zhongl.ex.codec.Codec;
-import com.github.zhongl.ex.nio.ByteBuffers;
 import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
 
 import java.nio.ByteBuffer;
@@ -80,10 +79,6 @@ class Reader implements Cursor {
         ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(page.file());
         buffer.position(offset);
         return page.codec().decode(buffer);
-    }
-
-    public int length() {
-        return ByteBuffers.lengthOf(page.codec().encode(get()));
     }
 
 }

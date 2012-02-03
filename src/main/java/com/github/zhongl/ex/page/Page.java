@@ -35,15 +35,6 @@ import static com.google.common.io.Closeables.closeQuietly;
 @NotThreadSafe
 public abstract class Page extends Numbered implements Closable, CursorFactory {
 
-    static Reader transform(Cursor cursor) {
-        if (cursor instanceof Reader) return (Reader) cursor;
-        if (cursor instanceof Proxy
-                && ((Proxy) cursor).delegate instanceof Reader) {
-            return (Reader) ((Proxy) cursor).delegate;
-        }
-        throw new IllegalArgumentException("Illegal cursor.");
-    }
-
     private final File file;
     private final int capacity;
     private final Codec codec;

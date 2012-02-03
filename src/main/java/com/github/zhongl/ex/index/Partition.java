@@ -36,9 +36,13 @@ class Partition extends Page {
 
     public Offset get(Md5Key key) {
         if (!file().exists()) return null;
-        int index = Collections.binarySearch(entries, new Entry<Md5Key, Offset>(key, new Offset(-1L)));
+        int index = Collections.binarySearch(entries, stub(key));
         if (index < 0) return null;
         return entries.get(index).value();
+    }
+
+    private Entry<Md5Key, Offset> stub(Md5Key key) {
+        return new Entry<Md5Key, Offset>(key, new Offset(-1L));
     }
 
     private class Entries extends AbstractList<Entry<Md5Key, Offset>> implements RandomAccess {

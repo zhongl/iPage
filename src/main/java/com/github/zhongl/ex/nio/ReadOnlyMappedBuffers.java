@@ -74,4 +74,8 @@ public class ReadOnlyMappedBuffers {
         CACHE.invalidateAll();
         CACHE.cleanUp();
     }
+
+    public static CacheStats stats() {
+        return CACHE.stats();
+    }
 }

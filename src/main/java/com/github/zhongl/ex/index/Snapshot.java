@@ -30,7 +30,7 @@ class Snapshot extends Binder implements Iterable<Entry<Md5Key, Offset>> {
     }
 
     @Override
-    protected Page newPage(File file, com.github.zhongl.ex.page.Number number, Codec codec) {
+    protected Page newPage(File file, Number number, Codec codec) {
         return new Partition(file, number, CAPACITY, codec);
     }
 

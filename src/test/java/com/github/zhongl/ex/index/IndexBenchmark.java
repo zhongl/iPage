@@ -16,6 +16,7 @@
 package com.github.zhongl.ex.index;
 
 import com.github.zhongl.ex.lang.Entry;
+import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
 import com.github.zhongl.ex.page.Offset;
 import com.github.zhongl.util.FileTestContext;
 import com.google.common.base.Stopwatch;
@@ -31,6 +32,8 @@ import java.util.concurrent.TimeUnit;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class IndexBenchmark extends FileTestContext {
+
+    public static final int SIZE = Index.MAX_ENTRY_SIZE * 10;
 
     @Test
     public void mergeAndGet() throws Exception {
@@ -64,11 +67,14 @@ public class IndexBenchmark extends FileTestContext {
         benchmark("get", new Runnable() {
             @Override
             public void run() {
-                for (int i = 0; i < Index.MAX_ENTRY_SIZE * 10; i++) {
+                for (int i = 0; i < SIZE; i++) {
                     index.get(Md5Key.generate(i + ""));
                 }
             }
         });
+
+
+        System.out.println(ReadOnlyMappedBuffers.stats());
 
         index.close();
     }
@@ -80,12 +86,12 @@ public class IndexBenchmark extends FileTestContext {
         System.out.println(MessageFormat.format("{0} : {1}, {2, number}ns",
                 name,
                 stopwatch,
-                stopwatch.elapsedTime(TimeUnit.NANOSECONDS) / Index.MAX_ENTRY_SIZE * 10));
+                stopwatch.elapsedTime(TimeUnit.NANOSECONDS) / SIZE));
     }
 
     private Iterator<Entry<Md5Key, Offset>> randomSortedIterator(int start) {
-        List<Entry<Md5Key, Offset>> entries = new ArrayList<Entry<Md5Key, Offset>>(Index.MAX_ENTRY_SIZE * 10);
-        for (int i = start; i < Index.MAX_ENTRY_SIZE * 10 + start; i++) {
+        List<Entry<Md5Key, Offset>> entries = new ArrayList<Entry<Md5Key, Offset>>(SIZE);
+        for (int i = start; i < SIZE + start; i++) {
             Md5Key key = Md5Key.generate(i + "");
             entries.add(new Entry<Md5Key, Offset>(key, new Offset(i)));
         }
