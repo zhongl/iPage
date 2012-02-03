@@ -42,7 +42,7 @@ public class FlexIndex extends Index {
         }
 
         @Override
-        protected InnerSnapshot newSnapshotOn(File dir) throws IOException {
+        protected Snapshot newSnapshotOn(File dir) throws IOException {
             return new InnerSnapshot(dir, codec);
         }
 
@@ -73,6 +73,19 @@ public class FlexIndex extends Index {
 
         protected int capacity() {return CAPACITY;}
 
+        @Override
+        protected Page newPage(File file, Number number, Codec codec) {
+            return new Partition(file, number, capacity(), codec) {
+                private int count;
+
+                @Override
+                protected boolean checkOverflow(int size, int capacity) {
+                    if ((++count) <= FlexIndex.MAX_ENTRY_SIZE) return false;
+                    count = 0;
+                    return true;
+                }
+            };
+        }
     }
 }
 

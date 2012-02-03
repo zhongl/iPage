@@ -17,17 +17,8 @@ import java.util.RandomAccess;
 class Partition extends Page implements Iterable<Entry<Md5Key, Offset>> {
     private final Entries entries = new Entries();
 
-    private int count;
-
     protected Partition(File file, Number number, int capacity, Codec codec) {
         super(file, number, capacity, codec);
-    }
-
-    @Override
-    protected boolean checkOverflow(int size, int capacity) {
-        if ((++count) <= FlexIndex.MAX_ENTRY_SIZE) return false;
-        count = 0;
-        return true;
     }
 
     @Override

@@ -2,8 +2,11 @@ package com.github.zhongl.ex.index;
 
 import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.lang.Entry;
-import com.github.zhongl.ex.page.*;
 import com.github.zhongl.ex.page.Number;
+import com.github.zhongl.ex.page.Offset;
+import com.github.zhongl.ex.page.Page;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.PeekingIterator;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -60,13 +63,23 @@ public class FixedIndex extends Index {
         }
 
         @Override
-        protected InnerSnapshot newSnapshotOn(File dir) throws IOException {
+        protected Snapshot newSnapshotOn(File dir) throws IOException {
             return new InnerSnapshot(dir, codec);
         }
 
         @Override
         protected void merge(Iterator<Entry<Md5Key, Offset>> sortedIterator, Snapshot snapshot) {
+            PeekingIterator<Entry<Md5Key, Offset>> bItr = Iterators.peekingIterator(sortedIterator);
+
+            for (int i = 0; i < pages.size(); i++) {
+                Page page = pages.get(i);
+            }
             // TODO
+        }
+
+        @Override
+        protected Page newPage(File file, Number number, Codec codec) {
+            return new Partition(file, number, capacity(), codec);
         }
     }
 }
