@@ -24,7 +24,7 @@ class Partition extends Page {
 
     @Override
     protected boolean checkOverflow(int size, int capacity) {
-        if ((++count) <= Index.MAX_ENTRY_SIZE) return false;
+        if ((++count) <= FlexIndex.MAX_ENTRY_SIZE) return false;
         count = 0;
         return true;
     }

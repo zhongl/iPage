@@ -25,7 +25,7 @@ public class IndexTest extends FileTestContext {
     @Test
     public void usage() throws Exception {
         dir = testDir("usage");
-        index = new Index(dir);
+        index = new FlexIndex(dir);
 
         int a1 = 12;
         int a2 = 34;
@@ -62,7 +62,7 @@ public class IndexTest extends FileTestContext {
     @Test
     public void mergeABandLeftA() throws Exception {
         dir = testDir("mergeABandLeftA");
-        index = new Index(dir);
+        index = new FlexIndex(dir);
 
         index.merge(asList(entry(1), entry(4), entry(5)).iterator()); // A
         index.merge(asList(entry(2), entry(3)).iterator()); // B
@@ -71,7 +71,7 @@ public class IndexTest extends FileTestContext {
     @Test
     public void mergeABandLeftOnlyOneA() throws Exception {
         dir = testDir("mergeABandLeftOnlyOneA");
-        index = new Index(dir);
+        index = new FlexIndex(dir);
 
         index.merge(asList(entry(1), entry(4)).iterator()); // A
         index.merge(asList(entry(2), entry(3)).iterator()); // B
@@ -80,7 +80,7 @@ public class IndexTest extends FileTestContext {
     @Test
     public void mergeABandLeftB() throws Exception {
         dir = testDir("mergeABandLeftB");
-        index = new Index(dir);
+        index = new FlexIndex(dir);
 
         index.merge(asList(entry(1), entry(2)).iterator()); // A
         index.merge(asList(entry(3), entry(4), entry(5)).iterator()); // B
@@ -89,14 +89,14 @@ public class IndexTest extends FileTestContext {
     @Test
     public void mergeEmpty() throws Exception {
         dir = testDir("mergeEmpty");
-        index = new Index(dir);
+        index = new FlexIndex(dir);
         index.merge(Collections.<Entry<Md5Key, Offset>>emptyList().iterator());
     }
 
     @Test
     public void getNoExistKey() throws Exception {
         dir = testDir("getNoExistKey");
-        index = new Index(dir);
+        index = new FlexIndex(dir);
 
         assertThat(index.get(key(1)), is(nullValue()));
 
@@ -108,13 +108,13 @@ public class IndexTest extends FileTestContext {
     @Test
     public void load() throws Exception {
         dir = testDir("load");
-        index = new Index(dir);
+        index = new FlexIndex(dir);
         index.merge(Collections.singletonList(entry(1)).iterator());
         index.close();
 
         File one = new File(dir, "1");
         one.mkdir();
-        new Index(dir); // load 0 and remove 1
+        new FlexIndex(dir); // load 0 and remove 1
 
         assertThat(one.exists(), is(false));
     }
@@ -122,16 +122,16 @@ public class IndexTest extends FileTestContext {
     @Test
     public void overflow() throws Exception {
         dir = testDir("overflow");
-        index = new Index(dir);
+        index = new FlexIndex(dir);
 
-        int capacity = Index.MAX_ENTRY_SIZE + 2; // to append more than one page.
+        int capacity = FlexIndex.MAX_ENTRY_SIZE + 2; // to append more than one page.
         List<Entry<Md5Key, Offset>> entries = new ArrayList<Entry<Md5Key, Offset>>(capacity);
         for (int i = 0; i < capacity; i++) entries.add(entry(i));
         Collections.sort(entries);
 
         index.merge(entries.iterator());
 
-        assertThat(index.get(key(Index.MAX_ENTRY_SIZE + 1)), is(value(Index.MAX_ENTRY_SIZE + 1)));
+        assertThat(index.get(key(FlexIndex.MAX_ENTRY_SIZE + 1)), is(value(FlexIndex.MAX_ENTRY_SIZE + 1)));
 
     }
 

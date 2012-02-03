@@ -31,12 +31,12 @@ import java.util.List;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class IndexBenchmark extends FileTestContext {
 
-    public static final int SIZE = Index.MAX_ENTRY_SIZE * 10;
+    public static final int SIZE = FlexIndex.MAX_ENTRY_SIZE * 10;
 
     @Test
-    public void mergeAndGet() throws Exception {
-        dir = testDir("mergeAndGet");
-        final Index index = new Index(dir);
+    public void get() throws Exception {
+        dir = testDir("get");
+        final Index index = new FlexIndex(dir);
 
         final Iterator<Entry<Md5Key, Offset>> sortedIterator1 = randomSortedIterator(0);
         Benchmarks.benchmark("init merge", new Runnable() {
@@ -50,17 +50,6 @@ public class IndexBenchmark extends FileTestContext {
             }
         }, SIZE);
 
-        final Iterator<Entry<Md5Key, Offset>> sortedIterator2 = randomSortedIterator(100);
-        Benchmarks.benchmark("cross merge", new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    index.merge(sortedIterator2);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }, SIZE);
 
         Benchmarks.benchmark("get", new Runnable() {
             @Override
@@ -75,6 +64,36 @@ public class IndexBenchmark extends FileTestContext {
         System.out.println(ReadOnlyMappedBuffers.stats());
 
         index.close();
+    }
+
+    @Test
+    public void crossMerge() throws Exception {
+        dir = testDir("crossMerge");
+        final Index index = new FlexIndex(dir);
+
+        final Iterator<Entry<Md5Key, Offset>> sortedIterator1 = randomSortedIterator(0);
+        Benchmarks.benchmark("init merge", new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    index.merge(sortedIterator1);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, SIZE);
+
+        final Iterator<Entry<Md5Key, Offset>> sortedIterator2 = randomSortedIterator(FlexIndex.MAX_ENTRY_SIZE * 2 + 1);
+        Benchmarks.benchmark("cross merge", new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    index.merge(sortedIterator2);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, SIZE);
     }
 
     private Iterator<Entry<Md5Key, Offset>> randomSortedIterator(int start) {

@@ -17,6 +17,7 @@ package com.github.zhongl.ex.page;
 
 import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.nio.Closable;
+import com.github.zhongl.ex.nio.Transferable;
 import com.github.zhongl.util.FilesLoader;
 import com.github.zhongl.util.FilterAndComparator;
 import com.github.zhongl.util.Transformer;
@@ -31,7 +32,7 @@ import java.util.List;
 import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class Binder implements Closable {
+public abstract class Binder implements Closable, Transferable {
 
     protected final File dir;
     protected final Codec codec;
@@ -53,6 +54,18 @@ public abstract class Binder implements Closable {
                 return cursor;
             }
         });
+    }
+
+    @Override
+    public long transferFrom(File file, long offset) throws IOException {
+        long remaining = file.length() - offset;
+        long transfered = 0;
+
+        while (true) {
+            transfered += last().transferFrom(file, offset + transfered);
+            if (transfered == remaining) return remaining;
+            pages.add(newPage(last()));
+        }
     }
 
     @Override

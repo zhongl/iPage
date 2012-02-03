@@ -3,6 +3,7 @@ package com.github.zhongl.ex.index;
 import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.lang.Entry;
 import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
+import com.github.zhongl.ex.nio.Transferable;
 import com.github.zhongl.ex.page.*;
 import com.github.zhongl.ex.page.Number;
 import com.google.common.collect.AbstractIterator;
@@ -17,7 +18,7 @@ import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class Snapshot extends Binder implements Iterable<Entry<Md5Key, Offset>> {
-    private static final int CAPACITY = Index.MAX_ENTRY_SIZE * EntryCodec.LENGTH;
+    private static final int CAPACITY = FlexIndex.MAX_ENTRY_SIZE * EntryCodec.LENGTH;
 
     private Entry<Md5Key, Offset> currentAppendingEntry;
 
@@ -61,28 +62,40 @@ class Snapshot extends Binder implements Iterable<Entry<Md5Key, Offset>> {
 
     @Override
     public Iterator<Entry<Md5Key, Offset>> iterator() {
-        return new AbstractIterator<Entry<Md5Key, Offset>>() {
-            int index = 0;
-            int offset = 0;
-
-            @Override
-            protected Entry<Md5Key, Offset> computeNext() {
-                if (index == pages.size()) return endOfData();
-
-                File file = pages.get(index).file();
-                if (file.length() == 0) return endOfData();
-
-                ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(file);
-                buffer.position(offset);
-                Entry<Md5Key, Offset> entry = codec.decode(buffer);
-
-                offset += EntryCodec.LENGTH;
-                if (offset == file.length()) {
-                    index += 1;
-                    offset = 0;
-                }
-                return entry;
-            }
-        };
+        return new EntryIterator();
     }
+
+    class EntryIterator extends AbstractIterator<Entry<Md5Key, Offset>> {
+        private int index = 0;
+        private int offset = 0;
+
+        @Override
+        protected Entry<Md5Key, Offset> computeNext() {
+            if (index == pages.size()) return endOfData();
+
+            File file = pages.get(index).file();
+            if (file.length() == 0) return endOfData();
+
+            ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(file);
+            buffer.position(offset);
+            Entry<Md5Key, Offset> entry = codec.decode(buffer);
+
+            offset += EntryCodec.LENGTH;
+            if (offset == file.length()) {
+                index += 1;
+                offset = 0;
+            }
+            return entry;
+        }
+
+        public void transferTo(Transferable transferable) throws IOException {
+            for (int i = index; i < pages.size(); i++) {
+                File file = pages.get(i).file();
+                transferable.transferFrom(file, (i == index) ? offset : 0L);
+            }
+        }
+
+    }
+
+
 }
