@@ -59,11 +59,11 @@ public class Journal implements Closable {
      * @throws IOException
      * @see Applicable
      */
-    public long append(Object event, boolean force) throws IOException {
-        long value = revision.value();
+    public Revision append(Object event, boolean force) throws IOException {
+        Revision result = revision;
         binder.append(event, force);
         revision = revision.increment();
-        return value;
+        return result;
     }
 
     /**
@@ -71,8 +71,8 @@ public class Journal implements Closable {
      *
      * @param revision of journal.
      */
-    public void eraseBy(long revision) {
-        binder.removePagesFromHeadTo(new Revision(revision));
+    public void eraseBy(Revision revision) {
+        binder.removePagesFromHeadTo(revision);
     }
 
     /**
@@ -83,7 +83,7 @@ public class Journal implements Closable {
      * @throws java.io.IOException
      */
     public void recover(final Applicable applicable) throws IOException {
-        Revision checkpoint = new Revision(applicable.lastCheckpoint());
+        Revision checkpoint = applicable.lastCheckpoint();
         binder.foreachFrom(checkpoint, applicable);
         binder.reset();
     }

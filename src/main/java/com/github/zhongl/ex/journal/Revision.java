@@ -18,7 +18,7 @@ package com.github.zhongl.ex.journal;
 import com.github.zhongl.ex.page.Number;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-class Revision extends Number<Revision> {
+public class Revision extends Number<Revision> {
 
     private final Long value;
 

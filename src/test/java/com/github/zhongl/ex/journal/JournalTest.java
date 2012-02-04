@@ -35,7 +35,7 @@ public class JournalTest extends FileTestContext {
 
         journal.append("1", false);
 
-        long revision = journal.append("2", true);
+        Revision revision = journal.append("2", true);
 
         journal.eraseBy(revision);
 

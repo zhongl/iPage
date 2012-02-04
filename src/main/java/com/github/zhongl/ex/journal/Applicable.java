@@ -27,7 +27,7 @@ public interface Applicable {
     void apply(Object record) throws IOException;
 
     /** @return offset of last applied checkpoint. */
-    long lastCheckpoint();
+    Revision lastCheckpoint();
 
     /** Ensure all records have been applied , then Journal could be erased. */
     void force() throws IOException;
