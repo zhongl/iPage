@@ -6,7 +6,8 @@ import com.github.zhongl.ex.lang.Entry;
 import com.github.zhongl.ex.page.Cursor;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class Reader {
+public abstract class Browser implements Iterable<byte[]> {
+
     public abstract byte[] get(Md5Key key);
 
     abstract void update(Revision revision, Entry<Md5Key, byte[]> entry);

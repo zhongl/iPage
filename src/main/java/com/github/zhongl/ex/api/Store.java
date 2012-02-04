@@ -6,7 +6,7 @@ import com.github.zhongl.ex.lang.Entry;
 import com.github.zhongl.ex.page.Offset;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-interface Store {
+interface Store extends Iterable<byte[]> {
     void append(Revision revision, Entry<Md5Key, byte[]> entry);
 
     void remove(Revision revision, Offset offset);
