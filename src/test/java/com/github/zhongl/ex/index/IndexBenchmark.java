@@ -40,7 +40,7 @@ public abstract class IndexBenchmark extends FileTestContext {
         final Index index = newIndex(dir);
 
         final Iterator<Entry<Md5Key, Offset>> sortedIterator1 = randomSortedIterator(0);
-        Benchmarks.benchmark(getClass().getSimpleName() + "init merge", new Runnable() {
+        Benchmarks.benchmark(getClass().getSimpleName() + " init merge", new Runnable() {
             @Override
             public void run() {
                 try {
@@ -52,7 +52,7 @@ public abstract class IndexBenchmark extends FileTestContext {
         }, SIZE);
 
 
-        Benchmarks.benchmark(getClass().getSimpleName() + "get", new Runnable() {
+        Benchmarks.benchmark(getClass().getSimpleName() + " get", new Runnable() {
             @Override
             public void run() {
                 for (int i = 0; i < SIZE; i++) {
@@ -73,7 +73,7 @@ public abstract class IndexBenchmark extends FileTestContext {
         final Index index = newIndex(dir);
 
         final Iterator<Entry<Md5Key, Offset>> sortedIterator1 = randomSortedIterator(0);
-        Benchmarks.benchmark(getClass().getSimpleName() + "init merge", new Runnable() {
+        Benchmarks.benchmark(getClass().getSimpleName() + " init merge", new Runnable() {
             @Override
             public void run() {
                 try {
@@ -85,7 +85,7 @@ public abstract class IndexBenchmark extends FileTestContext {
         }, SIZE);
 
         final Iterator<Entry<Md5Key, Offset>> sortedIterator2 = randomSortedIterator(FlexIndex.MAX_ENTRY_SIZE * 2 + 1);
-        Benchmarks.benchmark(getClass().getSimpleName() + "cross merge", new Runnable() {
+        Benchmarks.benchmark(getClass().getSimpleName() + " cross merge", new Runnable() {
             @Override
             public void run() {
                 try {
