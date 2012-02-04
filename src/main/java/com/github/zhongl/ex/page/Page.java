@@ -88,14 +88,10 @@ public abstract class Page extends Numbered implements Closable, CursorFactory {
     }
 
     @Override
-    public ObjectRef objectRef(final Object object) {
-        return new ObjectRef(object, codec);
-    }
+    public ObjectRef objectRef(final Object object) { return new ObjectRef(object, codec); }
 
     @Override
-    public Proxy proxy(final Cursor intiCursor) {
-        return new Proxy(intiCursor);
-    }
+    public Proxy proxy(final Cursor intiCursor) { return new Proxy(intiCursor); }
 
     protected boolean checkOverflow(int size, int capacity) { return size > capacity; }
 
@@ -105,8 +101,5 @@ public abstract class Page extends Numbered implements Closable, CursorFactory {
 
     protected abstract Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize);
 
-    private void createIfNotExist(File file) {
-        if (file.exists()) return;
-        file.getParentFile().mkdirs();
-    }
+    private void createIfNotExist(File file) { file.getParentFile().mkdirs(); }
 }

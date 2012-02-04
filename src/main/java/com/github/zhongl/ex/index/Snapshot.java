@@ -19,12 +19,7 @@ abstract class Snapshot extends Binder {
     public Snapshot(File dir, Codec codec) throws IOException {super(dir, codec);}
 
     public Offset get(Md5Key key) {
-        try {
-            return ((Partition) pages.get(binarySearchPageIndex(key))).get(key); // index will always in [0, pages.size)
-        } catch (RuntimeException e) {
-            System.out.println(key);
-            throw e;
-        }
+        return ((Partition) pages.get(binarySearchPageIndex(key))).get(key); // index will always in [0, pages.size)
     }
 
     public Snapshot merge(Iterator<Entry<Md5Key, Offset>> sortedIterator) throws IOException {

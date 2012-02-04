@@ -2,10 +2,8 @@ package com.github.zhongl.ex.index;
 
 import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.lang.Entry;
-import com.github.zhongl.ex.page.Cursor;
+import com.github.zhongl.ex.page.*;
 import com.github.zhongl.ex.page.Number;
-import com.github.zhongl.ex.page.Offset;
-import com.github.zhongl.ex.page.Page;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 
@@ -84,6 +82,11 @@ public class FlexIndex extends Index {
                     if ((++count) <= FlexIndex.MAX_ENTRY_SIZE) return false;
                     count = 0;
                     return true;
+                }
+
+                @Override
+                protected Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
+                    return super.newBatch(cursorFactory, position, CAPACITY);
                 }
             };
         }

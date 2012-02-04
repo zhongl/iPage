@@ -34,7 +34,7 @@ public final class DirectByteBufferCleaner {
         try {
             Object cleaner = invoke(byteBuffer, "cleaner");
             invoke(cleaner, "clean");
-        } catch (Exception e) { /* ignore */ }
+        } catch (Exception ignored) {}
     }
 
     private static Object invoke(final Object target, String methodName) throws Exception {

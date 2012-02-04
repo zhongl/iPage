@@ -24,8 +24,8 @@ import com.github.zhongl.util.Transformer;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -85,8 +85,8 @@ public abstract class Binder implements Closable, Appendable {
 
     protected abstract Number parseNumber(String text);
 
-    private LinkedList<Page> loadOrInitialize() throws IOException {
-        LinkedList<Page> list = new FilesLoader<Page>(
+    private List<Page> loadOrInitialize() throws IOException {
+        List<Page> list = new FilesLoader<Page>(
                 dir,
                 new FilterAndComparator() {
                     @Override
@@ -99,7 +99,7 @@ public abstract class Binder implements Closable, Appendable {
                         try {
                             parseNumber(name);
                             return true;
-                        } catch (RuntimeException e) {
+                        } catch (RuntimeException e) { // Invalid format Error
                             return false;
                         }
                     }
@@ -110,7 +110,7 @@ public abstract class Binder implements Closable, Appendable {
                         return newPage(file, parseNumber(file.getName()), codec);
                     }
                 }
-        ).loadTo(new LinkedList<Page>());
+        ).loadTo(new ArrayList<Page>());
 
         if (list.isEmpty()) list.add(newPage(null));
         return list;

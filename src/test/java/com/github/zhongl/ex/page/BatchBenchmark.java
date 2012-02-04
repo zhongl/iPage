@@ -2,8 +2,8 @@ package com.github.zhongl.ex.page;
 
 import com.github.zhongl.ex.codec.*;
 import com.github.zhongl.ex.nio.FileChannels;
+import com.github.zhongl.util.Benchmarks;
 import com.github.zhongl.util.FileTestContext;
-import com.google.common.base.Stopwatch;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -31,7 +31,7 @@ public class BatchBenchmark extends FileTestContext implements CursorFactory {
 
         doReturn(file).when(page).file();
         doReturn(codec).when(page).codec();
-        codec = ComposedCodecBuilder.compose(new ByteBufferCodec())
+        codec = ComposedCodecBuilder.compose(new BytesCodec())
                                     .with(ChecksumCodec.class)
                                     .with(LengthCodec.class)
                                     .build();
@@ -55,19 +55,27 @@ public class BatchBenchmark extends FileTestContext implements CursorFactory {
         benchmark(batch);
     }
 
-    private void benchmark(Batch batch) throws IOException {
-        FileChannel channel = FileChannels.getOrOpen(file);
+    private void benchmark(final Batch batch) throws IOException {
+        final FileChannel channel = FileChannels.getOrOpen(file);
 
-        Stopwatch stopwatch = new Stopwatch().start();
-        for (int i = 0; i < size; i++) {
-            ByteBuffer buffer = ByteBuffer.wrap(new byte[valueLength]);
-            buffer.putInt(0, i);
-            batch.append(buffer);
-        }
+        Benchmarks.benchmark(batch.getClass().getSimpleName(), new Runnable() {
+            @Override
+            public void run() {
 
-        batch.writeAndForceTo(channel);
-        stopwatch.stop();
-        System.out.println(batch.getClass().getSimpleName() + " : " + stopwatch);
+                for (int i = 0; i < size; i++) {
+                    byte[] bytes = new byte[valueLength];
+                    ByteBuffer.wrap(bytes).putInt(0, i);
+                    batch.append(bytes);
+                }
+
+                try {
+                    batch.writeAndForceTo(channel);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, size);
+
         FileChannels.closeChannelOf(file);
     }
 

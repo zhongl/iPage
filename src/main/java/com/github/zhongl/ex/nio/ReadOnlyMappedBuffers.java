@@ -56,12 +56,12 @@ public class ReadOnlyMappedBuffers {
         checkState(file.exists());
 
         MappedByteBuffer buffer = CACHE.getUnchecked(file);
-        if (ByteBuffers.lengthOf(buffer) == file.length()) {
+        if (ByteBuffers.lengthOf(buffer) == file.length()) { // mapped may not sync with file content.
             if (!buffer.isLoaded()) buffer.load();
             return buffer.duplicate();
         }
 
-        clearMappedOf(file);
+        clearMappedOf(file); // clear for reload.
         return CACHE.getUnchecked(file).duplicate();
     }
 
