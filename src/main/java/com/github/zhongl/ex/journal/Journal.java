@@ -22,6 +22,7 @@ import com.github.zhongl.ex.nio.Closable;
 import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
 import com.github.zhongl.ex.page.*;
 import com.github.zhongl.ex.page.Number;
+import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -49,6 +50,10 @@ public class Journal implements Closable {
                                                           .build());
     }
 
+    public void append(Object event, FutureCallback<Revision> forceCallback){
+//        binder.append(event, );
+    }
+
     /**
      * Append an event.
      *
@@ -71,7 +76,7 @@ public class Journal implements Closable {
      *
      * @param revision of journal.
      */
-    public void eraseBy(Revision revision) {
+    public void eraseTo(Revision revision) {
         binder.removePagesFromHeadTo(revision);
     }
 

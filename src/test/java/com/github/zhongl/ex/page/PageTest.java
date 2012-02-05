@@ -4,16 +4,18 @@ import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.codec.ComposedCodecBuilder;
 import com.github.zhongl.ex.codec.LengthCodec;
 import com.github.zhongl.ex.codec.StringCodec;
+import com.github.zhongl.util.CallbackFuture;
 import com.github.zhongl.util.FileTestContext;
+import com.google.common.util.concurrent.FutureCallback;
 import org.junit.After;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
 
-import static com.github.zhongl.ex.page.OverflowCallback.THROW_BY_OVERFLOW;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
@@ -26,23 +28,31 @@ public class PageTest extends FileTestContext {
         dir = testDir("get");
         page = newPage();
 
-        String one = "1";
+        final String one = "1";
 
-        Cursor cursor = page.append(one, true, THROW_BY_OVERFLOW);
-        assertThat(cursor.<String>get(), is(one));
+        page.append(one, new FutureCallback<Cursor>() {
+            @Override
+            public void onSuccess(Cursor cursor) {
+                assertThat(cursor.<String>get(), is(one));
+            }
 
-        page.close();
+            @Override
+            public void onFailure(Throwable t) {
+                fail();
+            }
+        });
 
-        assertThat(cursor.<String>get(), is(one));
+        page.force();
     }
 
     @Test(expected = IllegalStateException.class)
     public void getAfterDeleted() throws Exception {
         dir = testDir("getAfterDeleted");
         page = newPage();
-        Cursor cursor = page.append("value", true, THROW_BY_OVERFLOW);
+        CallbackFuture<Cursor> callbackFuture = new CallbackFuture<Cursor>();
+        page.append("value", callbackFuture);
         page.file().delete();
-        cursor.get();
+        callbackFuture.get().get();
     }
 
     @After

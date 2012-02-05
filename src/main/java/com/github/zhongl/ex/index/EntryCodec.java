@@ -44,6 +44,6 @@ class EntryCodec implements Codec {
 
     @Override
     public boolean supports(Class<?> type) {
-        return type.equals(Entry.class);
+        return Entry.class.equals(type);
     }
 }

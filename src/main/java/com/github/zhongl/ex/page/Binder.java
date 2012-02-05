@@ -20,6 +20,7 @@ import com.github.zhongl.ex.nio.Closable;
 import com.github.zhongl.util.FilesLoader;
 import com.github.zhongl.util.FilterAndComparator;
 import com.github.zhongl.util.Transformer;
+import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -43,8 +44,24 @@ public abstract class Binder implements Closable, Appendable {
         this.pages = loadOrInitialize();
     }
 
+    public void append(Object value, FutureCallback<Cursor> callback) {
+        boolean overflow = last().append(value, callback);
+        if (overflow) {
+            last().force();
+            Page page = newPage(last());
+            overflow = page.append(value, callback);
+            checkState(!overflow, "Too big value to append.");
+            pages.add(page);
+        }
+    }
+
+    public void force() {
+        last().force();
+    }
+
     @Override
     public <T> Cursor append(T value, boolean force) throws IOException {
+
         return last().append(value, force, new OverflowCallback() {
             @Override
             public <T> Cursor onOverflow(T value, boolean force) throws IOException {

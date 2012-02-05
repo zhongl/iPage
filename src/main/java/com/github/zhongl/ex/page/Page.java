@@ -18,6 +18,7 @@ package com.github.zhongl.ex.page;
 import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.nio.Closable;
 import com.github.zhongl.ex.nio.FileChannels;
+import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
@@ -50,6 +51,15 @@ public abstract class Page extends Numbered implements Closable, CursorFactory {
         this.codec = codec;
         this.opened = true;
         currentBatch = newBatch(this, (int) file.length(), 0);
+    }
+
+    public boolean append(Object value, FutureCallback<Cursor> forceCallback){
+        // TODO
+        return false;
+    }
+
+    public void force() {
+        // TODO force
     }
 
     public <T> Cursor append(T value, boolean force, OverflowCallback callback) throws IOException {
