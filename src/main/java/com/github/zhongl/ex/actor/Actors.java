@@ -1,7 +1,11 @@
 package com.github.zhongl.ex.actor;
 
+import com.google.common.base.Function;
+import com.google.common.util.concurrent.FutureCallback;
+
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import static java.util.Collections.synchronizedMap;
 
@@ -18,6 +22,19 @@ public class Actors {
             if (anInterface.getAnnotation(Asynchronize.class) != null)
                 flyweight.put(anInterface, actor);
         }
+    }
+
+    public static <T> T sync(Function<FutureCallback<T>, Void> function) {
+        CallbackFuture<T> callback = new CallbackFuture<T>();
+        function.apply(callback);
+        try {
+            return callback.get();
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(e);
+        } catch (ExecutionException e) {
+            throw new IllegalStateException(e.getCause());
+        }
+
     }
 }
 

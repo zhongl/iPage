@@ -1,10 +1,10 @@
 package com.github.zhongl.ex.api;
 
+import com.github.zhongl.ex.actor.CallbackFuture;
 import com.github.zhongl.ex.index.Md5Key;
 import com.github.zhongl.ex.journal.Journal;
 import com.github.zhongl.ex.journal.Revision;
 import com.github.zhongl.ex.lang.Entry;
-import com.github.zhongl.util.CallbackFuture;
 
 import java.util.concurrent.Callable;
 

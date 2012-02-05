@@ -1,3 +1,18 @@
+/*
+ * Copyright 2012 zhongl
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package com.github.zhongl.ex.api;
 
 import com.github.zhongl.ex.actor.Actor;
@@ -21,6 +36,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 @ThreadSafe
 class DefaultRecorder extends Actor implements Recorder, Erasable {
 
+    static final byte[] NULL_VALUE = new byte[0];
     private final QuanlityOfService quanlityOfService;
     private final Journal journal;
     private final FlowControllor controllor;
@@ -34,15 +50,13 @@ class DefaultRecorder extends Actor implements Recorder, Erasable {
 
     @Override
     public boolean append(Md5Key key, byte[] value) {
-        checkNotNull(key);
-        checkNotNull(value);
-        checkArgument(value.length > 0);
-        return append(new Entry<Md5Key, byte[]>(key, value));
+        checkArgument(checkNotNull(value).length > 0);
+        return append(new Entry<Md5Key, byte[]>(checkNotNull(key), value));
     }
 
     @Override
     public boolean remove(Md5Key key) {
-        return append(new Entry<Md5Key, byte[]>(key, new byte[0]));
+        return append(new Entry<Md5Key, byte[]>(checkNotNull(key), NULL_VALUE));
     }
 
     @Override
