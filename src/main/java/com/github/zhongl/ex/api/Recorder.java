@@ -1,19 +1,27 @@
 package com.github.zhongl.ex.api;
 
 import com.github.zhongl.ex.index.Md5Key;
-import com.github.zhongl.ex.journal.Revision;
-
-import java.io.IOException;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class Recorder {
+public interface Recorder {
 
-    public abstract void append(Md5Key key, byte[] value) throws IOException;
+    /**
+     * Append key and value, then notify {@link com.github.zhongl.ex.api.Browser}.
+     *
+     * @param key   {@link com.github.zhongl.ex.index.Md5Key}
+     * @param value byte[]
+     *
+     * @return false if failed.
+     */
+    boolean append(Md5Key key, byte[] value);
 
-    public abstract void remove(Md5Key key) throws IOException;
-
-    abstract void thoughtput(int delta);
-
-    abstract void applied(Revision revision);
+    /**
+     * Remove key and value by key, then notify {@link com.github.zhongl.ex.api.Browser}.
+     *
+     * @param key {@link com.github.zhongl.ex.index.Md5Key}
+     *
+     * @return false if failed.
+     */
+    boolean remove(Md5Key key);
 
 }
