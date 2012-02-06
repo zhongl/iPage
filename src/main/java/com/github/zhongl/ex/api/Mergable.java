@@ -20,10 +20,8 @@ import com.github.zhongl.ex.index.Md5Key;
 import com.github.zhongl.ex.page.Offset;
 import com.github.zhongl.ex.util.Entry;
 
-import java.util.Iterator;
-
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @Asynchronize
 interface Mergable {
-    void merge(Iterator<Entry<Md5Key, Offset>> sortedIterator);
+    void merge(Iterable<Entry<Md5Key, Offset>> sortedIterable);
 }
