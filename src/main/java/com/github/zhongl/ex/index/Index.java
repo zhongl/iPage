@@ -8,6 +8,7 @@ import com.github.zhongl.util.FilesLoader;
 import com.github.zhongl.util.NumberNamedFilterAndComparator;
 import com.github.zhongl.util.Transformer;
 
+import javax.annotation.concurrent.GuardedBy;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -17,7 +18,7 @@ import java.util.Iterator;
 public abstract class Index implements Closable {
     protected final File dir;
     protected final EntryCodec codec;
-    protected Snapshot current;
+    protected volatile Snapshot current;
 
     protected Index(File dir) throws IOException {
         this.dir = dir;
@@ -48,6 +49,7 @@ public abstract class Index implements Closable {
         current = current.merge(sortedIterator);
     }
 
+    @GuardedBy("volatile")
     public Offset get(Md5Key key) { return current.get(key); }
 
     @Override

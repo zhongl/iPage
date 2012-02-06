@@ -25,46 +25,30 @@ import com.google.common.base.Function;
 import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 
-import static com.github.zhongl.ex.actor.Actors.*;
+import static com.github.zhongl.ex.actor.Actors.actor;
+import static com.github.zhongl.ex.actor.Actors.call;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
 
-    @GuardedBy("this actor")
     private final Map<Md5Key, byte[]> cache;
-    @GuardedBy("this actor")
     private final Index index;
 
     public DefaultBrowser(Index index) {
         this.index = index;
-        this.cache = new HashMap<Md5Key, byte[]>();
+        this.cache = new ConcurrentHashMap<Md5Key, byte[]>();
     }
-
 
     @Override
     public byte[] get(final Md5Key key) {
-        byte[] bytes = getUnchecked(submit(new Callable<byte[]>() {
-            @Override
-            public byte[] call() throws Exception {
-                return cache.get(key);
-            }
-        }));
-        if (bytes == null) { // cache miss
-            Offset offset = getUnchecked(submit(new Callable<Offset>() {
-                @Override
-                public Offset call() throws Exception {
-                    return index.get(key);
-                }
-            }));
-            return get(offset);
-        }
-        return bytes.length == 0 ? null /*removed key*/ : bytes;
+        byte[] bytes = cache.get(key);
+        if (bytes == null) return get(index.get(key)); // cache miss
+        return bytes == DefaultRecorder.NULL_VALUE ? null /*removed key*/ : bytes;
     }
 
     @Override
@@ -84,7 +68,7 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
             @Override
             public Void call() throws Exception {
                 index.merge(sortedIterator);
-                while (sortedIterator.hasNext()) {
+                while (sortedIterator.hasNext()) { // release cache
                     cache.remove(sortedIterator.next().key());
                 }
                 return null;

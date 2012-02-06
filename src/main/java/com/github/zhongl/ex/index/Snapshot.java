@@ -8,6 +8,7 @@ import com.github.zhongl.ex.page.Number;
 import com.github.zhongl.ex.page.Offset;
 import com.google.common.collect.PeekingIterator;
 
+import javax.annotation.concurrent.GuardedBy;
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
@@ -18,6 +19,7 @@ import static com.google.common.base.Preconditions.checkState;
 abstract class Snapshot extends Binder {
     public Snapshot(File dir, Codec codec) throws IOException {super(dir, codec);}
 
+    @GuardedBy("readOnly")
     public Offset get(Md5Key key) {
         return ((Partition) pages.get(binarySearchPageIndex(key))).get(key); // index will always in [0, pages.size)
     }
