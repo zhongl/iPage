@@ -50,8 +50,20 @@ public class Journal implements Closable {
                                                           .build());
     }
 
-    public void append(Object event, FutureCallback<Revision> forceCallback){
-//        binder.append(event, );
+    public void append(Object event, boolean force, final FutureCallback<Revision> forceCallback) {
+        binder.append(event, new FutureCallback<Cursor>() {
+            @Override
+            public void onSuccess(Cursor result) {
+                forceCallback.onSuccess(revision);
+                revision.increment();
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                forceCallback.onFailure(t);
+            }
+        });
+        if (force) binder.force();
     }
 
     /**
@@ -94,9 +106,7 @@ public class Journal implements Closable {
     }
 
     @Override
-    public void close() {
-        binder.close();
-    }
+    public void close() { binder.close(); }
 
     private class InnerBinder extends Binder {
 
@@ -108,8 +118,13 @@ public class Journal implements Closable {
         protected Page newPage(File file, Number number, Codec codec) {
             return new Page(file, number, CAPACITY, codec) {
                 @Override
-                protected Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
-                    return new ParallelEncodeBatch(cursorFactory, position, estimateBufferSize);
+                protected boolean isOverflow() {
+                    return file().length() > CAPACITY;
+                }
+
+                @Override
+                protected Batch newBatch(Kit kit, int position, int estimateBufferSize) {
+                    return new ParallelEncodeBatch(kit, position, estimateBufferSize);
                 }
             };
         }

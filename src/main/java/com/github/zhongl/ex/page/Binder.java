@@ -45,7 +45,7 @@ public abstract class Binder implements Closable, Appendable {
     }
 
     public void append(Object value, FutureCallback<Cursor> callback) {
-        boolean overflow = last().append(value, callback);
+        boolean overflow = !last().append(value, callback);
         if (overflow) {
             last().force();
             Page page = newPage(last());

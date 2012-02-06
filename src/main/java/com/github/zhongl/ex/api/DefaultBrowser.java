@@ -31,7 +31,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.github.zhongl.ex.actor.Actors.actor;
-import static com.github.zhongl.ex.actor.Actors.call;
+import static com.github.zhongl.ex.util.FutureCallbacks.call;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {

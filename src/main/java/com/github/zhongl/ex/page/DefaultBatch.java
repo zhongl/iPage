@@ -18,6 +18,7 @@ package com.github.zhongl.ex.page;
 import com.github.zhongl.ex.nio.ByteBuffers;
 import com.github.zhongl.ex.nio.Forcer;
 import com.github.zhongl.ex.util.Tuple;
+import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;
@@ -33,37 +34,52 @@ import static com.github.zhongl.ex.nio.ByteBuffers.lengthOf;
 public class DefaultBatch extends Batch {
     protected final int start;
     protected final int estimateBufferSize;
-    protected final Queue<Runnable> delayTransformQueue;
+    protected final Queue<Tuple> delayTransformQueue;
+    protected final Kit kit;
 
     private final Queue<Tuple> tupleQueue;
-    private final CursorFactory cursorFactory;
 
-    public DefaultBatch(CursorFactory cursorFactory, int start, int estimateBufferSize) {
-        this.cursorFactory = cursorFactory;
+    public DefaultBatch(Kit kit, int start, int estimateBufferSize) {
+        this.kit = kit;
         this.start = start;
         this.estimateBufferSize = Math.max(4096, estimateBufferSize);
-        this.delayTransformQueue = new LinkedList<Runnable>();
+        this.delayTransformQueue = new LinkedList<Tuple>();
         this.tupleQueue = new LinkedList<Tuple>();
     }
 
     @Override
-    protected final Cursor _append(Object object) {
-        ObjectRef objectRef = cursorFactory.objectRef(object);
-        Proxy proxy = cursorFactory.proxy(objectRef);
-        onAppend(objectRef, proxy);
-        return proxy;
-    }
-
-    protected void onAppend(final ObjectRef objectRef, final Proxy proxy) {
-        tupleQueue.offer(new Tuple(proxy, objectRef.encode()));
+    protected Cursor _append(Object object) {
+        return null;  // TODO _append
     }
 
     @Override
-    protected final int _writeAndForceTo(FileChannel channel) throws IOException {
-        int size = Forcer.getInstance().force(channel, aggregate());
-        while (!delayTransformQueue.isEmpty())
-            delayTransformQueue.poll().run();
-        return size;
+    protected final int _writeAndForceTo(FileChannel channel) {
+        try {
+            int size = Forcer.getInstance().force(channel, aggregate());
+
+            while (!delayTransformQueue.isEmpty()) {
+                Tuple tuple = delayTransformQueue.poll();
+                FutureCallback<Cursor> callback = tuple.get(0);
+                Integer offset = tuple.get(1);
+                callback.onSuccess(kit.cursor(offset));
+            }
+
+            return size;
+        } catch (Throwable t) {
+            while (!delayTransformQueue.isEmpty()) {
+                Tuple tuple = delayTransformQueue.poll();
+                FutureCallback<Cursor> callback = tuple.get(0);
+                callback.onFailure(t);
+            }
+
+            // FIXME
+            throw new IllegalStateException("Data may be inconsistent cause by force failed", t);
+        }
+    }
+
+    @Override
+    protected void _append(Object value, FutureCallback<Cursor> callback) {
+        tupleQueue.offer(new Tuple(kit.encode(value), callback));
     }
 
     private ByteBuffer aggregate() throws IOException {
@@ -71,16 +87,10 @@ public class DefaultBatch extends Batch {
         ByteBuffer aggregated = ByteBuffer.allocate(estimateBufferSize);
 
         for (Tuple tuple : toAggregatingQueue()) {
-            final Proxy proxy = tuple.get(0);
-            final ByteBuffer buffer = tuple.get(1);
+            final ByteBuffer buffer = tuple.get(0);
+            final FutureCallback<Cursor> callback = tuple.get(1);
 
-            final int offset = position;
-            delayTransformQueue.offer(new Runnable() {
-                @Override
-                public void run() {
-                    proxy.transform(cursorFactory.reader(offset));
-                }
-            });
+            delayTransformQueue.offer(new Tuple(callback, position));
 
             position = position + lengthOf(buffer);
             aggregated = ByteBuffers.aggregate(aggregated, buffer);

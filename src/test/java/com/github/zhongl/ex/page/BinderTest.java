@@ -19,6 +19,7 @@ import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.codec.ComposedCodecBuilder;
 import com.github.zhongl.ex.codec.LengthCodec;
 import com.github.zhongl.ex.codec.StringCodec;
+import com.github.zhongl.ex.util.CallbackFuture;
 import com.github.zhongl.util.FileTestContext;
 import org.junit.After;
 import org.junit.Test;
@@ -44,10 +45,14 @@ public class BinderTest extends FileTestContext {
         dir = testDir("append");
         binder = new InnerBinder(dir, codec);
 
-        String value = "value";
+        final String value = "value";
 
-        Cursor cursor = binder.append(value, true);
-        assertThat(cursor.<String>get(), is(value));
+
+        CallbackFuture<Cursor> callback = new CallbackFuture<Cursor>();
+        binder.append(value, callback);
+        binder.force();
+
+        assertThat(callback.get().<String>get(), is(value));
         assertExist(new File(dir, "0")).contentIs(length(5), string(value));
     }
 
@@ -68,8 +73,13 @@ public class BinderTest extends FileTestContext {
         protected Page newPage(File file, Number number, Codec codec) {
             return new Page(file, number, 4096, InnerBinder.this.codec) {
                 @Override
-                protected Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
-                    return new DefaultBatch(cursorFactory, position, estimateBufferSize);
+                protected boolean isOverflow() {
+                    return file().length() > 4096;
+                }
+
+                @Override
+                protected Batch newBatch(Kit kit, int position, int estimateBufferSize) {
+                    return new DefaultBatch(kit, position, estimateBufferSize);
                 }
             };
         }

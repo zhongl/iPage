@@ -121,7 +121,13 @@ public class FixedIndex extends Index {
 
         @Override
         protected Page newPage(File file, Number number, Codec codec) {
-            return new Partition(file, number, capacity(), codec);
+            return new Partition(file, number, capacity(), codec) {
+                @Override
+                protected boolean isOverflow() {
+                    // FIXME a better implement.
+                    return true;
+                }
+            };
         }
     }
 }

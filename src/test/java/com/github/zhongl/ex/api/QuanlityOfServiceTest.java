@@ -39,7 +39,7 @@ public class QuanlityOfServiceTest {
                 callback.onSuccess(revision);
                 return null;
             }
-        }).when(journal).append(eq(entry), (FutureCallback<Revision>) anyObject());
+        }).when(journal).append(eq(entry), false, (FutureCallback<Revision>) anyObject());
     }
 
     @Test

@@ -15,71 +15,7 @@
 
 package com.github.zhongl.ex.page;
 
-import com.github.zhongl.ex.codec.Codec;
-import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
-
-import java.nio.ByteBuffer;
-
-import static com.google.common.base.Preconditions.checkState;
-
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public interface Cursor {
     <T> T get();
 }
-
-class Proxy implements Cursor {
-    volatile Cursor delegate;
-
-    public Proxy(Cursor intiCursor) {
-        delegate = intiCursor;
-    }
-
-    public void transform(Cursor delegate) {
-        this.delegate = delegate;
-    }
-
-    @Override
-    public <T> T get() {
-        return (T) delegate.get();
-    }
-
-}
-
-class ObjectRef implements Cursor {
-    private final Object object;
-    private final Codec codec;
-
-    ObjectRef(Object object, Codec codec) {
-        this.object = object;
-        this.codec = codec;
-    }
-
-    public ByteBuffer encode() {
-        return codec.encode(object);
-    }
-
-    @Override
-    public <T> T get() {
-        return (T) object;
-    }
-}
-
-class Reader implements Cursor {
-    final Page page;
-    final int offset;
-
-    public Reader(Page page, int offset) {
-        this.page = page;
-        this.offset = offset;
-    }
-
-    @Override
-    public <T> T get() {
-        checkState(page.file().exists());
-        ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(page.file());
-        buffer.position(offset);
-        return page.codec().decode(buffer);
-    }
-
-}
-

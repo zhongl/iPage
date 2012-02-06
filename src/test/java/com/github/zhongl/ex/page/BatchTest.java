@@ -20,16 +20,20 @@ import com.github.zhongl.ex.codec.ComposedCodecBuilder;
 import com.github.zhongl.ex.codec.LengthCodec;
 import com.github.zhongl.ex.codec.StringCodec;
 import com.github.zhongl.ex.nio.FileChannels;
+import com.github.zhongl.ex.util.FutureCallbacks;
 import com.github.zhongl.util.FileTestContext;
+import com.google.common.util.concurrent.FutureCallback;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.nio.ByteBuffer;
 
 import static com.github.zhongl.util.FileAsserter.*;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class BatchTest extends FileTestContext implements CursorFactory {
+public abstract class BatchTest extends FileTestContext implements Kit {
     private Page page = mock(Page.class);
 
     private Codec codec = ComposedCodecBuilder.compose(new StringCodec())
@@ -47,31 +51,27 @@ public abstract class BatchTest extends FileTestContext implements CursorFactory
 
     @Test
     public void main() throws Exception {
+
         Batch batch = newBatch(this, 0, 4096);
 
-        batch.append("1");
-        batch.append("2");
+        FutureCallback<Cursor> ignore = FutureCallbacks.<Cursor>ignore();
+        batch.append("1", ignore);
+        batch.append("2", ignore);
         batch.writeAndForceTo(FileChannels.getOrOpen(file));
         FileChannels.closeChannelOf(file);
 
         assertExist(file).contentIs(length(1), string("1"), length(1), string("2"));
     }
 
-    protected abstract Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize);
+    protected abstract Batch newBatch(Kit kit, int position, int estimateBufferSize);
 
     @Override
-    public Reader reader(final int offset) {
-        return new Reader(page, offset);
+    public Cursor cursor(int offset) {
+        return null;
     }
 
     @Override
-    public ObjectRef objectRef(final Object object) {
-        return new ObjectRef(object, codec);
+    public ByteBuffer encode(Object value) {
+        return codec.encode(value);
     }
-
-    @Override
-    public Proxy proxy(final Cursor intiCursor) {
-        return new Proxy(intiCursor);
-    }
-
 }

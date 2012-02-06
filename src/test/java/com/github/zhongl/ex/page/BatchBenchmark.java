@@ -15,7 +15,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class BatchBenchmark extends FileTestContext implements CursorFactory {
+public class BatchBenchmark extends FileTestContext implements Kit {
 
     private Page page = mock(Page.class);
     private int position;
@@ -37,7 +37,7 @@ public class BatchBenchmark extends FileTestContext implements CursorFactory {
                                     .build();
         position = 0;
         valueLength = 4096;
-        size = 1000;
+        size = 10000;
     }
 
 
@@ -68,11 +68,7 @@ public class BatchBenchmark extends FileTestContext implements CursorFactory {
                     batch.append(bytes);
                 }
 
-                try {
-                    batch.writeAndForceTo(channel);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                batch.writeAndForceTo(channel);
             }
         }, size);
 
@@ -80,18 +76,12 @@ public class BatchBenchmark extends FileTestContext implements CursorFactory {
     }
 
     @Override
-    public Reader reader(final int offset) {
-        return new Reader(page, offset);
+    public Cursor cursor(int offset) {
+        return null;
     }
 
     @Override
-    public ObjectRef objectRef(final Object object) {
-        return new ObjectRef(object, codec);
+    public ByteBuffer encode(Object value) {
+        return codec.encode(value);
     }
-
-    @Override
-    public Proxy proxy(final Cursor intiCursor) {
-        return new Proxy(intiCursor);
-    }
-
 }

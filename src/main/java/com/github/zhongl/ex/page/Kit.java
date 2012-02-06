@@ -15,13 +15,12 @@
 
 package com.github.zhongl.ex.page;
 
+import java.nio.ByteBuffer;
+
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl</a> */
-public interface CursorFactory {
+public interface Kit {
+    Cursor cursor(int offset);
 
-    Reader reader(int offset);
-
-    ObjectRef objectRef(Object object);
-
-    Proxy proxy(Cursor intiCursor);
-
+    ByteBuffer encode(Object value);
 }
+

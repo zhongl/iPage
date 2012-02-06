@@ -14,7 +14,7 @@ import java.util.Iterator;
 import java.util.RandomAccess;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-class Partition extends Page implements Iterable<Entry<Md5Key, Offset>> {
+abstract class Partition extends Page implements Iterable<Entry<Md5Key, Offset>> {
     private final Entries entries = new Entries();
 
     protected Partition(File file, Number number, int capacity, Codec codec) {
@@ -22,8 +22,8 @@ class Partition extends Page implements Iterable<Entry<Md5Key, Offset>> {
     }
 
     @Override
-    protected Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
-        return new DefaultBatch(cursorFactory, position, estimateBufferSize);
+    protected Batch newBatch(Kit kit, int position, int estimateBufferSize) {
+        return new DefaultBatch(kit, position, estimateBufferSize);
     }
 
     public Offset get(Md5Key key) {

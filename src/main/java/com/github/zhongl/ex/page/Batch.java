@@ -15,8 +15,9 @@
 
 package com.github.zhongl.ex.page;
 
+import com.google.common.util.concurrent.FutureCallback;
+
 import javax.annotation.concurrent.NotThreadSafe;
-import java.io.IOException;
 import java.nio.channels.FileChannel;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -34,13 +35,19 @@ public abstract class Batch {
         return _append(object);
     }
 
-    int writeAndForceTo(FileChannel channel) throws IOException {
+    int writeAndForceTo(FileChannel channel) {
         notWrote = false;
         return _writeAndForceTo(channel);
     }
 
     protected abstract Cursor _append(Object object);
 
-    protected abstract int _writeAndForceTo(FileChannel channel) throws IOException;
+    protected abstract int _writeAndForceTo(FileChannel channel);
 
+    public void append(Object value, FutureCallback<Cursor> forceCallback) {
+        checkState(notWrote);
+        _append(checkNotNull(value), checkNotNull(forceCallback));
+    }
+
+    protected abstract void _append(Object value, FutureCallback<Cursor> callback);
 }

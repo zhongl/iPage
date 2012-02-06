@@ -6,7 +6,6 @@ import com.github.zhongl.ex.codec.LengthCodec;
 import com.github.zhongl.ex.codec.StringCodec;
 import com.github.zhongl.ex.util.CallbackFuture;
 import com.github.zhongl.util.FileTestContext;
-import com.google.common.util.concurrent.FutureCallback;
 import org.junit.After;
 import org.junit.Test;
 
@@ -15,7 +14,6 @@ import java.io.IOException;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
@@ -30,19 +28,10 @@ public class PageTest extends FileTestContext {
 
         final String one = "1";
 
-        page.append(one, new FutureCallback<Cursor>() {
-            @Override
-            public void onSuccess(Cursor cursor) {
-                assertThat(cursor.<String>get(), is(one));
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                fail();
-            }
-        });
-
+        CallbackFuture<Cursor> callback = new CallbackFuture<Cursor>();
+        page.append(one, callback);
         page.force();
+        assertThat(callback.get().<String>get(), is(one));
     }
 
     @Test(expected = IllegalStateException.class)
@@ -66,8 +55,13 @@ public class PageTest extends FileTestContext {
                                           .build();
         return new Page(new File(dir, "0"), mock(Number.class), 4096, codec) {
             @Override
-            protected Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
-                return new DefaultBatch(cursorFactory, position, estimateBufferSize);
+            protected boolean isOverflow() {
+                return file().length() > 4096;
+            }
+
+            @Override
+            protected Batch newBatch(Kit kit, int position, int estimateBufferSize) {
+                return new DefaultBatch(kit, position, estimateBufferSize);
             }
         };
     }

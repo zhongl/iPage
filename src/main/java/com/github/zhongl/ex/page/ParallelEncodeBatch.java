@@ -17,6 +17,7 @@ package com.github.zhongl.ex.page;
 
 import com.github.zhongl.ex.util.Tuple;
 import com.google.common.collect.AbstractIterator;
+import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.Iterator;
@@ -43,19 +44,18 @@ public class ParallelEncodeBatch extends DefaultBatch {
 
     private final Queue<Future<Tuple>> futureQueue;
 
-    public ParallelEncodeBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
-        super(cursorFactory, position, estimateBufferSize);
+    public ParallelEncodeBatch(Kit kit, int position, int estimateBufferSize) {
+        super(kit, position, estimateBufferSize);
         this.futureQueue = new LinkedList<Future<Tuple>>();
     }
 
     @Override
-    protected void onAppend(final ObjectRef objectRef, final Proxy proxy) {
+    protected void _append(final Object value, final FutureCallback<Cursor> callback) {
         futureQueue.offer(SERVICE.submit(new Callable<Tuple>() {
             @Override
             public Tuple call() throws Exception {
-                return new Tuple(proxy, objectRef.encode());
+                return new Tuple(kit.encode(value), callback);
             }
-
         }));
     }
 

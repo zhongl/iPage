@@ -78,15 +78,15 @@ public class FlexIndex extends Index {
                 private int count;
 
                 @Override
-                protected boolean checkOverflow(int size, int capacity) {
+                protected boolean isOverflow() {
                     if ((++count) <= FlexIndex.MAX_ENTRY_SIZE) return false;
                     count = 0;
                     return true;
                 }
 
                 @Override
-                protected Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
-                    return super.newBatch(cursorFactory, position, CAPACITY);
+                protected Batch newBatch(Kit kit, int position, int estimateBufferSize) {
+                    return super.newBatch(kit, position, CAPACITY);
                 }
             };
         }

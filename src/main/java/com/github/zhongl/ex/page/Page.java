@@ -18,11 +18,13 @@ package com.github.zhongl.ex.page;
 import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.nio.Closable;
 import com.github.zhongl.ex.nio.FileChannels;
+import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
 import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -34,7 +36,7 @@ import static com.google.common.io.Closeables.closeQuietly;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @NotThreadSafe
-public abstract class Page extends Numbered implements Closable, CursorFactory {
+public abstract class Page extends Numbered implements Closable, Kit {
 
     private final File file;
     private final int capacity;
@@ -53,13 +55,18 @@ public abstract class Page extends Numbered implements Closable, CursorFactory {
         currentBatch = newBatch(this, (int) file.length(), 0);
     }
 
-    public boolean append(Object value, FutureCallback<Cursor> forceCallback){
-        // TODO
-        return false;
+    public boolean append(Object value, FutureCallback<Cursor> forceCallback) {
+        checkState(opened);
+        if (isOverflow()) return false;
+        currentBatch.append(value, forceCallback);
+        return true;
     }
 
+    protected abstract boolean isOverflow();
+
     public void force() {
-        // TODO force
+        final FileChannel channel = FileChannels.getOrOpen(file);
+        currentBatch = newBatch(this, (int) file().length(), currentBatch.writeAndForceTo(channel));
     }
 
     public <T> Cursor append(T value, boolean force, OverflowCallback callback) throws IOException {
@@ -92,16 +99,23 @@ public abstract class Page extends Numbered implements Closable, CursorFactory {
     }
 
     @Override
-    public Reader reader(final int offset) {
+    public Cursor cursor(final int offset) {
         if (file().length() == 0) return null;
-        return new Reader(Page.this, offset);
+        return new Cursor() {
+            @Override
+            public <T> T get() {
+                checkState(file().exists());
+                ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(file());
+                buffer.position(offset);
+                return codec().decode(buffer);
+            }
+        };
     }
 
     @Override
-    public ObjectRef objectRef(final Object object) { return new ObjectRef(object, codec); }
-
-    @Override
-    public Proxy proxy(final Cursor intiCursor) { return new Proxy(intiCursor); }
+    public ByteBuffer encode(final Object value) {
+        return codec().encode(value);
+    }
 
     protected boolean checkOverflow(int size, int capacity) { return size > capacity; }
 
@@ -109,7 +123,7 @@ public abstract class Page extends Numbered implements Closable, CursorFactory {
         currentBatch = newBatch(this, (int) channel.size(), currentBatch.writeAndForceTo(channel));
     }
 
-    protected abstract Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize);
+    protected abstract Batch newBatch(Kit kit, int position, int estimateBufferSize);
 
     private void createIfNotExist(File file) { file.getParentFile().mkdirs(); }
 }

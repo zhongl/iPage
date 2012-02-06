@@ -1,13 +1,7 @@
 package com.github.zhongl.ex.actor;
 
-import com.github.zhongl.ex.util.CallbackFuture;
-import com.google.common.base.Function;
-import com.google.common.util.concurrent.FutureCallback;
-
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
 import static java.util.Collections.synchronizedMap;
 
@@ -26,20 +20,5 @@ public class Actors {
         }
     }
 
-    public static <T> T call(Function<FutureCallback<T>, Void> function) {
-        CallbackFuture<T> callback = new CallbackFuture<T>();
-        function.apply(callback);
-        return getUnchecked(callback);
-    }
-
-    public static <T> T getUnchecked(Future<T> future) {
-        try {
-            return future.get();
-        } catch (InterruptedException e) {
-            throw new IllegalStateException(e);
-        } catch (ExecutionException e) {
-            throw new IllegalStateException(e.getCause());
-        }
-    }
 }
 

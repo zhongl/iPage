@@ -18,7 +18,7 @@ package com.github.zhongl.ex.page;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class DefaultBatchTest extends BatchTest {
     @Override
-    protected Batch newBatch(CursorFactory cursorFactory, int position, int estimateBufferSize) {
-        return new DefaultBatch(cursorFactory, position, estimateBufferSize);
+    protected Batch newBatch(Kit kit, int position, int estimateBufferSize) {
+        return new DefaultBatch(kit, position, estimateBufferSize);
     }
 }

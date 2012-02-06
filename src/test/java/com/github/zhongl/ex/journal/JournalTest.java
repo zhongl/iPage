@@ -17,12 +17,13 @@
 package com.github.zhongl.ex.journal;
 
 import com.github.zhongl.ex.codec.StringCodec;
+import com.github.zhongl.ex.util.CallbackFuture;
+import com.github.zhongl.ex.util.FutureCallbacks;
 import com.github.zhongl.util.FileTestContext;
+import com.google.common.util.concurrent.FutureCallback;
 import org.junit.Test;
 
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class JournalTest extends FileTestContext {
@@ -33,13 +34,17 @@ public class JournalTest extends FileTestContext {
 
         Journal journal = new Journal(dir, new StringCodec());
 
-        journal.append("1", false);
+        FutureCallback<Revision> ignore = FutureCallbacks.<Revision>ignore();
 
-        Revision revision = journal.append("2", true);
+        journal.append("1", false, ignore);
+
+        CallbackFuture<Revision> forceCallback = new CallbackFuture<Revision>();
+        journal.append("2", true, forceCallback);
+        Revision revision = forceCallback.get();
 
         journal.eraseTo(revision);
 
-        journal.append("3", true);
+        journal.append("3", true, ignore);
 
         journal.close(); // mock crash
 
