@@ -63,6 +63,7 @@ public enum QuanlityOfService {
             return new Callable<Void>() {
                 @Override
                 public Void call() throws Exception {
+                    actor(Updatable.class).update(entry);
                     CallbackFuture<Revision> callbackFuture = new CallbackFuture<Revision>() {
                         @Override
                         public void onSuccess(Revision revision) {
@@ -71,7 +72,6 @@ public enum QuanlityOfService {
                         }
                     };
                     journal.append(entry, callbackFuture);
-                    actor(Updatable.class).update(entry);
 
                     return null;
                 }

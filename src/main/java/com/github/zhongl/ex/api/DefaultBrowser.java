@@ -78,10 +78,11 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
 
     @Override
     public void update(final Entry<Md5Key, byte[]> entry) {
-        submit(new Callable<Object>() {
+        submit(new Callable<Void>() {
             @Override
-            public Object call() throws Exception {
-                return cache.put(entry.key(), entry.value());
+            public Void call() throws Exception {
+                cache.put(entry.key(), entry.value());
+                return null;
             }
         });
     }
@@ -91,6 +92,7 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
         submit(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
+                cache.put(entry.key(), entry.value());
                 if (entry.value() == DefaultRecorder.NULL_VALUE) {
                     actor(Store.class).remove(revision, index.get(entry.key()));
                 } else {
