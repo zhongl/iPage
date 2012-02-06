@@ -16,7 +16,6 @@
 package com.github.zhongl.ex.api;
 
 import com.github.zhongl.ex.actor.Actor;
-import com.github.zhongl.ex.actor.Actors;
 import com.github.zhongl.ex.index.Index;
 import com.github.zhongl.ex.index.Md5Key;
 import com.github.zhongl.ex.journal.Revision;
@@ -26,50 +25,57 @@ import com.google.common.base.Function;
 import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
+
+import static com.github.zhongl.ex.actor.Actors.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
 
-    private Map<Md5Key, byte[]> cache;
-    private Index index;
+    @GuardedBy("this actor")
+    private final Map<Md5Key, byte[]> cache;
+    @GuardedBy("this actor")
+    private final Index index;
 
-    @Override
-    public byte[] get(Md5Key key) {
-        byte[] bytes = cache.get(key);
-        if (bytes == null) return get(index.get(key)); // cache miss
-        if (bytes.length == 0) return null; // removed key
-        return bytes;
+    public DefaultBrowser(Index index) {
+        this.index = index;
+        this.cache = new HashMap<Md5Key, byte[]>();
     }
 
-    private byte[] get(final Offset offset) {
-        return Actors.sync(new Function<FutureCallback<byte[]>, Void>() {
+
+    @Override
+    public byte[] get(final Md5Key key) {
+        byte[] bytes = getUnchecked(submit(new Callable<byte[]>() {
             @Override
-            public Void apply(@Nullable FutureCallback<byte[]> callback) {
-                Actors.actor(Store.class).get(offset, callback);
-                return null;  // TODO apply
+            public byte[] call() throws Exception {
+                return cache.get(key);
             }
-        });
+        }));
+        if (bytes == null) { // cache miss
+            Offset offset = getUnchecked(submit(new Callable<Offset>() {
+                @Override
+                public Offset call() throws Exception {
+                    return index.get(key);
+                }
+            }));
+            return get(offset);
+        }
+        return bytes.length == 0 ? null /*removed key*/ : bytes;
     }
 
     @Override
     public Iterator<byte[]> iterator() {
-        return Actors.sync(new Function<FutureCallback<Iterator<byte[]>>, Void>() {
+        return call(new Function<FutureCallback<Iterator<byte[]>>, Void>() {
             @Override
             public Void apply(@Nullable FutureCallback<Iterator<byte[]>> callback) {
-                Actors.actor(Store.class).iterator(callback);
+                actor(Store.class).iterator(callback);
                 return null;
             }
         });
-    }
-
-    @Override
-    public void update(Future<Revision> future, Entry<Md5Key, byte[]> entry) {
-
-        // TODO update
     }
 
     @Override
@@ -78,6 +84,44 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
             @Override
             public Void call() throws Exception {
                 index.merge(sortedIterator);
+                while (sortedIterator.hasNext()) {
+                    cache.remove(sortedIterator.next().key());
+                }
+                return null;
+            }
+        });
+    }
+
+    @Override
+    public void update(final Entry<Md5Key, byte[]> entry) {
+        submit(new Callable<Object>() {
+            @Override
+            public Object call() throws Exception {
+                return cache.put(entry.key(), entry.value());
+            }
+        });
+    }
+
+    @Override
+    public void update(final Revision revision, final Entry<Md5Key, byte[]> entry) {
+        submit(new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                if (entry.value() == DefaultRecorder.NULL_VALUE) {
+                    actor(Store.class).remove(revision, index.get(entry.key()));
+                } else {
+                    actor(Store.class).append(revision, entry);
+                }
+                return null;
+            }
+        });
+    }
+
+    private byte[] get(final Offset offset) {
+        return call(new Function<FutureCallback<byte[]>, Void>() {
+            @Override
+            public Void apply(@Nullable FutureCallback<byte[]> callback) {
+                actor(Store.class).get(offset, callback);
                 return null;
             }
         });

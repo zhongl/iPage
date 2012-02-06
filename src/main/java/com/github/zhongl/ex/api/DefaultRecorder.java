@@ -41,11 +41,11 @@ class DefaultRecorder extends Actor implements Recorder, Erasable {
     private final Journal journal;
     private final FlowControllor controllor;
 
-    public DefaultRecorder(File dir, QuanlityOfService quanlityOfService, FlowControllor controllor) throws IOException {
+    public DefaultRecorder(Journal journal, QuanlityOfService quanlityOfService, FlowControllor controllor) throws IOException {
         super();
         this.controllor = controllor;
-        this.journal = new Journal(dir, new EntryCodec());
         this.quanlityOfService = quanlityOfService;
+        this.journal = journal;
     }
 
     @Override
@@ -86,28 +86,4 @@ class DefaultRecorder extends Actor implements Recorder, Erasable {
         }
     }
 
-    private class EntryCodec implements Codec {
-        @Override
-        public ByteBuffer encode(Object instance) {
-            Entry<Md5Key, byte[]> entry = (Entry<Md5Key, byte[]>) instance;
-            return (ByteBuffer) ByteBuffer.allocate(Md5Key.BYTE_LENGTH + entry.value().length)
-                                          .put(entry.key().bytes())
-                                          .put(entry.value())
-                                          .flip();
-        }
-
-        @Override
-        public Entry<Md5Key, byte[]> decode(ByteBuffer buffer) {
-            byte[] md5 = new byte[Md5Key.BYTE_LENGTH];
-            byte[] bytes = new byte[lengthOf(buffer) - Md5Key.BYTE_LENGTH];
-            buffer.get(md5);
-            buffer.get(bytes);
-            return new Entry<Md5Key, byte[]>(new Md5Key(md5), bytes);
-        }
-
-        @Override
-        public boolean supports(Class<?> type) {
-            return Entry.class.equals(type);
-        }
-    }
 }
