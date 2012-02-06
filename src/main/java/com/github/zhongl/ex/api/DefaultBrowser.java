@@ -19,8 +19,8 @@ import com.github.zhongl.ex.actor.Actor;
 import com.github.zhongl.ex.index.Index;
 import com.github.zhongl.ex.index.Md5Key;
 import com.github.zhongl.ex.journal.Revision;
-import com.github.zhongl.ex.lang.Entry;
 import com.github.zhongl.ex.page.Offset;
+import com.github.zhongl.ex.util.Entry;
 import com.google.common.base.Function;
 import com.google.common.util.concurrent.FutureCallback;
 

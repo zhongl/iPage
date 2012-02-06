@@ -15,9 +15,9 @@
 
 package com.github.zhongl.ex.page;
 
-import com.github.zhongl.ex.lang.Tuple;
 import com.github.zhongl.ex.nio.ByteBuffers;
 import com.github.zhongl.ex.nio.Forcer;
+import com.github.zhongl.ex.util.Tuple;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.IOException;

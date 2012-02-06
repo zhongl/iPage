@@ -15,11 +15,11 @@
 
 package com.github.zhongl.ex.api;
 
-import com.github.zhongl.ex.actor.CallbackFuture;
 import com.github.zhongl.ex.index.Md5Key;
 import com.github.zhongl.ex.journal.Journal;
 import com.github.zhongl.ex.journal.Revision;
-import com.github.zhongl.ex.lang.Entry;
+import com.github.zhongl.ex.util.CallbackFuture;
+import com.github.zhongl.ex.util.Entry;
 
 import java.util.concurrent.Callable;
 
@@ -63,7 +63,7 @@ public enum QuanlityOfService {
             return new Callable<Void>() {
                 @Override
                 public Void call() throws Exception {
-                    CallbackFuture<Revision> callbackFuture = new CallbackFuture<Revision>(){
+                    CallbackFuture<Revision> callbackFuture = new CallbackFuture<Revision>() {
                         @Override
                         public void onSuccess(Revision revision) {
                             super.onSuccess(revision);

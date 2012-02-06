@@ -1,14 +1,12 @@
 package com.github.zhongl.ex.index;
 
 import com.github.zhongl.ex.codec.Codec;
-import com.github.zhongl.ex.lang.Entry;
-import com.github.zhongl.ex.nio.FileChannels;
 import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
 import com.github.zhongl.ex.page.*;
 import com.github.zhongl.ex.page.Number;
+import com.github.zhongl.ex.util.Entry;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.AbstractList;
 import java.util.Collections;
@@ -42,10 +40,6 @@ class Partition extends Page implements Iterable<Entry<Md5Key, Offset>> {
 
     private Entry<Md5Key, Offset> stub(Md5Key key) {
         return new Entry<Md5Key, Offset>(key, new Offset(-1L));
-    }
-
-    public void force() throws IOException {
-        force(FileChannels.getOrOpen(file()));
     }
 
     private class Entries extends AbstractList<Entry<Md5Key, Offset>> implements RandomAccess {

@@ -1,11 +1,11 @@
 package com.github.zhongl.ex.index;
 
 import com.github.zhongl.ex.codec.Codec;
-import com.github.zhongl.ex.lang.Entry;
 import com.github.zhongl.ex.page.Appendable;
 import com.github.zhongl.ex.page.Binder;
 import com.github.zhongl.ex.page.Number;
 import com.github.zhongl.ex.page.Offset;
+import com.github.zhongl.ex.util.Entry;
 import com.google.common.collect.PeekingIterator;
 
 import javax.annotation.concurrent.GuardedBy;

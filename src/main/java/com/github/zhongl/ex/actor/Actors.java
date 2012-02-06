@@ -1,5 +1,6 @@
 package com.github.zhongl.ex.actor;
 
+import com.github.zhongl.ex.util.CallbackFuture;
 import com.google.common.base.Function;
 import com.google.common.util.concurrent.FutureCallback;
 

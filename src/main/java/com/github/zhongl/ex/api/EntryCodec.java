@@ -17,7 +17,7 @@ package com.github.zhongl.ex.api;
 
 import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.index.Md5Key;
-import com.github.zhongl.ex.lang.Entry;
+import com.github.zhongl.ex.util.Entry;
 
 import java.nio.ByteBuffer;
 

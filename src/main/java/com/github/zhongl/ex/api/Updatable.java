@@ -18,7 +18,7 @@ package com.github.zhongl.ex.api;
 import com.github.zhongl.ex.actor.Asynchronize;
 import com.github.zhongl.ex.index.Md5Key;
 import com.github.zhongl.ex.journal.Revision;
-import com.github.zhongl.ex.lang.Entry;
+import com.github.zhongl.ex.util.Entry;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @Asynchronize

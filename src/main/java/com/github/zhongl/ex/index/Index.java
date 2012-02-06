@@ -1,9 +1,9 @@
 package com.github.zhongl.ex.index;
 
 import com.github.zhongl.ex.codec.Codec;
-import com.github.zhongl.ex.lang.Entry;
 import com.github.zhongl.ex.nio.Closable;
 import com.github.zhongl.ex.page.Offset;
+import com.github.zhongl.ex.util.Entry;
 import com.github.zhongl.util.FilesLoader;
 import com.github.zhongl.util.NumberNamedFilterAndComparator;
 import com.github.zhongl.util.Transformer;

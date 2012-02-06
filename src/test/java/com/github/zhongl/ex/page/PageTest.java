@@ -4,7 +4,7 @@ import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.codec.ComposedCodecBuilder;
 import com.github.zhongl.ex.codec.LengthCodec;
 import com.github.zhongl.ex.codec.StringCodec;
-import com.github.zhongl.util.CallbackFuture;
+import com.github.zhongl.ex.util.CallbackFuture;
 import com.github.zhongl.util.FileTestContext;
 import com.google.common.util.concurrent.FutureCallback;
 import org.junit.After;

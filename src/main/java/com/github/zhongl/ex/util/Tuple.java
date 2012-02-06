@@ -1,4 +1,4 @@
-package com.github.zhongl.ex.lang;
+package com.github.zhongl.ex.util;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class Tuple {

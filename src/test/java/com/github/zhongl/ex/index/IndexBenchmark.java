@@ -15,9 +15,9 @@
 
 package com.github.zhongl.ex.index;
 
-import com.github.zhongl.ex.lang.Entry;
 import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
 import com.github.zhongl.ex.page.Offset;
+import com.github.zhongl.ex.util.Entry;
 import com.github.zhongl.util.Benchmarks;
 import com.github.zhongl.util.FileTestContext;
 import org.junit.Test;

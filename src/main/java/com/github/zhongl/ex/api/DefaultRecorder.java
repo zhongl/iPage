@@ -16,19 +16,15 @@
 package com.github.zhongl.ex.api;
 
 import com.github.zhongl.ex.actor.Actor;
-import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.index.Md5Key;
 import com.github.zhongl.ex.journal.Journal;
 import com.github.zhongl.ex.journal.Revision;
-import com.github.zhongl.ex.lang.Entry;
+import com.github.zhongl.ex.util.Entry;
 
 import javax.annotation.concurrent.ThreadSafe;
-import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.concurrent.Callable;
 
-import static com.github.zhongl.ex.nio.ByteBuffers.lengthOf;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 

@@ -15,7 +15,7 @@
 
 package com.github.zhongl.ex.page;
 
-import com.github.zhongl.ex.lang.Tuple;
+import com.github.zhongl.ex.util.Tuple;
 import com.google.common.collect.AbstractIterator;
 
 import javax.annotation.concurrent.NotThreadSafe;

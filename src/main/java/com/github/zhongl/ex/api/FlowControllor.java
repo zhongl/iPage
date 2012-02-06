@@ -8,12 +8,13 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class FlowControllor {
-    private final Semaphore semaphore = new Semaphore(0, true);
+    public static final int INIT_PERMITS = Integer.getInteger("ipage.flow.controller.init.permits", 10000);
+    private final Semaphore semaphore = new Semaphore(INIT_PERMITS, true);
     private final AtomicInteger timeout = new AtomicInteger(100);
 
     /** @return available throughout. */
     public int throughout(int delta) {
-        if (delta < 0) semaphore.acquireUninterruptibly(delta);
+        if (delta < 0) semaphore.acquireUninterruptibly(-delta);
         if (delta > 0) semaphore.release(delta);
         return semaphore.availablePermits();
     }

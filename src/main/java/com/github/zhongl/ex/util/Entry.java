@@ -13,17 +13,29 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ex.api;
-
-import com.github.zhongl.ex.actor.Asynchronize;
-import com.github.zhongl.ex.index.Md5Key;
-import com.github.zhongl.ex.page.Offset;
-import com.github.zhongl.ex.util.Entry;
-
-import java.util.Iterator;
+package com.github.zhongl.ex.util;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-@Asynchronize
-interface Mergable {
-    void merge(Iterator<Entry<Md5Key, Offset>> sortedIterator);
+public class Entry<K extends Comparable<K>, V> implements Comparable<Entry<K, V>> {
+
+    private final K key;
+    private final V value;
+
+    public Entry(K key, V value) {
+        this.key = key;
+        this.value = value;
+    }
+
+    public K key() {
+        return key;
+    }
+
+    public V value() {
+        return value;
+    }
+
+    @Override
+    public int compareTo(Entry<K, V> o) {
+        return key.compareTo(o.key);
+    }
 }
