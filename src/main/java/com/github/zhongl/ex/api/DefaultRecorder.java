@@ -44,7 +44,7 @@ class DefaultRecorder extends Actor implements Recorder, Erasable {
                            QuanlityOfService quanlityOfService,
 
                            FlowControllor controllor, int forceCount, long forceMilliseconds) throws IOException {
-        super();
+        super(forceMilliseconds / 2);
         this.controllor = controllor;
         this.quanlityOfService = quanlityOfService;
         this.journal = journal;

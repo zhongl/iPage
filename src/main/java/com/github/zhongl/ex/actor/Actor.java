@@ -38,15 +38,21 @@ public abstract class Actor {
     private final Runnable SHUTDOWN = new Runnable() {
         public void run() { core.running = false; }
     };
+    private final long timeout;
 
     protected Actor() {
+        this(TIMEOUT);
+    }
+
+    public Actor(long timeout) {
+        this.timeout = timeout;
         this.tasks = new LinkedBlockingQueue<Runnable>();
         core = new Core(getClass().getSimpleName());
         core.start();
         Actors.register(this);
     }
 
-    public void stop() {
+    public synchronized void stop() {
         if (!core.isAlive()) return;
         try {
             tasks.put(SHUTDOWN);
@@ -80,7 +86,7 @@ public abstract class Actor {
             boolean interrupted = false;
             while (running) {
                 try {
-                    Runnable task = tasks.poll(TIMEOUT, MILLISECONDS);
+                    Runnable task = tasks.poll(timeout, MILLISECONDS);
                     hearbeat();
                     if (task == null) continue;
                     task.run();

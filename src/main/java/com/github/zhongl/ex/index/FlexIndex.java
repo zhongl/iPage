@@ -63,15 +63,13 @@ public class FlexIndex extends Index {
         @Override
         public void append(Object value, FutureCallback<Cursor> callback) {
             currentAppendingEntry = (Entry<Md5Key, Offset>) value;
-            super.append(value, callback);    // TODO append
+            super.append(value, callback);
         }
 
         @Override
         protected Number newNumber(@Nullable Page last) {
             return currentAppendingEntry == null ? Md5Key.MIN : currentAppendingEntry.key();
         }
-
-        protected int capacity() {return CAPACITY;}
 
         @Override
         protected Page newPage(File file, Number number, Codec codec) {

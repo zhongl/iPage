@@ -20,5 +20,7 @@ public class Actors {
         }
     }
 
+    private Actors() {}
+
 }
 
