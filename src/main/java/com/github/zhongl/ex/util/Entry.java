@@ -15,6 +15,8 @@
 
 package com.github.zhongl.ex.util;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class Entry<K extends Comparable<K>, V> implements Comparable<Entry<K, V>> {
 
@@ -22,8 +24,8 @@ public class Entry<K extends Comparable<K>, V> implements Comparable<Entry<K, V>
     private final V value;
 
     public Entry(K key, V value) {
-        this.key = key;
-        this.value = value;
+        this.key = checkNotNull(key);
+        this.value = checkNotNull(value);
     }
 
     public K key() {
@@ -37,5 +39,20 @@ public class Entry<K extends Comparable<K>, V> implements Comparable<Entry<K, V>
     @Override
     public int compareTo(Entry<K, V> o) {
         return key.compareTo(o.key);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Entry entry = (Entry) o;
+        return key.equals(entry.key) && value.equals(entry.value);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = key.hashCode();
+        result = 31 * result + value.hashCode();
+        return result;
     }
 }
