@@ -40,6 +40,7 @@ public class PageTest extends FileTestContext {
         page = newPage();
         CallbackFuture<Cursor> callbackFuture = new CallbackFuture<Cursor>();
         page.append("value", callbackFuture);
+        page.force();
         page.file().delete();
         callbackFuture.get().get();
     }
@@ -53,7 +54,7 @@ public class PageTest extends FileTestContext {
         Codec codec = ComposedCodecBuilder.compose(new StringCodec())
                                           .with(LengthCodec.class)
                                           .build();
-        return new Page(new File(dir, "0"), mock(Number.class), 4096, codec) {
+        return new Page(new File(dir, "0"), mock(Number.class), codec) {
             @Override
             protected boolean isOverflow() {
                 return file().length() > 4096;

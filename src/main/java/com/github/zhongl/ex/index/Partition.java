@@ -16,9 +16,10 @@ import java.util.RandomAccess;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 abstract class Partition extends Page implements Iterable<Entry<Md5Key, Offset>> {
     private final Entries entries = new Entries();
+    private final Keys keys = new Keys();
 
-    protected Partition(File file, Number number, int capacity, Codec codec) {
-        super(file, number, capacity, codec);
+    protected Partition(File file, Number number, Codec codec) {
+        super(file, number, codec);
     }
 
     @Override
@@ -28,7 +29,7 @@ abstract class Partition extends Page implements Iterable<Entry<Md5Key, Offset>>
 
     public Offset get(Md5Key key) {
         if (!file().exists()) return null;
-        int index = Collections.binarySearch(entries, stub(key));
+        int index = Collections.binarySearch(keys, key);
         if (index < 0) return null;
         return entries.get(index).value();
     }
@@ -38,24 +39,36 @@ abstract class Partition extends Page implements Iterable<Entry<Md5Key, Offset>>
         return entries.iterator();
     }
 
-    private Entry<Md5Key, Offset> stub(Md5Key key) {
-        return new Entry<Md5Key, Offset>(key, new Offset(-1L));
-    }
-
-    private class Entries extends AbstractList<Entry<Md5Key, Offset>> implements RandomAccess {
-
-        @Override
-        public Entry<Md5Key, Offset> get(int index) {
-            ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(file());
-            buffer.position(index * EntryCodec.LENGTH).limit((index + 1) * EntryCodec.LENGTH);
-            return codec().decode(buffer);
-        }
-
+    private abstract class RandomAccessList<T> extends AbstractList<T> implements RandomAccess {
         @Override
         public int size() {
             if (file().length() == 0) return 0;
             return ReadOnlyMappedBuffers.getOrMap(file()).capacity() / EntryCodec.LENGTH;
         }
+
+        @Override
+        public T get(int index) {
+            ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(file());
+            buffer.position(index * EntryCodec.LENGTH).limit((index + 1) * EntryCodec.LENGTH);
+            return decode(buffer);
+        }
+
+        protected abstract T decode(ByteBuffer buffer);
     }
 
+    private class Keys extends RandomAccessList<Md5Key> {
+
+        @Override
+        protected Md5Key decode(ByteBuffer buffer) {
+            byte[] bytes = new byte[Md5Key.BYTE_LENGTH];
+            buffer.get(bytes);
+            return new Md5Key(bytes);
+        }
+
+    }
+
+    private class Entries extends RandomAccessList<Entry<Md5Key, Offset>> {
+        @Override
+        protected Entry<Md5Key, Offset> decode(ByteBuffer buffer) {return codec().decode(buffer);}
+    }
 }

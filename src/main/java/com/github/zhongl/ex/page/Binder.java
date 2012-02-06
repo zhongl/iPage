@@ -44,39 +44,23 @@ public abstract class Binder implements Closable, Appendable {
         this.pages = loadOrInitialize();
     }
 
+    @Override
     public void append(Object value, FutureCallback<Cursor> callback) {
-        boolean overflow = !last().append(value, callback);
-        if (overflow) {
+        boolean append = last().append(value, callback);
+        if (!append) { // overflow
             last().force();
             Page page = newPage(last());
-            overflow = page.append(value, callback);
-            checkState(!overflow, "Too big value to append.");
+            append = page.append(value, callback);
+            checkState(append, "Too big value to append.");
             pages.add(page);
         }
     }
 
-    public void force() {
-        last().force();
-    }
+    @Override
+    public void force() { last().force(); }
 
     @Override
-    public <T> Cursor append(T value, boolean force) throws IOException {
-
-        return last().append(value, force, new OverflowCallback() {
-            @Override
-            public <T> Cursor onOverflow(T value, boolean force) throws IOException {
-                Page page = newPage(last());
-                Cursor cursor = page.append(value, force, THROW_BY_OVERFLOW);
-                pages.add(page);
-                return cursor;
-            }
-        });
-    }
-
-    @Override
-    public void close() {
-        for (Page page : pages) page.close();
-    }
+    public void close() { for (Page page : pages) page.close(); }
 
     protected void removeHeadPage() {
         Page page = pages.remove(0);

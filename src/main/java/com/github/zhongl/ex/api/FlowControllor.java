@@ -24,6 +24,10 @@ public class FlowControllor {
         return timeout.getAndSet(milliseconds);
     }
 
+    public void halt() {
+        semaphore.drainPermits();
+    }
+
     public <T> T call(Callable<T> callable) throws Exception {
         boolean acquired = semaphore.tryAcquire(timeout.get(), MILLISECONDS);
         if (!acquired) throw new InterruptedException();

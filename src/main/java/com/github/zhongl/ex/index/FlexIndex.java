@@ -6,6 +6,7 @@ import com.github.zhongl.ex.page.Number;
 import com.github.zhongl.ex.util.Entry;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
+import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -60,9 +61,9 @@ public class FlexIndex extends Index {
         }
 
         @Override
-        public <T> Cursor append(T value, boolean force) throws IOException {
+        public void append(Object value, FutureCallback<Cursor> callback) {
             currentAppendingEntry = (Entry<Md5Key, Offset>) value;
-            return super.append(value, force);
+            super.append(value, callback);    // TODO append
         }
 
         @Override
@@ -74,7 +75,7 @@ public class FlexIndex extends Index {
 
         @Override
         protected Page newPage(File file, Number number, Codec codec) {
-            return new Partition(file, number, capacity(), codec) {
+            return new Partition(file, number, codec) {
                 private int count;
 
                 @Override

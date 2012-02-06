@@ -23,7 +23,6 @@ import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
@@ -39,17 +38,15 @@ import static com.google.common.io.Closeables.closeQuietly;
 public abstract class Page extends Numbered implements Closable, Kit {
 
     private final File file;
-    private final int capacity;
     private final Codec codec;
 
     private boolean opened;
     private Batch currentBatch;
 
-    protected Page(File file, Number number, int capacity, Codec codec) {
+    protected Page(File file, Number number, Codec codec) {
         super(number);
         createIfNotExist(file);
         this.file = file;
-        this.capacity = capacity;
         this.codec = codec;
         this.opened = true;
         currentBatch = newBatch(this, (int) file.length(), 0);
@@ -62,28 +59,9 @@ public abstract class Page extends Numbered implements Closable, Kit {
         return true;
     }
 
-    protected abstract boolean isOverflow();
-
     public void force() {
         final FileChannel channel = FileChannels.getOrOpen(file);
         currentBatch = newBatch(this, (int) file().length(), currentBatch.writeAndForceTo(channel));
-    }
-
-    public <T> Cursor append(T value, boolean force, OverflowCallback callback) throws IOException {
-        checkState(opened);
-
-        final FileChannel channel = FileChannels.getOrOpen(file);
-        final int size = (int) channel.size();
-
-        if (checkOverflow(size, capacity)) {
-            force(channel);
-            return callback.onOverflow(value, force);
-        }
-
-        final Cursor cursor = currentBatch.append(value);
-
-        if (force) force(channel);
-        return cursor;
     }
 
     public Codec codec() {return codec;}
@@ -113,15 +91,9 @@ public abstract class Page extends Numbered implements Closable, Kit {
     }
 
     @Override
-    public ByteBuffer encode(final Object value) {
-        return codec().encode(value);
-    }
+    public ByteBuffer encode(final Object value) { return codec().encode(value); }
 
-    protected boolean checkOverflow(int size, int capacity) { return size > capacity; }
-
-    protected final void force(FileChannel channel) throws IOException {
-        currentBatch = newBatch(this, (int) channel.size(), currentBatch.writeAndForceTo(channel));
-    }
+    protected abstract boolean isOverflow();
 
     protected abstract Batch newBatch(Kit kit, int position, int estimateBufferSize);
 

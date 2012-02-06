@@ -8,6 +8,7 @@ import com.github.zhongl.ex.util.Entry;
 import com.google.common.util.concurrent.FutureCallback;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Matchers;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -39,7 +40,7 @@ public class QuanlityOfServiceTest {
                 callback.onSuccess(revision);
                 return null;
             }
-        }).when(journal).append(eq(entry), false, (FutureCallback<Revision>) anyObject());
+        }).when(journal).append(eq(entry), Matchers.any(FutureCallback.class));
     }
 
     @Test

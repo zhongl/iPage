@@ -6,6 +6,7 @@ import com.github.zhongl.ex.page.*;
 import com.github.zhongl.ex.page.Number;
 import com.github.zhongl.ex.util.Entry;
 import com.google.common.collect.PeekingIterator;
+import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -13,7 +14,6 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Iterator;
 
-import static com.github.zhongl.ex.page.OverflowCallback.THROW_BY_OVERFLOW;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Iterators.*;
@@ -46,11 +46,6 @@ public class FixedIndex extends Index {
             } else {
                 checkArgument(pages.size() == partitionNums, "Invalid fixed index snapshot.");
             }
-        }
-
-        @Override
-        protected int capacity() {
-            return Integer.MAX_VALUE;
         }
 
         @Override
@@ -97,8 +92,13 @@ public class FixedIndex extends Index {
                 final int index = i;
                 Appendable appendable = new Appendable() {
                     @Override
-                    public <T> Cursor append(T value, boolean force) throws IOException {
-                        return ((InnerSnapshot) snapshot).appendToPartition(index, value, force);
+                    public void append(Object value, FutureCallback<Cursor> callback) {
+                        ((InnerSnapshot) snapshot).appendToPartition(index, value, callback);
+                    }
+
+                    @Override
+                    public void force() {
+                        snapshot.force();
                     }
                 };
 
@@ -112,20 +112,20 @@ public class FixedIndex extends Index {
         }
 
         private void force(int index) throws IOException {
-            ((Partition) pages.get(index)).force();
+            pages.get(index).force();
         }
 
-        private <T> Cursor appendToPartition(int index, T value, boolean force) throws IOException {
-            return pages.get(index).append(value, force, THROW_BY_OVERFLOW);
+        private void appendToPartition(int index, Object value, FutureCallback<Cursor> callback) {
+            pages.get(index).append(value, callback);
         }
 
         @Override
         protected Page newPage(File file, Number number, Codec codec) {
-            return new Partition(file, number, capacity(), codec) {
+            return new Partition(file, number, codec) {
                 @Override
                 protected boolean isOverflow() {
                     // FIXME a better implement.
-                    return true;
+                    return false;
                 }
             };
         }

@@ -71,7 +71,7 @@ public class BinderTest extends FileTestContext {
 
         @Override
         protected Page newPage(File file, Number number, Codec codec) {
-            return new Page(file, number, 4096, InnerBinder.this.codec) {
+            return new Page(file, number, InnerBinder.this.codec) {
                 @Override
                 protected boolean isOverflow() {
                     return file().length() > 4096;

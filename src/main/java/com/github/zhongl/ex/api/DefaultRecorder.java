@@ -19,6 +19,7 @@ import com.github.zhongl.ex.actor.Actor;
 import com.github.zhongl.ex.index.Md5Key;
 import com.github.zhongl.ex.journal.Journal;
 import com.github.zhongl.ex.journal.Revision;
+import com.github.zhongl.ex.util.CallByCountOrElapse;
 import com.github.zhongl.ex.util.Entry;
 
 import javax.annotation.concurrent.ThreadSafe;
@@ -33,15 +34,27 @@ import static com.google.common.base.Preconditions.checkNotNull;
 class DefaultRecorder extends Actor implements Recorder, Erasable {
 
     static final byte[] NULL_VALUE = new byte[0];
+
     private final QuanlityOfService quanlityOfService;
     private final Journal journal;
+    private final CallByCountOrElapse callByCountOrElapse;
     private final FlowControllor controllor;
 
-    public DefaultRecorder(Journal journal, QuanlityOfService quanlityOfService, FlowControllor controllor) throws IOException {
+    public DefaultRecorder(Journal journal,
+                           QuanlityOfService quanlityOfService,
+
+                           FlowControllor controllor, int forceCount, long forceMilliseconds) throws IOException {
         super();
         this.controllor = controllor;
         this.quanlityOfService = quanlityOfService;
         this.journal = journal;
+        this.callByCountOrElapse = new CallByCountOrElapse(forceCount, forceMilliseconds, new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                DefaultRecorder.this.journal.force();
+                return null;
+            }
+        });
     }
 
     @Override
@@ -66,18 +79,35 @@ class DefaultRecorder extends Actor implements Recorder, Erasable {
         });
     }
 
+    @Override
+    protected void hearbeat() {
+        try {
+            callByCountOrElapse.tryCallByElapse();
+        } catch (Exception e) {
+            haltByUnexpected(e);
+        }
+    }
+
+    private void haltByUnexpected(Exception e) {
+        e.printStackTrace();
+        controllor.halt();
+        stop();
+    }
+
     private boolean append(final Entry<Md5Key, byte[]> entry) {
         try {
             controllor.call(new Callable<Void>() {
                 @Override
                 public Void call() throws Exception {
                     submit(quanlityOfService.append(journal, entry)).get();
+                    callByCountOrElapse.tryCallByCount();
                     return null;
                 }
             });
 
             return true;
         } catch (Exception e) {
+            haltByUnexpected(e);
             return false;
         }
     }

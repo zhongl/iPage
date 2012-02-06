@@ -36,15 +36,17 @@ public class JournalTest extends FileTestContext {
 
         FutureCallback<Revision> ignore = FutureCallbacks.ignore();
 
-        journal.append("1", false, ignore);
+        journal.append("1", ignore);
 
         CallbackFuture<Revision> forceCallback = new CallbackFuture<Revision>();
-        journal.append("2", true, forceCallback);
+        journal.append("2", forceCallback);
+        journal.force();
         Revision revision = forceCallback.get();
 
         journal.eraseTo(revision);
 
-        journal.append("3", true, ignore);
+        journal.append("3", ignore);
+        journal.force();
 
         journal.close(); // mock crash
 

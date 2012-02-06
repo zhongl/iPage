@@ -17,7 +17,7 @@ package com.github.zhongl.ex.page;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class Offset extends Number<Offset> {
-    public static final Offset NIL = null;
+    public static final Offset NIL = new Offset(-1L);
 
     private final Long value;
 

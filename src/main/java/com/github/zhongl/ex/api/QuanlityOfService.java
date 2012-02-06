@@ -34,7 +34,7 @@ public enum QuanlityOfService {
                 @Override
                 public Void call() throws Exception {
                     CallbackFuture<Revision> callbackFuture = new CallbackFuture<Revision>();
-                    journal.append(entry, false, callbackFuture);
+                    journal.append(entry, callbackFuture);
                     actor(Updatable.class).update(callbackFuture.get(), entry);
 
                     return null;
@@ -48,7 +48,7 @@ public enum QuanlityOfService {
                 @Override
                 public Void call() throws Exception {
                     CallbackFuture<Revision> callbackFuture = new CallbackFuture<Revision>();
-                    journal.append(entry, false, callbackFuture);
+                    journal.append(entry, callbackFuture);
                     actor(Updatable.class).update(entry);
                     callbackFuture.get();
                     actor(Updatable.class).update(callbackFuture.get(), entry);
@@ -71,7 +71,7 @@ public enum QuanlityOfService {
                             actor(Updatable.class).update(revision, entry);
                         }
                     };
-                    journal.append(entry, false, callbackFuture);
+                    journal.append(entry, callbackFuture);
 
                     return null;
                 }

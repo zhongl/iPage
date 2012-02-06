@@ -2,10 +2,10 @@ package com.github.zhongl.ex.index;
 
 import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.page.Appendable;
-import com.github.zhongl.ex.page.Binder;
+import com.github.zhongl.ex.page.*;
 import com.github.zhongl.ex.page.Number;
-import com.github.zhongl.ex.page.Offset;
 import com.github.zhongl.ex.util.Entry;
+import com.github.zhongl.ex.util.FutureCallbacks;
 import com.google.common.collect.PeekingIterator;
 
 import javax.annotation.concurrent.GuardedBy;
@@ -73,8 +73,9 @@ abstract class Snapshot extends Binder {
 
             if (c.value() == Offset.NIL) continue; // remove entry
 
+            appendable.append(c, FutureCallbacks.<Cursor>ignore());
             boolean force = !aItr.hasNext() && !bItr.hasNext();
-            appendable.append(c, force);
+            if (force) appendable.force();
         }
 
     }
@@ -83,15 +84,14 @@ abstract class Snapshot extends Binder {
         while (iterator.hasNext()) {
             Entry<Md5Key, Offset> entry = iterator.next();
             if (entry.value() == Offset.NIL) continue;
-            merged.append(entry, !iterator.hasNext());
+            merged.append(entry, FutureCallbacks.<Cursor>ignore());
         }
+        merged.force();
     }
 
     protected abstract void merge(Iterator<Entry<Md5Key, Offset>> sortedIterator, Snapshot snapshot) throws IOException;
 
     protected abstract Snapshot newSnapshotOn(File dir) throws IOException;
-
-    protected abstract int capacity();
 
     protected abstract boolean isEmpty();
 }

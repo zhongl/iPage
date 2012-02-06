@@ -55,15 +55,14 @@ public class Journal implements Closable {
      * Append an event.
      *
      * @param event         of operation.
-     * @param force         to driver.
      * @param forceCallback for getting revision after force
      */
-    public void append(Object event, boolean force, final FutureCallback<Revision> forceCallback) {
+    public void append(Object event, final FutureCallback<Revision> forceCallback) {
         binder.append(event, new FutureCallback<Cursor>() {
             @Override
             public void onSuccess(Cursor result) {
                 forceCallback.onSuccess(revision);
-                revision.increment();
+                revision = revision.increment();
             }
 
             @Override
@@ -71,8 +70,9 @@ public class Journal implements Closable {
                 forceCallback.onFailure(t);
             }
         });
-        if (force) binder.force();
     }
+
+    public void force() { binder.force(); }
 
     /**
      * Erase events before the revision.
@@ -107,7 +107,7 @@ public class Journal implements Closable {
 
         @Override
         protected Page newPage(File file, Number number, Codec codec) {
-            return new Page(file, number, CAPACITY, codec) {
+            return new Page(file, number, codec) {
                 @Override
                 protected boolean isOverflow() {
                     return file().length() > CAPACITY;

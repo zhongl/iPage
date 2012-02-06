@@ -21,8 +21,10 @@ public class DefaultRecorderTest {
     public void usage() throws Exception {
         Journal journal = mock(Journal.class);
         QuanlityOfService quanlityOfService = mock(QuanlityOfService.class);
+        doReturn(mock(Callable.class)).when(quanlityOfService).append(eq(journal), any(Entry.class));
+
         FlowControllor controllor = spy(new FlowControllor());
-        recorder = new DefaultRecorder(journal, quanlityOfService, controllor);
+        recorder = new DefaultRecorder(journal, quanlityOfService, controllor, 10000, 10000L);
 
         byte[] value = "value".getBytes();
         Md5Key key = Md5Key.generate(value);
@@ -37,6 +39,7 @@ public class DefaultRecorderTest {
 
         Revision revision = new Revision(1L);
         recorder.eraseTo(revision);
+        Thread.sleep(1L);
         verify(journal).eraseTo(revision);
 
     }

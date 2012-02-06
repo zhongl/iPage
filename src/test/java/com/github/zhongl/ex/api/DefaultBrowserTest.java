@@ -55,7 +55,7 @@ public class DefaultBrowserTest {
         // Merge
         browser.merge(singletonList(new Entry<Md5Key, Offset>(key, new Offset(0L))));
 
-        Thread.sleep(1L);
+        Thread.sleep(5L);
         verify(index).merge(any(Iterator.class));
 
         assertThat(browser.get(key), is(value));
@@ -80,9 +80,11 @@ public class DefaultBrowserTest {
     @Test
     public void cache() throws Exception {
         browser.update(new Entry<Md5Key, byte[]>(key, value));
+        Thread.sleep(1L);
         assertThat(browser.get(key), is(value));
 
         browser.update(new Entry<Md5Key, byte[]>(key, DefaultRecorder.NULL_VALUE));
+        Thread.sleep(1L);
         assertThat(browser.get(key), is(nullValue()));
     }
 
