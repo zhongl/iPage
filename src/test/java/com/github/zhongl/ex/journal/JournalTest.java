@@ -34,7 +34,7 @@ public class JournalTest extends FileTestContext {
 
         Journal journal = new Journal(dir, new StringCodec());
 
-        FutureCallback<Revision> ignore = FutureCallbacks.<Revision>ignore();
+        FutureCallback<Revision> ignore = FutureCallbacks.ignore();
 
         journal.append("1", false, ignore);
 

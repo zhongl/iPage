@@ -50,6 +50,14 @@ public class Journal implements Closable {
                                                           .build());
     }
 
+
+    /**
+     * Append an event.
+     *
+     * @param event         of operation.
+     * @param force         to driver.
+     * @param forceCallback for getting revision after force
+     */
     public void append(Object event, boolean force, final FutureCallback<Revision> forceCallback) {
         binder.append(event, new FutureCallback<Cursor>() {
             @Override
@@ -64,23 +72,6 @@ public class Journal implements Closable {
             }
         });
         if (force) binder.force();
-    }
-
-    /**
-     * Append an event.
-     *
-     * @param event of operation.
-     * @param force to driver.
-     *
-     * @return checkpoint
-     * @throws IOException
-     * @see Applicable
-     */
-    public Revision append(Object event, boolean force) throws IOException {
-        Revision result = revision;
-        binder.append(event, force);
-        revision = revision.increment();
-        return result;
     }
 
     /**
