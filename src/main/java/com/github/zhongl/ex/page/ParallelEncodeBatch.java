@@ -15,19 +15,17 @@
 
 package com.github.zhongl.ex.page;
 
+import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.util.Tuple;
-import com.google.common.collect.AbstractIterator;
 import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.concurrent.NotThreadSafe;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Queue;
+import java.nio.ByteBuffer;
 import java.util.concurrent.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-public class ParallelEncodeBatch extends DefaultBatch {
+public class ParallelEncodeBatch<V> extends DefaultBatch<V> {
 
     private final static ExecutorService SERVICE;
 
@@ -42,43 +40,28 @@ public class ParallelEncodeBatch extends DefaultBatch {
         });
     }
 
-    private final Queue<Future<Tuple>> futureQueue;
-
-    public ParallelEncodeBatch(Kit kit, int position, int estimateBufferSize) {
-        super(kit, position, estimateBufferSize);
-        this.futureQueue = new LinkedList<Future<Tuple>>();
+    public ParallelEncodeBatch(Codec codec, int position, int estimateBufferSize) {
+        super(codec, position, estimateBufferSize);
     }
 
     @Override
-    protected void _append(final Object value, final FutureCallback<Cursor> callback) {
-        futureQueue.offer(SERVICE.submit(new Callable<Tuple>() {
+    protected Tuple tuple(FutureCallback<Cursor> callback, final V value) {
+        return new Tuple(callback, SERVICE.submit(new Callable<ByteBuffer>() {
             @Override
-            public Tuple call() throws Exception {
-                return new Tuple(kit.encode(value), callback);
+            public ByteBuffer call() throws Exception {
+                return codec.encode(value);
             }
         }));
     }
 
     @Override
-    protected Iterable<Tuple> toAggregatingQueue() {
-        return new Iterable<Tuple>() {
-            @Override
-            public Iterator<Tuple> iterator() {
-                return new AbstractIterator<Tuple>() {
-                    @Override
-                    protected Tuple computeNext() {
-                        try {
-                            Future<Tuple> future = futureQueue.poll();
-                            return future == null ? endOfData() : future.get();
-                        } catch (InterruptedException e) {
-                            throw new IllegalStateException(e);
-                        } catch (ExecutionException e) {
-                            throw new RuntimeException(e.getCause());
-                        }
-
-                    }
-                };
-            }
-        };
+    protected ByteBuffer bufferIn(Tuple tuple) {
+        try {
+            return tuple.<Future<ByteBuffer>>get(1).get();
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(e);
+        } catch (ExecutionException e) {
+            throw new IllegalStateException(e.getCause());
+        }
     }
 }

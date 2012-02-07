@@ -32,11 +32,11 @@ import java.util.List;
 import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class Binder implements Closable, Appendable {
+public abstract class Binder<V> implements Closable, Appendable<V> {
 
     protected final File dir;
     protected final Codec codec;
-    protected final List<Page> pages;
+    protected final List<Page<V>> pages;
 
     protected Binder(File dir, Codec codec) throws IOException {
         this.dir = dir;
@@ -45,7 +45,7 @@ public abstract class Binder implements Closable, Appendable {
     }
 
     @Override
-    public void append(Object value, FutureCallback<Cursor> callback) {
+    public void append(V value, FutureCallback<Cursor> callback) {
         boolean append = last().append(value, callback);
         if (!append) { // overflow
             last().force();
@@ -62,15 +62,7 @@ public abstract class Binder implements Closable, Appendable {
     @Override
     public void close() { for (Page page : pages) page.close(); }
 
-    protected void removeHeadPage() {
-        Page page = pages.remove(0);
-        page.close();
-        checkState(page.file().delete());
-    }
-
-    protected Page last() {return pages.get(pages.size() - 1);}
-
-    protected Page newPage(Page last) {
+    protected Page<V> newPage(Page last) {
         Number number = newNumber(last);
         return newPage(new File(dir, number.toString()), number, codec);
     }
@@ -80,14 +72,16 @@ public abstract class Binder implements Closable, Appendable {
         return i < 0 ? -(i + 2) : i;
     }
 
-    protected abstract Page newPage(File file, Number number, Codec codec);
-
     protected abstract Number newNumber(@Nullable Page last);
 
     protected abstract Number parseNumber(String text);
 
-    private List<Page> loadOrInitialize() throws IOException {
-        List<Page> list = new FilesLoader<Page>(
+    protected abstract Page<V> newPage(File file, Number number, Codec codec);
+
+    private Page<V> last() {return pages.get(pages.size() - 1);}
+
+    private List<Page<V>> loadOrInitialize() throws IOException {
+        List<Page<V>> list = new FilesLoader<Page<V>>(
                 dir,
                 new FilterAndComparator() {
                     @Override
@@ -105,15 +99,16 @@ public abstract class Binder implements Closable, Appendable {
                         }
                     }
                 },
-                new Transformer<Page>() {
+                new Transformer<Page<V>>() {
                     @Override
-                    public Page transform(File file, boolean last) throws IOException {
+                    public Page<V> transform(File file, boolean last) throws IOException {
                         return newPage(file, parseNumber(file.getName()), codec);
                     }
                 }
-        ).loadTo(new ArrayList<Page>());
+        ).loadTo(new ArrayList<Page<V>>());
 
         if (list.isEmpty()) list.add(newPage(null));
         return list;
     }
+
 }

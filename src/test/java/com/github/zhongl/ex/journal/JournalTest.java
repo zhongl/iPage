@@ -17,6 +17,7 @@
 package com.github.zhongl.ex.journal;
 
 import com.github.zhongl.ex.codec.StringCodec;
+import com.github.zhongl.ex.page.Cursor;
 import com.github.zhongl.ex.util.CallbackFuture;
 import com.github.zhongl.ex.util.FutureCallbacks;
 import com.github.zhongl.util.FileTestContext;
@@ -32,33 +33,33 @@ public class JournalTest extends FileTestContext {
     public void usage() throws Exception {
         dir = testDir("usage");
 
-        Journal journal = new Journal(dir, new StringCodec());
+        Journal journal = new Journal(dir, 26, new StringCodec());
 
-        FutureCallback<Revision> ignore = FutureCallbacks.ignore();
+        FutureCallback<Cursor> ignore = FutureCallbacks.ignore();
 
         journal.append("1", ignore);
-
-        CallbackFuture<Revision> forceCallback = new CallbackFuture<Revision>();
-        journal.append("2", forceCallback);
+        journal.append("2", ignore);
         journal.force();
-        Revision revision = forceCallback.get();
 
-        journal.eraseTo(revision);
-
-        journal.append("3", ignore);
+        CallbackFuture<Cursor> forceCallback = new CallbackFuture<Cursor>();
+        journal.append("3", forceCallback);
         journal.force();
+        Checkpoint checkpoint = journal.checkpoint(forceCallback.get());
+
+        journal.erase(checkpoint);
 
         journal.close(); // mock crash
 
-        journal = new Journal(dir, new StringCodec());
+        journal = new Journal(dir, 28, new StringCodec());
 
         Applicable applicable = mock(Applicable.class);
 
-        doReturn(revision).when(applicable).lastCheckpoint();
+        doReturn(checkpoint).when(applicable).lastCheckpoint();
 
         journal.recover(applicable);
 
         verify(applicable).apply("3");
+
 
         journal.close();
     }

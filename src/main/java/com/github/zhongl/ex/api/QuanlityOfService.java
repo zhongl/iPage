@@ -16,8 +16,9 @@
 package com.github.zhongl.ex.api;
 
 import com.github.zhongl.ex.index.Md5Key;
+import com.github.zhongl.ex.journal.Checkpoint;
 import com.github.zhongl.ex.journal.Journal;
-import com.github.zhongl.ex.journal.Revision;
+import com.github.zhongl.ex.page.Cursor;
 import com.github.zhongl.ex.util.CallbackFuture;
 import com.github.zhongl.ex.util.Entry;
 
@@ -33,11 +34,10 @@ public enum QuanlityOfService {
             return new Callable<Void>() {
                 @Override
                 public Void call() throws Exception {
-                    CallbackFuture<Revision> callbackFuture = new CallbackFuture<Revision>();
+                    CallbackFuture<Cursor> callbackFuture = new CallbackFuture<Cursor>();
                     journal.append(entry, callbackFuture);
-                    actor(Updatable.class).update(callbackFuture.get(), entry);
-
-                    return null;
+                    tryForce(journal.checkpoint(callbackFuture.get()));
+                    return VOID;
                 }
             };
         }
@@ -47,13 +47,12 @@ public enum QuanlityOfService {
             return new Callable<Void>() {
                 @Override
                 public Void call() throws Exception {
-                    CallbackFuture<Revision> callbackFuture = new CallbackFuture<Revision>();
+                    CallbackFuture<Cursor> callbackFuture = new CallbackFuture<Cursor>();
                     journal.append(entry, callbackFuture);
                     actor(Updatable.class).update(entry);
                     callbackFuture.get();
-                    actor(Updatable.class).update(callbackFuture.get(), entry);
-
-                    return null;
+                    tryForce(journal.checkpoint(callbackFuture.get()));
+                    return VOID;
                 }
             };
         }
@@ -64,20 +63,30 @@ public enum QuanlityOfService {
                 @Override
                 public Void call() throws Exception {
                     actor(Updatable.class).update(entry);
-                    CallbackFuture<Revision> callbackFuture = new CallbackFuture<Revision>() {
+                    CallbackFuture<Cursor> callbackFuture = new CallbackFuture<Cursor>() {
                         @Override
-                        public void onSuccess(Revision revision) {
-                            super.onSuccess(revision);
-                            actor(Updatable.class).update(revision, entry);
+                        public void onSuccess(Cursor cursor) {
+                            super.onSuccess(cursor);
+                            tryForce(journal.checkpoint(cursor));
                         }
                     };
                     journal.append(entry, callbackFuture);
-
-                    return null;
+                    return VOID;
                 }
             };
         }
     };
+
+    public static final Void VOID = null;
+
+    protected Checkpoint last = new Checkpoint(0L);
+
+    protected void tryForce(Checkpoint checkpoint) {
+        if (checkpoint.compareTo(last) > 0) {
+            actor(Updatable.class).force(checkpoint);
+            last = checkpoint;
+        }
+    }
 
     public abstract Callable<Void> append(Journal journal, Entry<Md5Key, byte[]> entry);
 }

@@ -16,7 +16,8 @@
 package com.github.zhongl.ex.index;
 
 import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
-import com.github.zhongl.ex.page.Offset;
+import com.github.zhongl.ex.page.Cursor;
+import com.github.zhongl.ex.page.DefaultCursor;
 import com.github.zhongl.ex.util.Entry;
 import com.github.zhongl.util.Benchmarks;
 import com.github.zhongl.util.FileTestContext;
@@ -39,7 +40,7 @@ public abstract class IndexBenchmark extends FileTestContext {
         dir = testDir("get");
         final Index index = newIndex(dir);
 
-        final Iterator<Entry<Md5Key, Offset>> sortedIterator1 = randomSortedIterator(0);
+        final Iterator<Entry<Md5Key, Cursor>> sortedIterator1 = randomSortedIterator(0);
         Benchmarks.benchmark(getClass().getSimpleName() + " init merge", new Runnable() {
             @Override
             public void run() {
@@ -72,7 +73,7 @@ public abstract class IndexBenchmark extends FileTestContext {
         dir = testDir("crossMerge");
         final Index index = newIndex(dir);
 
-        final Iterator<Entry<Md5Key, Offset>> sortedIterator1 = randomSortedIterator(0);
+        final Iterator<Entry<Md5Key, Cursor>> sortedIterator1 = randomSortedIterator(0);
         Benchmarks.benchmark(getClass().getSimpleName() + " init merge", new Runnable() {
             @Override
             public void run() {
@@ -84,7 +85,7 @@ public abstract class IndexBenchmark extends FileTestContext {
             }
         }, SIZE);
 
-        final Iterator<Entry<Md5Key, Offset>> sortedIterator2 = randomSortedIterator(FlexIndex.MAX_ENTRY_SIZE * 2 + 1);
+        final Iterator<Entry<Md5Key, Cursor>> sortedIterator2 = randomSortedIterator(FlexIndex.MAX_ENTRY_SIZE * 2 + 1);
         Benchmarks.benchmark(getClass().getSimpleName() + " cross merge", new Runnable() {
             @Override
             public void run() {
@@ -101,11 +102,11 @@ public abstract class IndexBenchmark extends FileTestContext {
 
     protected abstract Index newIndex(File dir) throws IOException;
 
-    private Iterator<Entry<Md5Key, Offset>> randomSortedIterator(int start) {
-        List<Entry<Md5Key, Offset>> entries = new ArrayList<Entry<Md5Key, Offset>>(SIZE);
+    private Iterator<Entry<Md5Key, Cursor>> randomSortedIterator(int start) {
+        List<Entry<Md5Key, Cursor>> entries = new ArrayList<Entry<Md5Key, Cursor>>(SIZE);
         for (int i = start; i < SIZE + start; i++) {
             Md5Key key = Md5Key.generate(i + "");
-            entries.add(new Entry<Md5Key, Offset>(key, new Offset(i)));
+            entries.add(new Entry<Md5Key, Cursor>(key, new DefaultCursor(i, 1)));
         }
         Collections.sort(entries);
         return entries.iterator();

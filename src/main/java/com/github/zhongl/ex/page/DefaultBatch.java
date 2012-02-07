@@ -15,89 +15,60 @@
 
 package com.github.zhongl.ex.page;
 
+import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.nio.ByteBuffers;
-import com.github.zhongl.ex.nio.Forcer;
 import com.github.zhongl.ex.util.Tuple;
 import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.concurrent.NotThreadSafe;
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.LinkedList;
-import java.util.Queue;
-
-import static com.github.zhongl.ex.nio.ByteBuffers.lengthOf;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-public class DefaultBatch extends Batch {
-    protected final int start;
-    protected final int estimateBufferSize;
-    protected final Queue<Tuple> delayTransformQueue;
-    protected final Kit kit;
+public class DefaultBatch<V> extends AbstractBatch<V> {
 
-    private final Queue<Tuple> tupleQueue;
+    protected final Codec codec;
 
-    public DefaultBatch(Kit kit, int start, int estimateBufferSize) {
-        this.kit = kit;
-        this.start = start;
-        this.estimateBufferSize = Math.max(4096, estimateBufferSize);
-        this.delayTransformQueue = new LinkedList<Tuple>();
-        this.tupleQueue = new LinkedList<Tuple>();
+    protected long position;
+
+    public DefaultBatch(Codec codec, long position, int estimateBufferSize) {
+        super(estimateBufferSize);
+        this.codec = codec;
+        this.position = position;
     }
 
     @Override
-    protected Cursor _append(Object object) {
-        return null;  // TODO _append
+    protected Tuple tuple(FutureCallback<Cursor> callback, V value) {
+        return new Tuple(callback, codec.encode(value));
     }
 
     @Override
-    protected final int _writeAndForceTo(FileChannel channel) {
-        try {
-            int size = Forcer.getInstance().force(channel, aggregate());
+    protected Tuple aggregate(Tuple tuple, ByteBuffer aggregated) {
+        ByteBuffer buffer = bufferIn(tuple);
 
-            while (!delayTransformQueue.isEmpty()) {
-                Tuple tuple = delayTransformQueue.poll();
-                FutureCallback<Cursor> callback = tuple.get(0);
-                Integer offset = tuple.get(1);
-                callback.onSuccess(kit.cursor(offset));
-            }
+        long offset = position;
+        int length = ByteBuffers.lengthOf(buffer);
+        ByteBuffers.aggregate(aggregated, buffer);
+        position += length;
 
-            return size;
-        } catch (Throwable t) {
-            while (!delayTransformQueue.isEmpty()) {
-                Tuple tuple = delayTransformQueue.poll();
-                FutureCallback<Cursor> callback = tuple.get(0);
-                callback.onFailure(t);
-            }
+        return new Tuple(callbackIn(tuple), offset, length);
+    }
 
-            // FIXME
-            throw new IllegalStateException("Data may be inconsistent cause by force failed", t);
-        }
+    protected ByteBuffer bufferIn(Tuple tuple) {
+        return tuple.get(1);
+    }
+
+    protected FutureCallback<Cursor> callbackIn(Tuple tuple) {
+        return tuple.get(0);
     }
 
     @Override
-    protected void _append(Object value, FutureCallback<Cursor> callback) {
-        tupleQueue.offer(new Tuple(kit.encode(value), callback));
+    protected void callback(Tuple tuple, Throwable error) {
+        FutureCallback<Cursor> callback = callbackIn(tuple);
+        if (error != null) callback.onFailure(error);
+        else callback.onSuccess(cursor(tuple.<Long>get(1), tuple.<Integer>get(2)));
     }
 
-    private ByteBuffer aggregate() throws IOException {
-        int position = start;
-        ByteBuffer aggregated = ByteBuffer.allocate(estimateBufferSize);
+    protected Cursor cursor(long offset, int length) {return new DefaultCursor(offset, length);}
 
-        for (Tuple tuple : toAggregatingQueue()) {
-            final ByteBuffer buffer = tuple.get(0);
-            final FutureCallback<Cursor> callback = tuple.get(1);
-
-            delayTransformQueue.offer(new Tuple(callback, position));
-
-            position = position + lengthOf(buffer);
-            aggregated = ByteBuffers.aggregate(aggregated, buffer);
-        }
-
-        return (ByteBuffer) aggregated.flip();
-    }
-
-    protected Iterable<Tuple> toAggregatingQueue() { return tupleQueue; }
 }

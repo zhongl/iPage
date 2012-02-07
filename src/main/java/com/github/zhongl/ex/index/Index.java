@@ -2,7 +2,7 @@ package com.github.zhongl.ex.index;
 
 import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.nio.Closable;
-import com.github.zhongl.ex.page.Offset;
+import com.github.zhongl.ex.page.Cursor;
 import com.github.zhongl.ex.util.Entry;
 import com.github.zhongl.util.FilesLoader;
 import com.github.zhongl.util.NumberNamedFilterAndComparator;
@@ -44,13 +44,13 @@ public abstract class Index implements Closable {
         }
     }
 
-    public void merge(Iterator<Entry<Md5Key, Offset>> sortedIterator) throws IOException {
+    public void merge(Iterator<Entry<Md5Key, Cursor>> sortedIterator) throws IOException {
         if (!sortedIterator.hasNext()) return;
         current = current.merge(sortedIterator);
     }
 
     @GuardedBy("volatile")
-    public Offset get(Md5Key key) { return current.get(key); }
+    public Cursor get(Md5Key key) { return current.get(key); }
 
     @Override
     public void close() { current.close(); }

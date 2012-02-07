@@ -17,7 +17,7 @@ package com.github.zhongl.ex.api;
 
 import com.github.zhongl.ex.actor.Asynchronize;
 import com.github.zhongl.ex.index.Md5Key;
-import com.github.zhongl.ex.journal.Revision;
+import com.github.zhongl.ex.journal.Checkpoint;
 import com.github.zhongl.ex.util.Entry;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
@@ -25,5 +25,5 @@ import com.github.zhongl.ex.util.Entry;
 interface Updatable {
     void update(Entry<Md5Key, byte[]> entry);
 
-    void update(Revision revision, Entry<Md5Key, byte[]> entry);
+    void force(Checkpoint checkpoint);
 }

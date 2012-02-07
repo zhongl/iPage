@@ -18,12 +18,10 @@ package com.github.zhongl.ex.page;
 import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.nio.Closable;
 import com.github.zhongl.ex.nio.FileChannels;
-import com.github.zhongl.ex.nio.ReadOnlyMappedBuffers;
 import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
-import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -35,7 +33,7 @@ import static com.google.common.io.Closeables.closeQuietly;
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
 @NotThreadSafe
-public abstract class Page extends Numbered implements Closable, Kit {
+public abstract class Page<V> extends Numbered implements Closable {
 
     private final File file;
     private final Codec codec;
@@ -49,10 +47,10 @@ public abstract class Page extends Numbered implements Closable, Kit {
         this.file = file;
         this.codec = codec;
         this.opened = true;
-        currentBatch = newBatch(this, (int) file.length(), 0);
+        currentBatch = newBatch(0);
     }
 
-    public boolean append(Object value, FutureCallback<Cursor> forceCallback) {
+    public boolean append(V value, FutureCallback<Cursor> forceCallback) {
         checkState(opened);
         if (isOverflow()) return false;
         currentBatch.append(value, forceCallback);
@@ -61,12 +59,8 @@ public abstract class Page extends Numbered implements Closable, Kit {
 
     public void force() {
         final FileChannel channel = FileChannels.getOrOpen(file);
-        currentBatch = newBatch(this, (int) file().length(), currentBatch.writeAndForceTo(channel));
+        currentBatch = newBatch(currentBatch.writeAndForceTo(channel));
     }
-
-    public Codec codec() {return codec;}
-
-    public File file() { return file; }
 
     @Override
     public void close() {
@@ -76,26 +70,13 @@ public abstract class Page extends Numbered implements Closable, Kit {
         FileChannels.closeChannelOf(file);
     }
 
-    @Override
-    public Cursor cursor(final int offset) {
-        if (file().length() == 0) return null;
-        return new Cursor() {
-            @Override
-            public <T> T get() {
-                checkState(file().exists());
-                ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(file());
-                buffer.position(offset);
-                return codec().decode(buffer);
-            }
-        };
-    }
+    public Codec codec() {return codec;}
 
-    @Override
-    public ByteBuffer encode(final Object value) { return codec().encode(value); }
+    public File file() { return file; }
 
     protected abstract boolean isOverflow();
 
-    protected abstract Batch newBatch(Kit kit, int position, int estimateBufferSize);
+    protected abstract Batch<V> newBatch(int estimateBufferSize);
 
     private void createIfNotExist(File file) { file.getParentFile().mkdirs(); }
 }

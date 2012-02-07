@@ -17,8 +17,8 @@ package com.github.zhongl.ex.api;
 
 import com.github.zhongl.ex.actor.Actor;
 import com.github.zhongl.ex.index.Md5Key;
+import com.github.zhongl.ex.journal.Checkpoint;
 import com.github.zhongl.ex.journal.Journal;
-import com.github.zhongl.ex.journal.Revision;
 import com.github.zhongl.ex.util.CallByCountOrElapse;
 import com.github.zhongl.ex.util.Entry;
 
@@ -40,11 +40,15 @@ class DefaultRecorder extends Actor implements Recorder, Erasable {
     private final CallByCountOrElapse callByCountOrElapse;
     private final FlowControllor controllor;
 
-    public DefaultRecorder(Journal journal,
-                           QuanlityOfService quanlityOfService,
-
-                           FlowControllor controllor, int forceCount, long forceMilliseconds) throws IOException {
+    public DefaultRecorder(
+            Journal journal,
+            QuanlityOfService quanlityOfService,
+            FlowControllor controllor,
+            int forceCount,
+            long forceMilliseconds
+    ) throws IOException {
         super(forceMilliseconds / 2);
+
         this.controllor = controllor;
         this.quanlityOfService = quanlityOfService;
         this.journal = journal;
@@ -69,11 +73,11 @@ class DefaultRecorder extends Actor implements Recorder, Erasable {
     }
 
     @Override
-    public void eraseTo(final Revision revision) {
+    public void erase(final Checkpoint checkpoint) {
         submit(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                journal.eraseTo(revision);
+                journal.erase(checkpoint);
                 return null;
             }
         });

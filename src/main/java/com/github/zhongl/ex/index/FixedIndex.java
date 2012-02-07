@@ -2,8 +2,9 @@ package com.github.zhongl.ex.index;
 
 import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.page.Appendable;
-import com.github.zhongl.ex.page.*;
+import com.github.zhongl.ex.page.Cursor;
 import com.github.zhongl.ex.page.Number;
+import com.github.zhongl.ex.page.Page;
 import com.github.zhongl.ex.util.Entry;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.util.concurrent.FutureCallback;
@@ -38,8 +39,9 @@ public class FixedIndex extends Index {
             super(file, codec);
             int partitionNums = Integer.parseInt(PARTITION_NUM);
             if (pages.size() == 1) {
+                Page page = pages.get(0);
                 for (int i = 0; i < partitionNums - 1; i++) {
-                    Page page = newPage(last());
+                    page = newPage(page);
                     checkState(page.file().createNewFile());
                     pages.add(page);
                 }
@@ -69,9 +71,9 @@ public class FixedIndex extends Index {
         }
 
         @Override
-        protected void merge(Iterator<Entry<Md5Key, Offset>> sortedIterator, final Snapshot snapshot) throws IOException {
-            PeekingIterator<Entry<Md5Key, Offset>> bItr = peekingIterator(sortedIterator);
-            PeekingIterator<Entry<Md5Key, Offset>> aItr;
+        protected void merge(Iterator<Entry<Md5Key, Cursor>> sortedIterator, final Snapshot snapshot) throws IOException {
+            PeekingIterator<Entry<Md5Key, Cursor>> bItr = peekingIterator(sortedIterator);
+            PeekingIterator<Entry<Md5Key, Cursor>> aItr;
 
             for (int i = 0; i < pages.size(); i++) {
 
@@ -84,13 +86,13 @@ public class FixedIndex extends Index {
                                  ^
                            lower boundary
                    Lower boundary help elements of sortedIterator put into right partition, while it can not be appended
-                   because of Offset.NIL.
+                   because of Cursor.NIL.
                  */
-                Entry<Md5Key, Offset> lowerBoundary = new Entry<Md5Key, Offset>(key, Offset.NIL);
+                Entry<Md5Key, Cursor> lowerBoundary = new Entry<Md5Key, Cursor>(key, Cursor.NIL);
                 aItr = peekingIterator(concat(partition.iterator(), singletonIterator(lowerBoundary)));
 
                 final int index = i;
-                Appendable appendable = new Appendable() {
+                Appendable<Object> appendable = new Appendable<Object>() {
                     @Override
                     public void append(Object value, FutureCallback<Cursor> callback) {
                         ((InnerSnapshot) snapshot).appendToPartition(index, value, callback);
@@ -122,6 +124,7 @@ public class FixedIndex extends Index {
         @Override
         protected Page newPage(File file, Number number, Codec codec) {
             return new Partition(file, number, codec) {
+
                 @Override
                 protected boolean isOverflow() {
                     // FIXME a better implement.

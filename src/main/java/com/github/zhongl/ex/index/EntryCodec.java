@@ -16,7 +16,8 @@
 package com.github.zhongl.ex.index;
 
 import com.github.zhongl.ex.codec.Codec;
-import com.github.zhongl.ex.page.Offset;
+import com.github.zhongl.ex.page.Cursor;
+import com.github.zhongl.ex.page.DefaultCursor;
 import com.github.zhongl.ex.util.Entry;
 
 import java.nio.ByteBuffer;
@@ -24,22 +25,24 @@ import java.nio.ByteBuffer;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class EntryCodec implements Codec {
 
-    static final int LENGTH = 16 + 8;
+    static final int LENGTH = 16 + 8 + 4;
 
     @Override
     public ByteBuffer encode(Object instance) {
-        Entry<Md5Key, Offset> entry = (Entry<Md5Key, Offset>) instance;
+        Entry<Md5Key, Cursor> entry = (Entry<Md5Key, Cursor>) instance;
         ByteBuffer buffer = ByteBuffer.allocate(LENGTH);
         buffer.put(entry.key().bytes());
-        buffer.putLong(entry.value().value());
+        DefaultCursor cursor = (DefaultCursor) entry.value();
+        buffer.putLong(cursor.offset());
+        buffer.putInt(cursor.length());
         return (ByteBuffer) buffer.flip();
     }
 
     @Override
-    public Entry<Md5Key, Offset> decode(ByteBuffer buffer) {
+    public Entry<Md5Key, Cursor> decode(ByteBuffer buffer) {
         byte[] bytes = new byte[Md5Key.BYTE_LENGTH];
         buffer.get(bytes);
-        return new Entry<Md5Key, Offset>(new Md5Key(bytes), new Offset(buffer.getLong()));
+        return new Entry<Md5Key, Cursor>(new Md5Key(bytes), new DefaultCursor(buffer.getLong(), buffer.getInt()));
     }
 
     @Override

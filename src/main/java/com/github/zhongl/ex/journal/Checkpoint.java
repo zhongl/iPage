@@ -15,20 +15,36 @@
 
 package com.github.zhongl.ex.journal;
 
-import java.io.IOException;
+import com.github.zhongl.ex.page.Number;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface Applicable {
-    /**
-     * Apply a record from {@link com.github.zhongl.ex.journal.Journal} with it's offset.
-     *
-     * @param record indicate an operation.
-     */
-    void apply(Object record) throws IOException;
+public class Checkpoint extends Number<Checkpoint> {
 
-    /** @return offset of last applied checkpoint. */
-    Checkpoint lastCheckpoint();
+    private final Long value;
 
-    /** Ensure all records have been applied , then Journal could be erased. */
-    void force() throws IOException;
+    public Checkpoint(long value) {
+        this.value = value;
+    }
+
+    public Checkpoint(String text) {
+        this(Long.parseLong(text));
+    }
+
+    public Checkpoint add(long delta) {
+        return new Checkpoint(value + delta);
+    }
+
+    public long value() {
+        return value;
+    }
+
+    @Override
+    public String toString() {
+        return value.toString();
+    }
+
+    @Override
+    public int compareTo(Checkpoint o) {
+        return value.compareTo(o.value);
+    }
 }

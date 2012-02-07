@@ -3,8 +3,9 @@ package com.github.zhongl.ex.api;
 import com.github.zhongl.ex.actor.Actor;
 import com.github.zhongl.ex.index.Index;
 import com.github.zhongl.ex.index.Md5Key;
-import com.github.zhongl.ex.journal.Revision;
-import com.github.zhongl.ex.page.Offset;
+import com.github.zhongl.ex.journal.Checkpoint;
+import com.github.zhongl.ex.page.Cursor;
+import com.github.zhongl.ex.page.DefaultCursor;
 import com.github.zhongl.ex.util.Entry;
 import com.google.common.util.concurrent.FutureCallback;
 import org.junit.After;
@@ -13,28 +14,26 @@ import org.junit.Test;
 
 import java.util.Iterator;
 
-import static com.google.common.collect.Iterators.singletonIterator;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class DefaultBrowserTest {
 
     private DefaultBrowser browser;
     private byte[] value;
-    private DefaultBrowserTest.StoreSpy storeSpy;
+    private DurableSpy durableSpy;
     private Md5Key key;
     private Index index;
 
     @Before
     public void setUp() throws Exception {
         value = "value".getBytes();
-        storeSpy = new StoreSpy();
+        durableSpy = spy(new DurableSpy());
         index = mock(Index.class);
         browser = new DefaultBrowser(index);
         key = Md5Key.generate(value);
@@ -44,36 +43,30 @@ public class DefaultBrowserTest {
     public void usage() throws Exception {
 
         // Add
-        browser.update(new Revision(0L), new Entry<Md5Key, byte[]>(key, value));
+        browser.update(new Entry<Md5Key, byte[]>(key, value));
 
         Thread.sleep(1L);
 
-        assertThat(storeSpy.append, is(true));
+
         assertThat(browser.get(key), is(value)); // get from cache
 
 
         // Merge
-        browser.merge(singletonList(new Entry<Md5Key, Offset>(key, new Offset(0L))));
+        browser.merge(singletonList(new Entry<Md5Key, Cursor>(key, new DefaultCursor(0L, 1))));
 
         Thread.sleep(5L);
         verify(index).merge(any(Iterator.class));
 
         assertThat(browser.get(key), is(value));
         Thread.sleep(1L);
-        assertThat(storeSpy.get, is(true));
-
-
-        // Iterate
-        Iterator<byte[]> iterator = browser.iterator();
-        Thread.sleep(1L);
-        assertThat(iterator.next(), is(value));
+//        assertThat(durableSpy.get, is(true));
 
 
         // Remove
-        browser.update(new Revision(1L), new Entry<Md5Key, byte[]>(key, DefaultRecorder.NULL_VALUE));
+        browser.update(new Entry<Md5Key, byte[]>(key, DefaultRecorder.NULL_VALUE));
 
         Thread.sleep(1L);
-        assertThat(storeSpy.remove, is(true));
+//        assertThat(durableSpy.remove, is(true));
         assertThat(browser.get(key), is(nullValue()));
     }
 
@@ -93,31 +86,16 @@ public class DefaultBrowserTest {
         browser.stop();
     }
 
-    private class StoreSpy extends Actor implements Store {
-
-        private volatile boolean append;
-        private volatile boolean remove;
-        private volatile boolean get;
+    private class DurableSpy extends Actor implements Durable {
 
         @Override
-        public void append(Revision revision, Entry<Md5Key, byte[]> entry) {
-            append = true;
+        public void merge(Iterator<Entry<Md5Key, byte[]>> appendings, Iterator<Entry<Md5Key, Cursor>> removings, Checkpoint checkpoint) {
+            // TODO merge
         }
 
         @Override
-        public void remove(Revision revision, Offset offset) {
-            remove = true;
-        }
-
-        @Override
-        public void get(Offset offset, FutureCallback<byte[]> callback) {
-            get = true;
-            callback.onSuccess(value);
-        }
-
-        @Override
-        public void iterator(FutureCallback<Iterator<byte[]>> callback) {
-            callback.onSuccess(singletonIterator(value));
+        public void get(Cursor cursor, FutureCallback<byte[]> callback) {
+            // TODO get
         }
     }
 }

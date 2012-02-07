@@ -29,8 +29,6 @@ import java.io.File;
 import java.io.IOException;
 
 import static com.github.zhongl.util.FileAsserter.*;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class BinderTest extends FileTestContext {
@@ -52,7 +50,6 @@ public class BinderTest extends FileTestContext {
         binder.append(value, callback);
         binder.force();
 
-        assertThat(callback.get().<String>get(), is(value));
         assertExist(new File(dir, "0")).contentIs(length(5), string(value));
     }
 
@@ -78,8 +75,8 @@ public class BinderTest extends FileTestContext {
                 }
 
                 @Override
-                protected Batch newBatch(Kit kit, int position, int estimateBufferSize) {
-                    return new DefaultBatch(kit, position, estimateBufferSize);
+                protected Batch newBatch(int estimateBufferSize) {
+                    return new DefaultBatch(codec(), file().length(), estimateBufferSize);
                 }
             };
         }
@@ -93,6 +90,5 @@ public class BinderTest extends FileTestContext {
         protected Number parseNumber(String text) {
             return new Offset(Long.parseLong(text));
         }
-
     }
 }

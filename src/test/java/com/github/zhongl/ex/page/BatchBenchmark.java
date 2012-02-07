@@ -2,6 +2,7 @@ package com.github.zhongl.ex.page;
 
 import com.github.zhongl.ex.codec.*;
 import com.github.zhongl.ex.nio.FileChannels;
+import com.github.zhongl.ex.util.FutureCallbacks;
 import com.github.zhongl.util.Benchmarks;
 import com.github.zhongl.util.FileTestContext;
 import org.junit.Before;
@@ -15,7 +16,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class BatchBenchmark extends FileTestContext implements Kit {
+public class BatchBenchmark extends FileTestContext {
 
     private Page page = mock(Page.class);
     private int position;
@@ -44,14 +45,14 @@ public class BatchBenchmark extends FileTestContext implements Kit {
     @Test
     public void defaultBatch() throws Exception {
         file = testFile("defaultBatch");
-        Batch batch = new DefaultBatch(this, position, valueLength);
+        Batch batch = new DefaultBatch(codec, position, valueLength);
         benchmark(batch);
     }
 
     @Test
     public void parallelEncodeBatch() throws Exception {
         file = testFile("parallelEncodeBatch");
-        Batch batch = new ParallelEncodeBatch(this, position, valueLength);
+        Batch batch = new ParallelEncodeBatch(codec, position, valueLength);
         benchmark(batch);
     }
 
@@ -65,7 +66,7 @@ public class BatchBenchmark extends FileTestContext implements Kit {
                 for (int i = 0; i < size; i++) {
                     byte[] bytes = new byte[valueLength];
                     ByteBuffer.wrap(bytes).putInt(0, i);
-                    batch.append(bytes);
+                    batch.append(bytes, FutureCallbacks.<Cursor>ignore());
                 }
 
                 batch.writeAndForceTo(channel);
@@ -75,13 +76,4 @@ public class BatchBenchmark extends FileTestContext implements Kit {
         FileChannels.closeChannelOf(file);
     }
 
-    @Override
-    public Cursor cursor(int offset) {
-        return null;
-    }
-
-    @Override
-    public ByteBuffer encode(Object value) {
-        return codec.encode(value);
-    }
 }

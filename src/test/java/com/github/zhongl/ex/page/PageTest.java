@@ -31,18 +31,8 @@ public class PageTest extends FileTestContext {
         CallbackFuture<Cursor> callback = new CallbackFuture<Cursor>();
         page.append(one, callback);
         page.force();
-        assertThat(callback.get().<String>get(), is(one));
-    }
 
-    @Test(expected = IllegalStateException.class)
-    public void getAfterDeleted() throws Exception {
-        dir = testDir("getAfterDeleted");
-        page = newPage();
-        CallbackFuture<Cursor> callbackFuture = new CallbackFuture<Cursor>();
-        page.append("value", callbackFuture);
-        page.force();
-        page.file().delete();
-        callbackFuture.get().get();
+        assertThat((DefaultCursor) callback.get(), is(new DefaultCursor(0L, 5)));
     }
 
     @After
@@ -61,8 +51,8 @@ public class PageTest extends FileTestContext {
             }
 
             @Override
-            protected Batch newBatch(Kit kit, int position, int estimateBufferSize) {
-                return new DefaultBatch(kit, position, estimateBufferSize);
+            protected Batch newBatch(int estimateBufferSize) {
+                return new DefaultBatch(codec(), file().length(), estimateBufferSize);
             }
         };
     }

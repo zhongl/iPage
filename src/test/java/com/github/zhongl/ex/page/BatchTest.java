@@ -26,14 +26,12 @@ import com.google.common.util.concurrent.FutureCallback;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.nio.ByteBuffer;
-
 import static com.github.zhongl.util.FileAsserter.*;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class BatchTest extends FileTestContext implements Kit {
+public abstract class BatchTest extends FileTestContext {
     private Page page = mock(Page.class);
 
     private Codec codec = ComposedCodecBuilder.compose(new StringCodec())
@@ -52,7 +50,7 @@ public abstract class BatchTest extends FileTestContext implements Kit {
     @Test
     public void main() throws Exception {
 
-        Batch batch = newBatch(this, 0, 4096);
+        Batch batch = newBatch(codec, 0, 4096);
 
         FutureCallback<Cursor> ignore = FutureCallbacks.<Cursor>ignore();
         batch.append("1", ignore);
@@ -63,15 +61,6 @@ public abstract class BatchTest extends FileTestContext implements Kit {
         assertExist(file).contentIs(length(1), string("1"), length(1), string("2"));
     }
 
-    protected abstract Batch newBatch(Kit kit, int position, int estimateBufferSize);
+    protected abstract Batch newBatch(Codec codec, int position, int estimateBufferSize);
 
-    @Override
-    public Cursor cursor(int offset) {
-        return null;
-    }
-
-    @Override
-    public ByteBuffer encode(Object value) {
-        return codec.encode(value);
-    }
 }

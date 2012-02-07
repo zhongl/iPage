@@ -1,8 +1,10 @@
 package com.github.zhongl.ex.index;
 
 import com.github.zhongl.ex.codec.Codec;
-import com.github.zhongl.ex.page.*;
+import com.github.zhongl.ex.page.Batch;
+import com.github.zhongl.ex.page.Cursor;
 import com.github.zhongl.ex.page.Number;
+import com.github.zhongl.ex.page.Page;
 import com.github.zhongl.ex.util.Entry;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
@@ -31,7 +33,7 @@ public class FlexIndex extends Index {
 
     private class InnerSnapshot extends Snapshot {
 
-        private Entry<Md5Key, Offset> currentAppendingEntry;
+        private Entry<Md5Key, Cursor> currentAppendingEntry;
 
         InnerSnapshot(File dir, Codec codec) throws IOException { super(dir, codec); }
 
@@ -46,9 +48,9 @@ public class FlexIndex extends Index {
         }
 
         @Override
-        protected void merge(Iterator<Entry<Md5Key, Offset>> sortedIterator, Snapshot snapshot) throws IOException {
-            PeekingIterator<Entry<Md5Key, Offset>> bItr = Iterators.peekingIterator(sortedIterator);
-            PeekingIterator<Entry<Md5Key, Offset>> aItr;
+        protected void merge(Iterator<Entry<Md5Key, Cursor>> sortedIterator, Snapshot snapshot) throws IOException {
+            PeekingIterator<Entry<Md5Key, Cursor>> bItr = Iterators.peekingIterator(sortedIterator);
+            PeekingIterator<Entry<Md5Key, Cursor>> aItr;
 
             for (Page page : pages) {
                 Partition partition = (Partition) page;
@@ -62,7 +64,7 @@ public class FlexIndex extends Index {
 
         @Override
         public void append(Object value, FutureCallback<Cursor> callback) {
-            currentAppendingEntry = (Entry<Md5Key, Offset>) value;
+            currentAppendingEntry = (Entry<Md5Key, Cursor>) value;
             super.append(value, callback);
         }
 
@@ -84,8 +86,8 @@ public class FlexIndex extends Index {
                 }
 
                 @Override
-                protected Batch newBatch(Kit kit, int position, int estimateBufferSize) {
-                    return super.newBatch(kit, position, CAPACITY);
+                protected Batch newBatch(int estimateBufferSize) {
+                    return super.newBatch(CAPACITY);
                 }
             };
         }

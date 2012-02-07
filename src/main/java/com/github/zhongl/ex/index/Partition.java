@@ -14,7 +14,7 @@ import java.util.Iterator;
 import java.util.RandomAccess;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-abstract class Partition extends Page implements Iterable<Entry<Md5Key, Offset>> {
+abstract class Partition extends Page implements Iterable<Entry<Md5Key, Cursor>> {
     private final Entries entries = new Entries();
     private final Keys keys = new Keys();
 
@@ -23,11 +23,11 @@ abstract class Partition extends Page implements Iterable<Entry<Md5Key, Offset>>
     }
 
     @Override
-    protected Batch newBatch(Kit kit, int position, int estimateBufferSize) {
-        return new DefaultBatch(kit, position, estimateBufferSize);
+    protected Batch newBatch(int estimateBufferSize) {
+        return new DefaultBatch(codec(), file().length(), estimateBufferSize);
     }
 
-    public Offset get(Md5Key key) {
+    public Cursor get(Md5Key key) {
         if (!file().exists()) return null;
         int index = Collections.binarySearch(keys, key);
         if (index < 0) return null;
@@ -35,7 +35,7 @@ abstract class Partition extends Page implements Iterable<Entry<Md5Key, Offset>>
     }
 
     @Override
-    public Iterator<Entry<Md5Key, Offset>> iterator() {
+    public Iterator<Entry<Md5Key, Cursor>> iterator() {
         return entries.iterator();
     }
 
@@ -67,8 +67,8 @@ abstract class Partition extends Page implements Iterable<Entry<Md5Key, Offset>>
 
     }
 
-    private class Entries extends RandomAccessList<Entry<Md5Key, Offset>> {
+    private class Entries extends RandomAccessList<Entry<Md5Key, Cursor>> {
         @Override
-        protected Entry<Md5Key, Offset> decode(ByteBuffer buffer) {return codec().decode(buffer);}
+        protected Entry<Md5Key, Cursor> decode(ByteBuffer buffer) {return codec().decode(buffer);}
     }
 }

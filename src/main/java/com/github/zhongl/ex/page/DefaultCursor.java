@@ -15,12 +15,49 @@
 
 package com.github.zhongl.ex.page;
 
-import com.github.zhongl.ex.codec.Codec;
-
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class DefaultBatchTest extends BatchTest {
+public class DefaultCursor implements Cursor, Comparable<DefaultCursor> {
+    private final long offset;
+    private final int length;
+
+    public DefaultCursor(long offset, int length) {
+        this.offset = offset;
+        this.length = length;
+    }
+
+    public long offset() {
+        return offset;
+    }
+
+    public int length() {
+        return length;
+    }
+
     @Override
-    protected Batch newBatch(Codec codec, int position, int estimateBufferSize) {
-        return new DefaultBatch(codec, position, estimateBufferSize);
+    public String toString() {
+        return "Cursor{" +
+                "offset=" + offset +
+                ", length=" + length +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        DefaultCursor cursor = (DefaultCursor) o;
+        return length == cursor.length && offset == cursor.offset;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (int) (offset ^ (offset >>> 32));
+        result = 31 * result + length;
+        return result;
+    }
+
+    @Override
+    public int compareTo(DefaultCursor o) {
+        return offset > o.offset() ? 1 : offset < o.offset ? -1 : 0;
     }
 }

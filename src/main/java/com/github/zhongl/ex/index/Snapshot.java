@@ -16,15 +16,15 @@ import java.util.Iterator;
 import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-abstract class Snapshot extends Binder {
+abstract class Snapshot extends Binder<Object> {
     public Snapshot(File dir, Codec codec) throws IOException {super(dir, codec);}
 
     @GuardedBy("readOnly")
-    public Offset get(Md5Key key) {
+    public Cursor get(Md5Key key) {
         return ((Partition) pages.get(binarySearchPageIndex(key))).get(key); // index will always in [0, pages.size)
     }
 
-    public Snapshot merge(Iterator<Entry<Md5Key, Offset>> sortedIterator) throws IOException {
+    public Snapshot merge(Iterator<Entry<Md5Key, Cursor>> sortedIterator) throws IOException {
 
         if (isEmpty()) {
             merge(sortedIterator, this);
@@ -51,16 +51,16 @@ abstract class Snapshot extends Binder {
     protected Number parseNumber(String text) { return new Md5Key(text); }
 
     protected final void merge(
-            PeekingIterator<Entry<Md5Key, Offset>> aItr,
-            PeekingIterator<Entry<Md5Key, Offset>> bItr,
+            PeekingIterator<Entry<Md5Key, Cursor>> aItr,
+            PeekingIterator<Entry<Md5Key, Cursor>> bItr,
             Appendable appendable
     ) throws IOException {
 
         while (aItr.hasNext() && bItr.hasNext()) {
 
-            Entry<Md5Key, Offset> a = aItr.peek();
-            Entry<Md5Key, Offset> b = bItr.peek();
-            Entry<Md5Key, Offset> c;
+            Entry<Md5Key, Cursor> a = aItr.peek();
+            Entry<Md5Key, Cursor> b = bItr.peek();
+            Entry<Md5Key, Cursor> c;
 
             int result = a.compareTo(b);
 
@@ -71,7 +71,7 @@ abstract class Snapshot extends Binder {
                 aItr.next();
             }
 
-            if (c.value() == Offset.NIL) continue; // remove entry
+            if (c.value() == Cursor.NIL) continue; // remove entry
 
             appendable.append(c, FutureCallbacks.<Cursor>ignore());
             boolean force = !aItr.hasNext() && !bItr.hasNext();
@@ -80,18 +80,24 @@ abstract class Snapshot extends Binder {
 
     }
 
-    protected final void mergeRestOf(Iterator<Entry<Md5Key, Offset>> iterator, Appendable merged) throws IOException {
+    protected final void mergeRestOf(Iterator<Entry<Md5Key, Cursor>> iterator, Appendable merged) throws IOException {
         while (iterator.hasNext()) {
-            Entry<Md5Key, Offset> entry = iterator.next();
-            if (entry.value() == Offset.NIL) continue;
+            Entry<Md5Key, Cursor> entry = iterator.next();
+            if (entry.value() == Cursor.NIL) continue;
             merged.append(entry, FutureCallbacks.<Cursor>ignore());
         }
         merged.force();
     }
 
-    protected abstract void merge(Iterator<Entry<Md5Key, Offset>> sortedIterator, Snapshot snapshot) throws IOException;
+    protected abstract void merge(Iterator<Entry<Md5Key, Cursor>> sortedIterator, Snapshot snapshot) throws IOException;
 
     protected abstract Snapshot newSnapshotOn(File dir) throws IOException;
 
     protected abstract boolean isEmpty();
+
+    protected void removeHeadPage() {
+        Page page = pages.remove(0);
+        page.close();
+        checkState(page.file().delete());
+    }
 }

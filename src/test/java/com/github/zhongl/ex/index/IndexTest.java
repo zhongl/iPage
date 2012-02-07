@@ -1,6 +1,7 @@
 package com.github.zhongl.ex.index;
 
-import com.github.zhongl.ex.page.Offset;
+import com.github.zhongl.ex.page.Cursor;
+import com.github.zhongl.ex.page.DefaultCursor;
 import com.github.zhongl.ex.util.Entry;
 import com.github.zhongl.util.FileTestContext;
 import org.junit.After;
@@ -30,7 +31,7 @@ public abstract class IndexTest extends FileTestContext {
         int a1 = 12;
         int a2 = 34;
 
-        List<Entry<Md5Key, Offset>> entries = asList(
+        List<Entry<Md5Key, Cursor>> entries = asList(
                 entry(7),
                 entry(a1),
                 entry(a2)
@@ -45,9 +46,9 @@ public abstract class IndexTest extends FileTestContext {
         assertThat(index.get(key(a2)), is(value(a2)));
 
         entries = asList(
-                entry(7, Offset.NIL),      // remove
+                entry(7, Cursor.NIL),      // remove
                 entry(14),                 // add
-                entry(a1, new Offset(a2))  // update
+                entry(a1, value(a2))  // update
         );
 
         Collections.sort(entries);
@@ -91,7 +92,7 @@ public abstract class IndexTest extends FileTestContext {
     public void mergeEmpty() throws Exception {
         dir = testDir("mergeEmpty");
         index = newIndex(dir);
-        index.merge(Collections.<Entry<Md5Key, Offset>>emptyList().iterator());
+        index.merge(Collections.<Entry<Md5Key, Cursor>>emptyList().iterator());
     }
 
     @Test
@@ -126,7 +127,7 @@ public abstract class IndexTest extends FileTestContext {
         index = newIndex(dir);
 
         int capacity = FlexIndex.MAX_ENTRY_SIZE + 2; // to append more than one page.
-        List<Entry<Md5Key, Offset>> entries = new ArrayList<Entry<Md5Key, Offset>>(capacity);
+        List<Entry<Md5Key, Cursor>> entries = new ArrayList<Entry<Md5Key, Cursor>>(capacity);
         for (int i = 0; i < capacity; i++) entries.add(entry(i));
         Collections.sort(entries);
 
@@ -145,13 +146,13 @@ public abstract class IndexTest extends FileTestContext {
 
     protected abstract Index newIndex(File dir) throws IOException;
 
-    private Entry<Md5Key, Offset> entry(int i, Offset o) {
-        return new Entry<Md5Key, Offset>(key(i), o);
+    private Entry<Md5Key, Cursor> entry(int i, Cursor o) {
+        return new Entry<Md5Key, Cursor>(key(i), o);
     }
 
-    private Entry<Md5Key, Offset> entry(int i) {return new Entry<Md5Key, Offset>(key(i), value(i));}
+    private Entry<Md5Key, Cursor> entry(int i) {return new Entry<Md5Key, Cursor>(key(i), value(i));}
 
-    private Offset value(long v) {return new Offset(v);}
+    private Cursor value(long v) {return new DefaultCursor(v, 1);}
 
     private Md5Key key(int k) {
         return Md5Key.generate(k + "");

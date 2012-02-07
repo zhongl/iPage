@@ -17,5 +17,5 @@ package com.github.zhongl.ex.page;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public interface Cursor {
-    <T> T get();
+    Cursor NIL = new Cursor() {};
 }

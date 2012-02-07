@@ -1,8 +1,8 @@
 package com.github.zhongl.ex.api;
 
 import com.github.zhongl.ex.index.Md5Key;
+import com.github.zhongl.ex.journal.Checkpoint;
 import com.github.zhongl.ex.journal.Journal;
-import com.github.zhongl.ex.journal.Revision;
 import com.github.zhongl.ex.util.Entry;
 import org.junit.After;
 import org.junit.Test;
@@ -37,10 +37,10 @@ public class DefaultRecorderTest {
         verify(quanlityOfService).append(journal, new Entry<Md5Key, byte[]>(key, DefaultRecorder.NULL_VALUE));
         verify(controllor, times(2)).call(any(Callable.class));
 
-        Revision revision = new Revision(1L);
-        recorder.eraseTo(revision);
+        Checkpoint checkpoint = new Checkpoint(1L);
+        recorder.erase(checkpoint);
         Thread.sleep(1L);
-        verify(journal).eraseTo(revision);
+        verify(journal).erase(checkpoint);
 
     }
 
