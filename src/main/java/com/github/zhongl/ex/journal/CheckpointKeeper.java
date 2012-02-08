@@ -23,6 +23,7 @@ public class CheckpointKeeper {
     public CheckpointKeeper(File dir) throws IOException {
         this.dir = dir;
         if (!dir.exists()) checkState(dir.mkdirs());
+
         List<Checkpoint> checkpoints = new FilesLoader<Checkpoint>(dir, new FilterAndComparator() {
             @Override
             public int compare(File o1, File o2) {

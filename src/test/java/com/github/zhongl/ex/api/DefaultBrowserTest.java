@@ -138,7 +138,6 @@ public class DefaultBrowserTest {
         erasableMock.assertCheckpointIs(checkpoint);
 
         assertThat(browser.get(key), is(value));
-        durableMock.assertCursorIs(cursor);
     }
 
     @Test
@@ -153,6 +152,7 @@ public class DefaultBrowserTest {
         assertThat(browser.get(key), is(value));
 
         browser.update(new Entry<Md5Key, byte[]>(key, Nils.BYTES));
+        doReturn(null).when(index).get(key);
         assertThat(browser.get(key), is(nullValue()));
     }
 
@@ -168,10 +168,8 @@ public class DefaultBrowserTest {
         private volatile Iterator<Entry<Md5Key, byte[]>> appendings;
         private volatile Iterator<Entry<Md5Key, Cursor>> removings;
         private volatile Checkpoint checkpoint;
-        private volatile Cursor cursor;
 
         private final Semaphore mergeSemaphore = new Semaphore(0);
-        private final Semaphore getSemaphore = new Semaphore(0);
 
         @Override
         public void merge(
@@ -186,9 +184,7 @@ public class DefaultBrowserTest {
 
         @Override
         public void get(Cursor cursor, FutureCallback<byte[]> callback) {
-            this.cursor = cursor;
-            callback.onSuccess(value);
-            getSemaphore.release();
+            if (cursor.equals(DefaultBrowserTest.this.cursor)) callback.onSuccess(value);
         }
 
         public void assertAppendingsHas(Entry<Md5Key, byte[]>... entries) throws Exception {
@@ -212,11 +208,6 @@ public class DefaultBrowserTest {
             assertThat(this.checkpoint, is(checkpoint));
         }
 
-        public void assertCursorIs(Cursor cursor) throws Exception {
-            getSemaphore.tryAcquire(1, SECONDS);
-            assertThat(this.cursor, is(cursor));
-        }
-
     }
 
     private class ErasableMock extends Actor implements Erasable {
@@ -235,7 +226,6 @@ public class DefaultBrowserTest {
             assertThat(this.checkpoint, is(checkpoint));
         }
     }
-
 
     private class Mergings extends ForwardingCollection<Entry<Md5Key, Cursor>> {
         volatile int count;

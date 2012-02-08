@@ -22,6 +22,7 @@ import com.github.zhongl.ex.journal.Checkpoint;
 import com.github.zhongl.ex.journal.CheckpointKeeper;
 import com.github.zhongl.ex.page.Cursor;
 import com.github.zhongl.ex.util.Entry;
+import com.github.zhongl.ex.util.Nils;
 import com.google.common.base.Function;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.util.concurrent.FutureCallback;
@@ -43,7 +44,6 @@ import static com.github.zhongl.ex.util.FutureCallbacks.getUnchecked;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
 
-    public static final Object PHANTOM = new Object();
     public static final Object REMOVED = new Object();
 
     private final Index index;
@@ -68,7 +68,7 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
         Object value = cache.get(key);
         if (value == null) return get(index.get(key)); // cache miss
         if (value instanceof byte[]) return (byte[]) value;
-        return null; // removed or phantom key
+        return null; // removed
     }
 
     @Override
@@ -80,7 +80,7 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
                 for (Entry<Md5Key, Cursor> entry : sortedIterable) cache.remove(entry.key()); // release cache
                 checkpointKeeper.last(checkpoint);
                 actor(Erasable.class).erase(checkpoint);
-                return null;
+                return Nils.VOID;
             }
         });
     }
@@ -91,11 +91,29 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
 
         if (entry.value().length > 0) {
             value = entry.value(); // new entry
-            appendings.add(entry);
+
+            submit(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    appendings.add(entry);
+                    return Nils.VOID;
+                }
+            });
+
         } else if (cache.containsKey(entry.key())) {
-            appendings.remove(new Entry<Md5Key, byte[]>(entry.key(), (byte[]) cache.get(entry.key())));
-            value = PHANTOM;
+            final byte[] removed = (byte[]) cache.remove(entry.key()); // phantom entry
+
+            submit(new Callable<Void>() {
+                @Override
+                public Void call() throws Exception {
+                    appendings.remove(new Entry<Md5Key, byte[]>(entry.key(), removed));
+                    return Nils.VOID;
+                }
+            });
+
+            return;
         } else {
+
             Future<Cursor> future = submit(new Callable<Cursor>() {
                 @Override
                 public Cursor call() throws Exception {
@@ -131,7 +149,7 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
 
                 actor(Durable.class).merge(copyAndClear(appendings).iterator(), removingsItr, checkpoint);
 
-                return null;
+                return Nils.VOID;
             }
         });
     }
@@ -142,7 +160,7 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
             @Override
             public Void apply(@Nullable FutureCallback<byte[]> callback) {
                 actor(Durable.class).get(cursor, callback);
-                return null;
+                return Nils.VOID;
             }
         });
     }
