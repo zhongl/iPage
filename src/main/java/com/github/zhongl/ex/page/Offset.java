@@ -17,12 +17,15 @@ package com.github.zhongl.ex.page;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class Offset extends Number<Offset> {
-    public static final Offset NIL = new Offset(-1L);
 
     private final Long value;
 
     public Offset(long value) {
         this.value = value;
+    }
+
+    public Offset(String text) {
+        this(Long.parseLong(text));
     }
 
     public Offset add(long length) {
