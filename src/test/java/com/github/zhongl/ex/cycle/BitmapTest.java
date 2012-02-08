@@ -14,9 +14,11 @@ public class BitmapTest {
     public void usage() throws Exception {
         Bitmap bitmap = new Bitmap(ByteBuffer.allocate(4096));
 
-        bitmap.set(0, 3);
+        bitmap.set(5, 3);
 
-        assertThat(bitmap.nextClearBit(0), is(3));
+        assertThat(bitmap.nextSetBit(0), is(5));
+        assertThat(bitmap.nextClearBit(5), is(8));
+        assertThat(bitmap.nextSetBit(8), is(-1));
 
         bitmap.reset();
 

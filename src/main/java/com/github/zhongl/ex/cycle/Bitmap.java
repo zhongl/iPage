@@ -7,7 +7,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class Bitmap {
 
-    private static final int WORD_LENGTH = 8;
+    public static final int WORD_LENGTH = 8;
+
     private static final int ADDRESS_BITS_PER_WORD = 6;
     private static final int BITS_PER_WORD = 1 << ADDRESS_BITS_PER_WORD;
     private static final long WORD_MASK = 0xffffffffffffffffL;
@@ -49,6 +50,7 @@ public class Bitmap {
     }
 
     public int nextClearBit(int from) {
+        checkArgument(from > -1);
         int u = wordIndex(from);
 
         long word = ~get(u) & (WORD_MASK << from);
@@ -57,6 +59,25 @@ public class Bitmap {
             if (word != 0)
                 return (u * BITS_PER_WORD) + Long.numberOfTrailingZeros(word);
             word = ~get(++u);
+        }
+    }
+
+    public int nextSetBit(int from) {
+        checkArgument(from > -1);
+
+        int u = wordIndex(from);
+
+        int boundary = buffer.capacity() / WORD_LENGTH;
+        if (u >= boundary) return -1;
+
+        long word = get(u) & (WORD_MASK << from);
+
+        while (true) {
+            if (word != 0)
+                return (u * BITS_PER_WORD) + Long.numberOfTrailingZeros(word);
+            if (++u >= boundary)
+                return -1;
+            word = get(u);
         }
     }
 
@@ -85,5 +106,4 @@ public class Bitmap {
     private static int wordIndex(int bitIndex) {
         return bitIndex >> ADDRESS_BITS_PER_WORD;
     }
-
 }
