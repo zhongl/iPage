@@ -72,13 +72,14 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
     }
 
     @Override
-    public void merge(final Iterable<Entry<Md5Key, Cursor>> sortedIterable) {
+    public void merge(final Iterable<Entry<Md5Key, Cursor>> sortedIterable, final Checkpoint checkpoint) {
         submit(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
                 index.merge(sortedIterable.iterator());
                 for (Entry<Md5Key, Cursor> entry : sortedIterable) cache.remove(entry.key()); // release cache
-
+                checkpointKeeper.last(checkpoint);
+                actor(Erasable.class).erase(checkpoint);
                 return null;
             }
         });

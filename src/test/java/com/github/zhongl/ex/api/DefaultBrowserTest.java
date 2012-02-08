@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
 
 import static java.util.Collections.singleton;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -27,8 +28,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class DefaultBrowserTest {
@@ -51,6 +51,7 @@ public class DefaultBrowserTest {
         index = mock(Index.class);
 
         checkpointKeeper = mock(CheckpointKeeper.class);
+        doReturn(new Checkpoint(0L)).when(checkpointKeeper).last();
         browser = new DefaultBrowser(index, checkpointKeeper);
 
         cursor = new DefaultCursor(0L, 1);
@@ -121,15 +122,20 @@ public class DefaultBrowserTest {
         Entry<Md5Key, byte[]> entry = new Entry<Md5Key, byte[]>(key, value);
 
         browser.update(entry);
-        browser.force(new Checkpoint(1L));
+
+        Checkpoint checkpoint = new Checkpoint(1L);
+        browser.force(checkpoint);
 
         durableMock.assertAppendingsHas(entry);
 
         Mergings mergings = new Mergings(singleton(new Entry<Md5Key, Cursor>(key, Nils.CURSOR)));
 
-        browser.merge(mergings);
+        browser.merge(mergings, checkpoint);
 
         mergings.waitForIterated();
+
+        verify(checkpointKeeper).last(checkpoint);
+        erasableMock.assertCheckpointIs(checkpoint);
 
         assertThat(browser.get(key), is(value));
         durableMock.assertCursorIs(cursor);
@@ -164,8 +170,8 @@ public class DefaultBrowserTest {
         private volatile Checkpoint checkpoint;
         private volatile Cursor cursor;
 
-        private final CountDownLatch mergeLatch = new CountDownLatch(1);
-        private final CountDownLatch getLatch = new CountDownLatch(1);
+        private final Semaphore mergeSemaphore = new Semaphore(0);
+        private final Semaphore getSemaphore = new Semaphore(0);
 
         @Override
         public void merge(
@@ -175,38 +181,39 @@ public class DefaultBrowserTest {
             this.appendings = appendings;
             this.removings = removings;
             this.checkpoint = checkpoint;
-            mergeLatch.countDown();
+            mergeSemaphore.release(3);
         }
 
         @Override
         public void get(Cursor cursor, FutureCallback<byte[]> callback) {
             this.cursor = cursor;
             callback.onSuccess(value);
-            getLatch.countDown();
+            getSemaphore.release();
         }
 
         public void assertAppendingsHas(Entry<Md5Key, byte[]>... entries) throws Exception {
+            mergeSemaphore.tryAcquire(1, SECONDS);
             assertIteratorHas(appendings, entries);
         }
 
         public void assertRemovingsHas(Entry<Md5Key, Cursor>... entries) throws Exception {
+            mergeSemaphore.tryAcquire(1, SECONDS);
             assertIteratorHas(removings, entries);
         }
 
         private <T> void assertIteratorHas(Iterator<T> iterator, T[] entries) throws InterruptedException {
-            mergeLatch.await(1, SECONDS);
             for (T entry : entries) {
                 assertThat(iterator.next(), is(entry));
             }
         }
 
         public void assertCheckpointIs(Checkpoint checkpoint) throws Exception {
-            mergeLatch.await(1, SECONDS);
+            mergeSemaphore.tryAcquire(1, SECONDS);
             assertThat(this.checkpoint, is(checkpoint));
         }
 
         public void assertCursorIs(Cursor cursor) throws Exception {
-            getLatch.await(1, SECONDS);
+            getSemaphore.tryAcquire(1, SECONDS);
             assertThat(this.cursor, is(cursor));
         }
 
@@ -215,16 +222,16 @@ public class DefaultBrowserTest {
     private class ErasableMock extends Actor implements Erasable {
 
         private Checkpoint checkpoint;
-        private CountDownLatch eraseLatch = new CountDownLatch(1);
+        private Semaphore eraseLatch = new Semaphore(0);
 
         @Override
         public void erase(Checkpoint checkpoint) {
-            eraseLatch.countDown();
             this.checkpoint = checkpoint;
+            eraseLatch.release();
         }
 
         public void assertCheckpointIs(Checkpoint checkpoint) throws Exception {
-            eraseLatch.await(1L, SECONDS);
+            eraseLatch.tryAcquire(1L, SECONDS);
             assertThat(this.checkpoint, is(checkpoint));
         }
     }

@@ -6,4 +6,8 @@ public class CheckpointKeeper {
     public Checkpoint last() {
         return null;  // TODO last
     }
+
+    public void last(Checkpoint checkpoint) {
+        // TODO last
+    }
 }

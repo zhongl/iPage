@@ -17,11 +17,12 @@ package com.github.zhongl.ex.api;
 
 import com.github.zhongl.ex.actor.Asynchronize;
 import com.github.zhongl.ex.index.Md5Key;
+import com.github.zhongl.ex.journal.Checkpoint;
 import com.github.zhongl.ex.page.Cursor;
 import com.github.zhongl.ex.util.Entry;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @Asynchronize
 interface Mergable {
-    void merge(Iterable<Entry<Md5Key, Cursor>> sortedIterable);
+    void merge(Iterable<Entry<Md5Key, Cursor>> sortedIterable, Checkpoint checkpoint);
 }
