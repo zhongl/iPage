@@ -47,4 +47,17 @@ public class Checkpoint extends Number<Checkpoint> {
     public int compareTo(Checkpoint o) {
         return value.compareTo(o.value);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Checkpoint that = (Checkpoint) o;
+        return value.equals(that.value);
+    }
+
+    @Override
+    public int hashCode() {
+        return value.hashCode();
+    }
 }

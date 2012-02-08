@@ -1,5 +1,6 @@
 package com.github.zhongl.ex.util;
 
+import com.github.zhongl.ex.journal.Checkpoint;
 import com.github.zhongl.ex.page.Cursor;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
@@ -10,4 +11,5 @@ public interface Nils {
     Void VOID = null;
 
     Cursor CURSOR = new Cursor() {};
+    Checkpoint CHECKPOINT = new Checkpoint(0L);
 }
