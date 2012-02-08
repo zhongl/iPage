@@ -4,6 +4,7 @@ import com.github.zhongl.ex.actor.Actor;
 import com.github.zhongl.ex.index.Index;
 import com.github.zhongl.ex.index.Md5Key;
 import com.github.zhongl.ex.journal.Checkpoint;
+import com.github.zhongl.ex.journal.CheckpointKeeper;
 import com.github.zhongl.ex.page.Cursor;
 import com.github.zhongl.ex.page.DefaultCursor;
 import com.github.zhongl.ex.util.Entry;
@@ -25,6 +26,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
@@ -38,6 +40,7 @@ public class DefaultBrowserTest {
     private Index index;
     private DefaultBrowserTest.ErasableMock erasableMock;
     private DefaultCursor cursor;
+    private CheckpointKeeper checkpointKeeper;
 
     @Before
     public void setUp() throws Exception {
@@ -46,15 +49,32 @@ public class DefaultBrowserTest {
         durableMock = new DurableMock();
         erasableMock = new ErasableMock();
         index = mock(Index.class);
-        browser = new DefaultBrowser(index);
+
+        checkpointKeeper = mock(CheckpointKeeper.class);
+        browser = new DefaultBrowser(index, checkpointKeeper);
 
         cursor = new DefaultCursor(0L, 1);
         doReturn(cursor).when(index).get(key);
     }
 
     @Test
+    public void ignoreForce() throws Exception {
+        doReturn(new Checkpoint(2L)).when(checkpointKeeper).last();
+
+        browser.update(new Entry<Md5Key, byte[]>(key, value));
+
+        Checkpoint checkpoint = new Checkpoint(1L);
+        browser.force(checkpoint);
+
+        try {
+            erasableMock.assertCheckpointIs(checkpoint);
+            durableMock.assertCheckpointIs(checkpoint);
+            fail("Should ignore force");
+        } catch (AssertionError ignore) { }
+    }
+
+    @Test
     public void force() throws Exception {
-        // TODO force
         byte[] value0 = "0".getBytes();
         Md5Key key0 = Md5Key.generate(value0);
         byte[] value1 = "1".getBytes();
@@ -166,16 +186,17 @@ public class DefaultBrowserTest {
         }
 
         public void assertAppendingsHas(Entry<Md5Key, byte[]>... entries) throws Exception {
-            mergeLatch.await(1, SECONDS);
-            for (Entry<Md5Key, byte[]> entry : entries) {
-                assertThat(appendings.next(), is(entry));
-            }
+            assertIteratorHas(appendings, entries);
         }
 
         public void assertRemovingsHas(Entry<Md5Key, Cursor>... entries) throws Exception {
+            assertIteratorHas(removings, entries);
+        }
+
+        private <T> void assertIteratorHas(Iterator<T> iterator, T[] entries) throws InterruptedException {
             mergeLatch.await(1, SECONDS);
-            for (Entry<Md5Key, Cursor> entry : entries) {
-                assertThat(removings.next(), is(entry));
+            for (T entry : entries) {
+                assertThat(iterator.next(), is(entry));
             }
         }
 

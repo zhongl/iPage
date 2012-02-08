@@ -19,6 +19,7 @@ import com.github.zhongl.ex.actor.Actor;
 import com.github.zhongl.ex.index.Index;
 import com.github.zhongl.ex.index.Md5Key;
 import com.github.zhongl.ex.journal.Checkpoint;
+import com.github.zhongl.ex.journal.CheckpointKeeper;
 import com.github.zhongl.ex.page.Cursor;
 import com.github.zhongl.ex.util.Entry;
 import com.google.common.base.Function;
@@ -46,6 +47,7 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
     public static final Object REMOVED = new Object();
 
     private final Index index;
+    private final CheckpointKeeper checkpointKeeper;
     private final SortedMap<Md5Key, Object> cache;
 
     @GuardedBy("this actor")
@@ -53,8 +55,9 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
     @GuardedBy("this actor")
     private final Queue<Entry<Md5Key, byte[]>> appendings;
 
-    public DefaultBrowser(Index index) {
+    public DefaultBrowser(Index index, CheckpointKeeper checkpointKeeper) {
         this.index = index;
+        this.checkpointKeeper = checkpointKeeper;
         this.cache = new ConcurrentSkipListMap<Md5Key, Object>();
         this.appendings = new LinkedList<Entry<Md5Key, byte[]>>();
         this.removings = new LinkedList<Entry<Md5Key, Future<Cursor>>>();
@@ -75,6 +78,7 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
             public Void call() throws Exception {
                 index.merge(sortedIterable.iterator());
                 for (Entry<Md5Key, Cursor> entry : sortedIterable) cache.remove(entry.key()); // release cache
+
                 return null;
             }
         });
@@ -107,6 +111,7 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
 
     @Override
     public void force(final Checkpoint checkpoint) {
+        if (checkpoint.compareTo(checkpointKeeper.last()) <= 0) return;
         submit(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
