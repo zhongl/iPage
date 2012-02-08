@@ -2,6 +2,8 @@ package com.github.zhongl.ex.cycle;
 
 import org.junit.Test;
 
+import java.nio.ByteBuffer;
+
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
@@ -10,7 +12,7 @@ public class BitmapTest {
 
     @Test
     public void usage() throws Exception {
-        Bitmap bitmap = new Bitmap(16);
+        Bitmap bitmap = new Bitmap(ByteBuffer.allocate(4096));
 
         bitmap.set(0, 3);
 
