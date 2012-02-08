@@ -22,29 +22,34 @@ import com.github.zhongl.ex.journal.Checkpoint;
 import com.github.zhongl.ex.page.Cursor;
 import com.github.zhongl.ex.util.Entry;
 import com.google.common.base.Function;
+import com.google.common.collect.AbstractIterator;
 import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.SortedMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.Future;
 
 import static com.github.zhongl.ex.actor.Actors.actor;
 import static com.github.zhongl.ex.util.FutureCallbacks.call;
+import static com.github.zhongl.ex.util.FutureCallbacks.getUnchecked;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
 
     public static final Object PHANTOM = new Object();
+    public static final Object REMOVED = new Object();
 
     private final Index index;
     private final SortedMap<Md5Key, Object> cache;
 
     @GuardedBy("this actor")
-    private final Queue<Entry<Md5Key, Cursor>> removings;
+    private final Queue<Entry<Md5Key, Future<Cursor>>> removings;
     @GuardedBy("this actor")
     private final Queue<Entry<Md5Key, byte[]>> appendings;
 
@@ -52,7 +57,7 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
         this.index = index;
         this.cache = new ConcurrentSkipListMap<Md5Key, Object>();
         this.appendings = new LinkedList<Entry<Md5Key, byte[]>>();
-        this.removings = new LinkedList<Entry<Md5Key, Cursor>>();
+        this.removings = new LinkedList<Entry<Md5Key, Future<Cursor>>>();
     }
 
     @Override
@@ -77,26 +82,27 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
 
     @Override
     public void update(final Entry<Md5Key, byte[]> entry) {
-        submit(new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                Object value;
+        final Object value;
 
-                if (entry.value().length > 0) {
-                    value = entry.value(); // new entry
-                    appendings.add(entry);
-                } else if (cache.containsKey(entry.key())) {
-                    value = PHANTOM; // phantom entry
-                } else {
-                    value = index.get(entry.key()); // removed entry
-                    // IMPROVE use parallel
-                    removings.add(new Entry<Md5Key, Cursor>(entry.key(), (Cursor) value));
+        if (entry.value().length > 0) {
+            value = entry.value(); // new entry
+            appendings.add(entry);
+        } else if (cache.containsKey(entry.key())) {
+            appendings.remove(new Entry<Md5Key, byte[]>(entry.key(), (byte[]) cache.get(entry.key())));
+            value = PHANTOM;
+        } else {
+            Future<Cursor> future = submit(new Callable<Cursor>() {
+                @Override
+                public Cursor call() throws Exception {
+                    return index.get(entry.key());
                 }
+            });
+            value = REMOVED;
+            // IMPROVE use parallel
+            removings.add(new Entry<Md5Key, Future<Cursor>>(entry.key(), future));
+        }
 
-                cache.put(entry.key(), value);
-                return null;
-            }
-        });
+        cache.put(entry.key(), value);
     }
 
     @Override
@@ -104,9 +110,20 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
         submit(new Callable<Void>() {
             @Override
             public Void call() throws Exception {
-                Queue<Entry<Md5Key, byte[]>> appendingsCopy = copyAndClear(appendings);
-                Queue<Entry<Md5Key, Cursor>> removingsCopy = copyAndClear(removings);
-                actor(Durable.class).merge(appendingsCopy.iterator(), removingsCopy.iterator(), checkpoint);
+                if (appendings.isEmpty() && removings.isEmpty()) actor(Erasable.class).erase(checkpoint);
+
+                Iterator<Entry<Md5Key, Cursor>> removingsItr = new AbstractIterator<Entry<Md5Key, Cursor>>() {
+                    Iterator<Entry<Md5Key, Future<Cursor>>> itr = copyAndClear(removings).iterator();
+
+                    @Override
+                    protected Entry<Md5Key, Cursor> computeNext() {
+                        if (!itr.hasNext()) return endOfData();
+                        Entry<Md5Key, Future<Cursor>> entry = itr.next();
+                        return new Entry<Md5Key, Cursor>(entry.key(), getUnchecked(entry.value()));
+                    }
+                };
+
+                actor(Durable.class).merge(copyAndClear(appendings).iterator(), removingsItr, checkpoint);
 
                 return null;
             }
@@ -114,6 +131,7 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
     }
 
     private byte[] get(final Cursor cursor) {
+        if (cursor == null) return null;
         return call(new Function<FutureCallback<byte[]>, Void>() {
             @Override
             public Void apply(@Nullable FutureCallback<byte[]> callback) {

@@ -6,6 +6,7 @@ import com.github.zhongl.ex.page.Cursor;
 import com.github.zhongl.ex.page.Number;
 import com.github.zhongl.ex.page.Page;
 import com.github.zhongl.ex.util.Entry;
+import com.github.zhongl.ex.util.Nils;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.util.concurrent.FutureCallback;
 
@@ -88,7 +89,7 @@ public class FixedIndex extends Index {
                    Lower boundary help elements of sortedIterator put into right partition, while it can not be appended
                    because of Cursor.NIL.
                  */
-                Entry<Md5Key, Cursor> lowerBoundary = new Entry<Md5Key, Cursor>(key, Cursor.NIL);
+                Entry<Md5Key, Cursor> lowerBoundary = new Entry<Md5Key, Cursor>(key, Nils.CURSOR);
                 aItr = peekingIterator(concat(partition.iterator(), singletonIterator(lowerBoundary)));
 
                 final int index = i;

@@ -3,6 +3,7 @@ package com.github.zhongl.ex.index;
 import com.github.zhongl.ex.page.Cursor;
 import com.github.zhongl.ex.page.DefaultCursor;
 import com.github.zhongl.ex.util.Entry;
+import com.github.zhongl.ex.util.Nils;
 import com.github.zhongl.util.FileTestContext;
 import org.junit.After;
 import org.junit.Test;
@@ -46,7 +47,7 @@ public abstract class IndexTest extends FileTestContext {
         assertThat(index.get(key(a2)), is(value(a2)));
 
         entries = asList(
-                entry(7, Cursor.NIL),      // remove
+                entry(7, Nils.CURSOR),      // remove
                 entry(14),                 // add
                 entry(a1, value(a2))  // update
         );

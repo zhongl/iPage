@@ -4,6 +4,7 @@ import com.github.zhongl.ex.index.Md5Key;
 import com.github.zhongl.ex.journal.Checkpoint;
 import com.github.zhongl.ex.journal.Journal;
 import com.github.zhongl.ex.util.Entry;
+import com.github.zhongl.ex.util.Nils;
 import org.junit.After;
 import org.junit.Test;
 
@@ -34,7 +35,7 @@ public class DefaultRecorderTest {
         verify(controllor, times(1)).call(any(Callable.class));
 
         recorder.remove(key);
-        verify(quanlityOfService).append(journal, new Entry<Md5Key, byte[]>(key, DefaultRecorder.NULL_VALUE));
+        verify(quanlityOfService).append(journal, new Entry<Md5Key, byte[]>(key, Nils.BYTES));
         verify(controllor, times(2)).call(any(Callable.class));
 
         Checkpoint checkpoint = new Checkpoint(1L);

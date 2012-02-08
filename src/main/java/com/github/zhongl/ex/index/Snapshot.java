@@ -6,6 +6,7 @@ import com.github.zhongl.ex.page.*;
 import com.github.zhongl.ex.page.Number;
 import com.github.zhongl.ex.util.Entry;
 import com.github.zhongl.ex.util.FutureCallbacks;
+import com.github.zhongl.ex.util.Nils;
 import com.google.common.collect.PeekingIterator;
 
 import javax.annotation.concurrent.GuardedBy;
@@ -71,7 +72,7 @@ abstract class Snapshot extends Binder<Object> {
                 aItr.next();
             }
 
-            if (c.value() == Cursor.NIL) continue; // remove entry
+            if (c.value() == Nils.CURSOR) continue; // remove entry
 
             appendable.append(c, FutureCallbacks.<Cursor>ignore());
             boolean force = !aItr.hasNext() && !bItr.hasNext();
@@ -83,7 +84,7 @@ abstract class Snapshot extends Binder<Object> {
     protected final void mergeRestOf(Iterator<Entry<Md5Key, Cursor>> iterator, Appendable merged) throws IOException {
         while (iterator.hasNext()) {
             Entry<Md5Key, Cursor> entry = iterator.next();
-            if (entry.value() == Cursor.NIL) continue;
+            if (entry.value() == Nils.CURSOR) continue;
             merged.append(entry, FutureCallbacks.<Cursor>ignore());
         }
         merged.force();

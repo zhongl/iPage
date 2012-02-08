@@ -21,6 +21,7 @@ import com.github.zhongl.ex.journal.Checkpoint;
 import com.github.zhongl.ex.journal.Journal;
 import com.github.zhongl.ex.util.CallByCountOrElapse;
 import com.github.zhongl.ex.util.Entry;
+import com.github.zhongl.ex.util.Nils;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
@@ -32,8 +33,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @ThreadSafe
 class DefaultRecorder extends Actor implements Recorder, Erasable {
-
-    static final byte[] NULL_VALUE = new byte[0];
 
     private final QuanlityOfService quanlityOfService;
     private final Journal journal;
@@ -69,7 +68,7 @@ class DefaultRecorder extends Actor implements Recorder, Erasable {
 
     @Override
     public boolean remove(Md5Key key) {
-        return append(new Entry<Md5Key, byte[]>(checkNotNull(key), NULL_VALUE));
+        return append(new Entry<Md5Key, byte[]>(checkNotNull(key), Nils.BYTES));
     }
 
     @Override
