@@ -23,7 +23,6 @@ import java.nio.MappedByteBuffer;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 import static java.nio.channels.FileChannel.MapMode.READ_ONLY;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
@@ -53,15 +52,19 @@ public class ReadOnlyMappedBuffers {
 
     public static ByteBuffer getOrMap(File file) {
         checkNotNull(file);
-        checkState(file.exists());
+
+/*
+        CAUTION : mapped may be not sync with file content.
 
         MappedByteBuffer buffer = CACHE.getUnchecked(file);
-        if (ByteBuffers.lengthOf(buffer) == file.length()) { // mapped may not sync with file content.
+        if (ByteBuffers.lengthOf(buffer) == file.length()) {
+            //
             if (!buffer.isLoaded()) buffer.load();
             return buffer.duplicate();
         }
 
         clearMappedOf(file); // clear for reload.
+*/
         return CACHE.getUnchecked(file).duplicate();
     }
 
