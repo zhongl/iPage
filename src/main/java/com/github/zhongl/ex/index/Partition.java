@@ -40,10 +40,10 @@ abstract class Partition extends Page implements Iterable<Entry<Md5Key, Cursor>>
     }
 
     private abstract class RandomAccessList<T> extends AbstractList<T> implements RandomAccess {
+
         @Override
         public int size() {
-            if (file().length() == 0) return 0;
-            return ReadOnlyMappedBuffers.getOrMap(file()).capacity() / EntryCodec.LENGTH;
+            return (int) (file().length() / EntryCodec.LENGTH);
         }
 
         @Override
