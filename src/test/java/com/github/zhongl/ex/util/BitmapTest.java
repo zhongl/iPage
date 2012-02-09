@@ -1,4 +1,4 @@
-package com.github.zhongl.ex.cycle;
+package com.github.zhongl.ex.util;
 
 import org.junit.Test;
 
@@ -12,7 +12,18 @@ public class BitmapTest {
 
     @Test
     public void usage() throws Exception {
-        Bitmap bitmap = new Bitmap(ByteBuffer.allocate(4096));
+        final ByteBuffer buffer = ByteBuffer.allocate(4096);
+        Bitmap bitmap = new Bitmap() {
+            @Override
+            protected ByteBuffer buffer() {
+                return buffer;
+            }
+
+            @Override
+            protected int capacity() {
+                return buffer.capacity();
+            }
+        };
 
         bitmap.set(5, 3);
 
