@@ -8,6 +8,7 @@ import com.github.zhongl.util.Transformer;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
@@ -36,7 +37,10 @@ public abstract class SnapshotKeeper<S extends Snapshot, I> implements Closable 
         }
     }
 
-    public abstract void merge(I input);
+    public void merge(Iterator<I> input) throws IOException {
+        if (!input.hasNext()) return;
+        currentSnapshot = (S) currentSnapshot.merge(input);
+    }
 
     @Override
     public void close() {

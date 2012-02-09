@@ -7,8 +7,6 @@ import com.github.zhongl.ex.util.Tuple;
 
 import java.nio.ByteBuffer;
 
-import static java.nio.ByteBuffer.allocate;
-
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class CycleBatch extends DefaultBatch {
 
@@ -20,26 +18,18 @@ class CycleBatch extends DefaultBatch {
     }
 
     @Override
-    protected Tuple aggregate(Tuple tuple, ByteBuffer aggregated) {
+    protected Tuple aggregate(Tuple tuple, ByteBuffers.Aggregater aggregater) {
         ByteBuffer buffer = bufferIn(tuple);
 
         long offset = position;
         int bufferLength = ByteBuffers.lengthOf(buffer);
         int numOfBlocks = bufferLength / blockSize + 1;
-        int alignLength = numOfBlocks * blockSize;
 
-        while (aggregated.remaining() < alignLength) {
-            aggregated.flip();
-            aggregated = allocate(aggregated.capacity() * 2).put(aggregated);
-        }
-
-        aggregated.put(buffer);
-
-        aggregated.position(aggregated.position() + (alignLength - bufferLength)); // set align position
+        aggregater.concat(buffer, numOfBlocks * blockSize);
 
         position += numOfBlocks;
 
         return new Tuple(callbackIn(tuple), offset, numOfBlocks);
-
     }
+
 }

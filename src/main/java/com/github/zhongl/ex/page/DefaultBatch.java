@@ -28,7 +28,6 @@ import java.nio.ByteBuffer;
 public class DefaultBatch<V> extends AbstractBatch<V> {
 
     protected final Codec codec;
-
     protected long position;
 
     public DefaultBatch(Codec codec, long position, int estimateBufferSize) {
@@ -40,18 +39,6 @@ public class DefaultBatch<V> extends AbstractBatch<V> {
     @Override
     protected Tuple tuple(FutureCallback<Cursor> callback, V value) {
         return new Tuple(callback, codec.encode(value));
-    }
-
-    @Override
-    protected Tuple aggregate(Tuple tuple, ByteBuffer aggregated) {
-        ByteBuffer buffer = bufferIn(tuple);
-
-        long offset = position;
-        int length = ByteBuffers.lengthOf(buffer);
-        ByteBuffers.aggregate(aggregated, buffer);
-        position += length;
-
-        return new Tuple(callbackIn(tuple), offset, length);
     }
 
     protected ByteBuffer bufferIn(Tuple tuple) {
@@ -71,4 +58,14 @@ public class DefaultBatch<V> extends AbstractBatch<V> {
 
     protected Cursor cursor(long offset, int length) {return new DefaultCursor(offset, length);}
 
+    protected Tuple aggregate(Tuple tuple, ByteBuffers.Aggregater aggregater) {
+        ByteBuffer buffer = bufferIn(tuple);
+
+        long offset = position;
+        int length = ByteBuffers.lengthOf(buffer);
+        aggregater.concat(buffer, length);
+        position += length;
+
+        return new Tuple(callbackIn(tuple), offset, length);
+    }
 }

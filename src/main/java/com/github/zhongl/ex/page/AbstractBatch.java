@@ -15,6 +15,7 @@
 
 package com.github.zhongl.ex.page;
 
+import com.github.zhongl.ex.nio.ByteBuffers;
 import com.github.zhongl.ex.nio.Forcer;
 import com.github.zhongl.ex.util.Tuple;
 import com.google.common.util.concurrent.FutureCallback;
@@ -69,21 +70,18 @@ public abstract class AbstractBatch<V> implements Batch<V> {
         return size;
     }
 
-
     protected abstract Tuple tuple(FutureCallback<Cursor> callback, V value);
-
-    protected abstract Tuple aggregate(Tuple tuple, ByteBuffer aggregated);
 
     protected abstract void callback(Tuple tuple, Throwable error);
 
-    private ByteBuffer aggregate() throws IOException {
-        ByteBuffer aggregated = ByteBuffer.allocate(estimateBufferSize);
-
+    protected ByteBuffer aggregate() throws IOException {
+        ByteBuffers.Aggregater aggregater = ByteBuffers.aggregater(estimateBufferSize);
         for (int i = 0; i < tupleCycle.size(); i++) {
-            tupleCycle.offer(aggregate(tupleCycle.poll(), aggregated));
+            tupleCycle.offer(aggregate(tupleCycle.poll(), aggregater));
         }
-
-        return (ByteBuffer) aggregated.flip();
+        return aggregater.get();
     }
+
+    protected abstract Tuple aggregate(Tuple tuple, ByteBuffers.Aggregater aggregater);
 
 }

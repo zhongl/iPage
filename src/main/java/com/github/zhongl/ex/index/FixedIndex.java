@@ -2,9 +2,8 @@ package com.github.zhongl.ex.index;
 
 import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.page.Appendable;
-import com.github.zhongl.ex.page.Cursor;
+import com.github.zhongl.ex.page.*;
 import com.github.zhongl.ex.page.Number;
-import com.github.zhongl.ex.page.Page;
 import com.github.zhongl.ex.util.Entry;
 import com.github.zhongl.ex.util.Nils;
 import com.google.common.collect.PeekingIterator;
@@ -27,16 +26,18 @@ public class FixedIndex extends Index {
 
     static final BigInteger INTERVAL = Md5Key.MAX.bigInteger.divide(new BigInteger(PARTITION_NUM, 10));
 
-    public FixedIndex(File dir) throws IOException { super(dir); }
-
-    @Override
-    protected Snapshot newSnapshot(File file, Codec codec) throws IOException {
-        return new InnerSnapshot(file, codec);
+    public FixedIndex(File dir) throws IOException {
+        super(dir, new Factory<Index.Snapshot>() {
+            @Override
+            public Index.Snapshot create(File file) throws IOException {
+                return new Snapshot(file, new EntryCodec());  // TODO create
+            }
+        });
     }
 
-    private class InnerSnapshot extends Snapshot {
+    private static class Snapshot extends Index.Snapshot {
 
-        public InnerSnapshot(File file, Codec codec) throws IOException {
+        public Snapshot(File file, Codec codec) throws IOException {
             super(file, codec);
             int partitionNums = Integer.parseInt(PARTITION_NUM);
             if (pages.size() == 1) {
@@ -60,19 +61,19 @@ public class FixedIndex extends Index {
         }
 
         @Override
-        public boolean isEmpty() {
+        protected boolean isEmpty() {
             for (Page page : pages)
                 if (page.file().length() > 0) return false;
             return true;
         }
 
         @Override
-        protected Snapshot newSnapshotOn(File dir) throws IOException {
-            return new InnerSnapshot(dir, codec);
+        protected Index.Snapshot next(File dir) throws IOException {
+            return new Snapshot(dir, codec);
         }
 
         @Override
-        protected void merge(Iterator<Entry<Md5Key, Cursor>> sortedIterator, final Snapshot snapshot) throws IOException {
+        protected void merge(Iterator<Entry<Md5Key, Cursor>> sortedIterator, final SnapshotBinder snapshot) throws IOException {
             PeekingIterator<Entry<Md5Key, Cursor>> bItr = peekingIterator(sortedIterator);
             PeekingIterator<Entry<Md5Key, Cursor>> aItr;
 
@@ -96,7 +97,7 @@ public class FixedIndex extends Index {
                 Appendable<Object> appendable = new Appendable<Object>() {
                     @Override
                     public void append(Object value, FutureCallback<Cursor> callback) {
-                        ((InnerSnapshot) snapshot).appendToPartition(index, value, callback);
+                        ((Snapshot) snapshot).appendToPartition(index, value, callback);
                     }
 
                     @Override
@@ -109,7 +110,7 @@ public class FixedIndex extends Index {
 
                 if (aItr.hasNext()) mergeRestOf(aItr, appendable);
 
-                ((InnerSnapshot) snapshot).force(index); // to fix never force bug cause by lower boundary.
+                ((Snapshot) snapshot).force(index); // to fix never force bug cause by lower boundary.
             }
 
         }

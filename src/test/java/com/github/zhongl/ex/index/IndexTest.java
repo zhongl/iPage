@@ -127,7 +127,7 @@ public abstract class IndexTest extends FileTestContext {
         dir = testDir("overflow");
         index = newIndex(dir);
 
-        int capacity = FlexIndex.MAX_ENTRY_SIZE + 2; // to append more than one page.
+        int capacity = FlexIndex.MAX_ENTRY_SIZE + 2 + 1; // to append more than one page.
         List<Entry<Md5Key, Cursor>> entries = new ArrayList<Entry<Md5Key, Cursor>>(capacity);
         for (int i = 0; i < capacity; i++) entries.add(entry(i));
         Collections.sort(entries);
@@ -135,6 +135,7 @@ public abstract class IndexTest extends FileTestContext {
         index.merge(entries.iterator());
 
         assertThat(index.get(key(FlexIndex.MAX_ENTRY_SIZE + 1)), is(value(FlexIndex.MAX_ENTRY_SIZE + 1)));
+//        assertThat(index.get(key(2)), is(value(2)));
 
     }
 

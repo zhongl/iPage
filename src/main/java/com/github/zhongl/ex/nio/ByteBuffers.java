@@ -14,18 +14,33 @@ public class ByteBuffers {
         return buffer.limit() - buffer.position();
     }
 
-    public static ByteBuffer aggregate(ByteBuffer aggregated, ByteBuffer more) {
-        checkNotNull(aggregated);
-        checkArgument(aggregated.capacity() > 0);
-        checkNotNull(more);
+    public static Aggregater aggregater(int initialCapacity) {
+        return new Aggregater(initialCapacity);
+    }
 
-        int lengthOfMore = lengthOf(more);
+    public static class Aggregater {
+        private volatile ByteBuffer aggregated;
 
-        while (aggregated.remaining() < lengthOfMore) {
-            aggregated.flip();
-            aggregated = allocate(aggregated.capacity() * 2).put(aggregated);
+        private Aggregater(int initialCapacity) {
+            checkArgument(initialCapacity > 0);
+            this.aggregated = ByteBuffer.allocate(initialCapacity);
         }
-        return aggregated.put(more);
+
+        public Aggregater concat(ByteBuffer more, int length) {
+            checkNotNull(more);
+            int previous = aggregated.position();
+            while (aggregated.remaining() < length) {
+                aggregated.flip();
+                aggregated = allocate(aggregated.capacity() * 2).put(aggregated);
+            }
+            aggregated.put(more);
+            aggregated.position(previous + length);
+            return this;
+        }
+
+        public ByteBuffer get() {
+            return (ByteBuffer) aggregated.flip();
+        }
     }
 
 }

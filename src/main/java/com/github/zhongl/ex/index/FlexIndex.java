@@ -1,10 +1,8 @@
 package com.github.zhongl.ex.index;
 
 import com.github.zhongl.ex.codec.Codec;
-import com.github.zhongl.ex.page.Batch;
-import com.github.zhongl.ex.page.Cursor;
+import com.github.zhongl.ex.page.*;
 import com.github.zhongl.ex.page.Number;
-import com.github.zhongl.ex.page.Page;
 import com.github.zhongl.ex.util.Entry;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
@@ -24,18 +22,20 @@ public class FlexIndex extends Index {
 
     private static final int CAPACITY = MAX_ENTRY_SIZE * EntryCodec.LENGTH;
 
-    public FlexIndex(File dir) throws IOException { super(dir); }
-
-    @Override
-    protected Snapshot newSnapshot(File file, Codec codec) throws IOException {
-        return new InnerSnapshot(file, codec);
+    public FlexIndex(File dir) throws IOException {
+        super(dir, new Factory<Index.Snapshot>() {
+            @Override
+            public Index.Snapshot create(File file) throws IOException {
+                return new Snapshot(file, new EntryCodec());
+            }
+        });
     }
 
-    private class InnerSnapshot extends Snapshot {
+    private static class Snapshot extends Index.Snapshot {
 
         private Entry<Md5Key, Cursor> currentAppendingEntry;
 
-        InnerSnapshot(File dir, Codec codec) throws IOException { super(dir, codec); }
+        Snapshot(File dir, Codec codec) throws IOException { super(dir, codec); }
 
         @Override
         public boolean isEmpty() {
@@ -43,12 +43,12 @@ public class FlexIndex extends Index {
         }
 
         @Override
-        protected Snapshot newSnapshotOn(File dir) throws IOException {
-            return new InnerSnapshot(dir, codec);
+        protected Index.Snapshot next(File dir) throws IOException {
+            return new Snapshot(dir, codec);
         }
 
         @Override
-        protected void merge(Iterator<Entry<Md5Key, Cursor>> sortedIterator, Snapshot snapshot) throws IOException {
+        protected void merge(Iterator<Entry<Md5Key, Cursor>> sortedIterator, SnapshotBinder snapshot) throws IOException {
             PeekingIterator<Entry<Md5Key, Cursor>> bItr = Iterators.peekingIterator(sortedIterator);
             PeekingIterator<Entry<Md5Key, Cursor>> aItr;
 

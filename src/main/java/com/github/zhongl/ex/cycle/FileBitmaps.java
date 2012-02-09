@@ -1,112 +1,104 @@
 package com.github.zhongl.ex.cycle;
 
 import com.github.zhongl.ex.codec.Codec;
-import com.github.zhongl.ex.nio.Closable;
 import com.github.zhongl.ex.page.*;
-import com.github.zhongl.util.FilesLoader;
-import com.github.zhongl.util.NumberNamedFilterAndComparator;
-import com.github.zhongl.util.Transformer;
+import com.github.zhongl.ex.page.Number;
+import com.github.zhongl.ex.util.Bitmap;
+import com.github.zhongl.ex.util.SnapshotKeeper;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
 import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class FileBitmaps implements Closable {
+public class FileBitmaps extends SnapshotKeeper<SnapshotBinder, DefaultCursor> {
 
     private final int pageCapcity;
 
-    private volatile InnerBinder currentSnapshot;
-
     public FileBitmaps(File dir, int pageCapcity) throws IOException {
+        super(dir, new Factory<SnapshotBinder>() {
+            @Override
+            public SnapshotBinder create(File file) throws IOException {
+                return new InnerBinder(file);
+            }
+        });
         this.pageCapcity = pageCapcity;
-
-        List<InnerBinder> list = new FilesLoader<InnerBinder>(
-                dir,
-                new NumberNamedFilterAndComparator(),
-                new Transformer<InnerBinder>() {
-                    @Override
-                    public InnerBinder transform(File file, boolean last) throws IOException {
-                        return new InnerBinder(file);
-                    }
-                }
-        ).loadTo(new ArrayList<InnerBinder>());
-
-        if (list.isEmpty()) {
-            currentSnapshot = new InnerBinder(new File(dir, "0"));
-        } else {
-            // In this case, it means index merged failed last time because of crash.
-            // So the simplest way is keep only the first binder, and remove rest, then wait for recovery.
-            currentSnapshot = list.remove(0);
-            for (InnerBinder InnerBinder : list) InnerBinder.remove();
-        }
-
-    }
-
-    public void merge(Iterator<DefaultCursor> cursorIterator) {
-        if (!cursorIterator.hasNext()) return;
-        currentSnapshot = currentSnapshot.merge(cursorIterator);
     }
 
     public long nextSetBit(long from) {
-        return currentSnapshot.nextSetBit(from);
+        return ((InnerBinder) currentSnapshot).nextSetBit(from);
     }
 
     public long nextClearBit(long from) {
-        return currentSnapshot.nextClearBit(from);
+        return ((InnerBinder) currentSnapshot).nextClearBit(from);
     }
 
-    @Override
-    public void close() {
-        currentSnapshot.close();
-    }
-
-    private class InnerBinder extends Binder<Object> {
+    static class InnerBinder extends SnapshotBinder<DefaultCursor> {
 
         protected InnerBinder(File dir) throws IOException {
             super(dir, null);
         }
 
         @Override
-        protected com.github.zhongl.ex.page.Number newNumber(@Nullable Page last) {
+        protected Number newNumber(@Nullable Page last) {
             if (last == null) return new Offset(0L);
             Offset offset = (Offset) last.number();
             return offset.add(last.file().length() * Bitmap.WORD_LENGTH);
         }
 
         @Override
-        protected com.github.zhongl.ex.page.Number parseNumber(String text) {
+        protected Number parseNumber(String text) {
             return new Offset(text);
         }
 
         @Override
-        protected Page newPage(File file, com.github.zhongl.ex.page.Number number, Codec codec) {
+        protected Page<Object> newPage(File file, Number number, Codec codec) {
             return new FileBitmap(file, number, codec);
         }
 
-        public long nextSetBit(long from) {
-            int index = binarySearchPageIndex(new Offset(from));
-            checkState(index > -1, "Invalid start %s for next set bit.", from);
-            FileBitmap bitmap = (FileBitmap) pages.get(index);
-            Offset offset = (Offset) bitmap.number();
-            return bitmap.nextSetBit((int) (from - offset.value())) + offset.value();
+        public Long nextSetBit(long from) {
+            return doInPage(from, new Fun() {
+                @Override
+                public int apply(FileBitmap fileBitmap, int offset) {
+                    return fileBitmap.nextSetBit(offset);
+                }
+            });
+        }
+
+        private Long doInPage(long offset, Fun fun) {
+            int index = binarySearchPageIndex(new Offset(offset));
+            checkState(index > -1, "Invalid offset %s for search page.", offset);
+            FileBitmap fileBitmap = (FileBitmap) pages.get(index);
+            Offset number = (Offset) fileBitmap.number();
+            int l = (int) (offset - number.value());
+            return fun.apply(fileBitmap, l) + number.value();
         }
 
         public long nextClearBit(long from) {
-            int index = binarySearchPageIndex(new Offset(from));
-            checkState(index > -1, "Invalid start %s for next clear bit.", from);
-            FileBitmap bitmap = (FileBitmap) pages.get(index);
-            Offset offset = (Offset) bitmap.number();
-            return bitmap.nextClearBit((int) (from - offset.value())) + offset.value();
+            return doInPage(from, new Fun() {
+                @Override
+                public int apply(FileBitmap fileBitmap, int offset) {
+                    return fileBitmap.nextClearBit(offset);
+                }
+            });
         }
 
-        public InnerBinder merge(Iterator<DefaultCursor> cursorIterator) {
-            return null;  // TODO merge
+        @Override
+        protected InnerBinder next(File dir) throws IOException {
+            return new InnerBinder(dir);
+        }
+
+        @Override
+        protected void merge(Iterator<DefaultCursor> iterator, SnapshotBinder binder) {
+            // TODO merge
+        }
+
+        @Override
+        protected boolean isEmpty() {
+            return pages.get(0).file().length() == 0;
         }
 
         public void remove() {
@@ -119,7 +111,7 @@ public class FileBitmaps implements Closable {
         }
 
         private class FileBitmap extends Page<Object> {
-            public FileBitmap(File file, com.github.zhongl.ex.page.Number number, Codec codec) {
+            public FileBitmap(File file, Number number, Codec codec) {
                 super(file, number, codec);
             }
 
@@ -141,5 +133,11 @@ public class FileBitmaps implements Closable {
                 return 0;  // TODO nextSetBit
             }
         }
+
+        interface Fun {
+            int apply(FileBitmap fileBitmap, int offset);
+        }
     }
+
+
 }
