@@ -2,14 +2,16 @@ package com.github.zhongl.ex.rvs;
 
 import com.github.zhongl.ex.util.Nils;
 import com.google.common.util.concurrent.FutureCallback;
+import org.softee.management.annotation.MBean;
+import org.softee.management.annotation.ManagedAttribute;
+import org.softee.management.annotation.ManagedOperation;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.Collection;
-import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -18,11 +20,33 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @ThreadSafe
+@MBean
 public abstract class Ephemerons<K, V> {
-    private final Map<K, Record> map = new ConcurrentHashMap<K, Record>();
+
     private final Semaphore flowControl = new Semaphore(0);
     private final AtomicLong id = new AtomicLong(Long.MIN_VALUE);
-    private final transient AtomicBoolean flushing = new AtomicBoolean(false);
+    private final AtomicBoolean flushing = new AtomicBoolean(false);
+
+    private final ConcurrentMap<K, Record> map;
+
+    protected Ephemerons(ConcurrentMap<K, Record> map) {this.map = map;}
+
+    @ManagedOperation
+    public int throughout(int delta) {
+        if (delta > 0) flowControl.release(delta);
+        if (delta < 0) flowControl.acquireUninterruptibly(-delta);
+        return flowControl.availablePermits();
+    }
+
+    @ManagedAttribute
+    public boolean isFlush() {
+        return flushing.get();
+    }
+
+    @ManagedAttribute
+    public int size() {
+        return map.size();
+    }
 
     public void put(K key, @Nullable V value, FutureCallback<Void> removedOrDurableCallback) {
         checkNotNull(key);
@@ -39,8 +63,10 @@ public abstract class Ephemerons<K, V> {
         return record == null ? getMiss(key) : record.value;
     }
 
+    /** This method supposed be thread safed. */
     protected abstract V getMiss(K key);
 
+    /** This method supposed be asynchronized. */
     protected abstract void requestFlush(SortedSet<Entry<K, V>> records, FutureCallback<Void> flushedCallback);
 
     private void flush() {
