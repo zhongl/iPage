@@ -63,19 +63,7 @@ public abstract class Ephemerons<K, V> {
         return record == null ? getMiss(key) : record.value;
     }
 
-    /** This method supposed be thread safed. */
-    protected abstract V getMiss(K key);
-
-    /** This method supposed be asynchronized. */
-    protected abstract void requestFlush(SortedSet<Entry<K, V>> records, FutureCallback<Void> flushedCallback);
-
-    private void put(K key, V value, FutureCallback<Void> removedOrDurableCallback) {
-        release(key, Nils.VOID);
-        if (!flowControl.tryAcquire()) flush(); // CAUTION cpu overload
-        map.put(key, new Record(id.getAndIncrement(), key, value, removedOrDurableCallback));
-    }
-
-    private void flush() {
+    public void flush() {
         if (!flushing.compareAndSet(false, true)) return;
 
         final SortedSet<Entry<K, V>> entries = sort(map.values());
@@ -93,6 +81,18 @@ public abstract class Ephemerons<K, V> {
                 flushing.set(false);
             }
         });
+    }
+
+    /** This method supposed be thread safed. */
+    protected abstract V getMiss(K key);
+
+    /** This method supposed be asynchronized. */
+    protected abstract void requestFlush(SortedSet<Entry<K, V>> records, FutureCallback<Void> flushedCallback);
+
+    private void put(K key, V value, FutureCallback<Void> removedOrDurableCallback) {
+        release(key, Nils.VOID);
+        if (!flowControl.tryAcquire()) flush(); // CAUTION cpu overload
+        map.put(key, new Record(id.getAndIncrement(), key, value, removedOrDurableCallback));
     }
 
     private SortedSet<Entry<K, V>> sort(Collection<Record> records) {
