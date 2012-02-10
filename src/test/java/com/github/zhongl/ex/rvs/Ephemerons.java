@@ -1,12 +1,12 @@
 package com.github.zhongl.ex.rvs;
 
+import com.github.zhongl.ex.util.FutureCallbacks;
 import com.github.zhongl.ex.util.Nils;
 import com.google.common.util.concurrent.FutureCallback;
 import org.softee.management.annotation.MBean;
 import org.softee.management.annotation.ManagedAttribute;
 import org.softee.management.annotation.ManagedOperation;
 
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.Collection;
 import java.util.SortedSet;
@@ -22,6 +22,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 @ThreadSafe
 @MBean
 public abstract class Ephemerons<K, V> {
+
+    private static final Object REMOVED = null;
 
     private final Semaphore flowControl = new Semaphore(0);
     private final AtomicLong id = new AtomicLong(Long.MIN_VALUE);
@@ -48,14 +50,12 @@ public abstract class Ephemerons<K, V> {
         return map.size();
     }
 
-    public void put(K key, @Nullable V value, FutureCallback<Void> removedOrDurableCallback) {
-        checkNotNull(key);
-        checkNotNull(removedOrDurableCallback);
+    public void add(K key, V value, FutureCallback<Void> removedOrDurableCallback) {
+        put(checkNotNull(key), checkNotNull(value), checkNotNull(removedOrDurableCallback));
+    }
 
-        if (!flowControl.tryAcquire()) flush(); // CAUTION cpu overload
-
-        release(key, Nils.VOID);
-        map.put(key, new Record(id.getAndIncrement(), key, value, removedOrDurableCallback));
+    public void remove(K key) {
+        put(checkNotNull(key), (V) REMOVED, FutureCallbacks.<Void>ignore());
     }
 
     public V get(K key) {
@@ -68,6 +68,12 @@ public abstract class Ephemerons<K, V> {
 
     /** This method supposed be asynchronized. */
     protected abstract void requestFlush(SortedSet<Entry<K, V>> records, FutureCallback<Void> flushedCallback);
+
+    private void put(K key, V value, FutureCallback<Void> removedOrDurableCallback) {
+        release(key, Nils.VOID);
+        if (!flowControl.tryAcquire()) flush(); // CAUTION cpu overload
+        map.put(key, new Record(id.getAndIncrement(), key, value, removedOrDurableCallback));
+    }
 
     private void flush() {
         if (!flushing.compareAndSet(false, true)) return;
@@ -95,15 +101,17 @@ public abstract class Ephemerons<K, V> {
         return sorted;
     }
 
-    private void release(K key, Object voidOrThrowable) {
+    private boolean release(K key, Object voidOrThrowable) {
         Record record = map.remove(key);
-        if (record != null) {
-            flowControl.release();
-            if (voidOrThrowable == Nils.VOID)
-                record.callback.onSuccess(Nils.VOID);
-            else
-                record.callback.onFailure((Throwable) voidOrThrowable);
-        }
+
+        if (record == null) return false;
+
+        flowControl.release();
+        if (voidOrThrowable == Nils.VOID)
+            record.callback.onSuccess(Nils.VOID);
+        else
+            record.callback.onFailure((Throwable) voidOrThrowable);
+        return true;
     }
 
     protected class Record implements Comparable<Record> {
