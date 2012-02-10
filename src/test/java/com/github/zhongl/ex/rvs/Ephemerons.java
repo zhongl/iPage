@@ -1,0 +1,102 @@
+package com.github.zhongl.ex.rvs;
+
+import com.github.zhongl.ex.util.Nils;
+import com.google.common.util.concurrent.FutureCallback;
+
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.ThreadSafe;
+import java.util.Collection;
+import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+
+/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+@ThreadSafe
+public abstract class Ephemerons<K, V> {
+    private final Map<K, Record> map = new ConcurrentHashMap<K, Record>();
+    private final Semaphore flowControl = new Semaphore(0);
+    private final AtomicLong id = new AtomicLong(Long.MIN_VALUE);
+    private final transient AtomicBoolean flushing = new AtomicBoolean(false);
+
+    public void put(K key, @Nullable V value, FutureCallback<Void> removedOrDurableCallback) {
+        checkNotNull(key);
+        checkNotNull(removedOrDurableCallback);
+
+        if (!flowControl.tryAcquire()) flush(); // CAUTION cpu overload
+
+        release(key, Nils.VOID);
+        map.put(key, new Record(id.getAndIncrement(), key, value, removedOrDurableCallback));
+    }
+
+    public V get(K key) {
+        Record record = map.get(key);
+        return record == null ? getMiss(key) : record.value;
+    }
+
+    protected abstract V getMiss(K key);
+
+    protected abstract void requestFlush(SortedSet<Entry<K, V>> records, FutureCallback<Void> flushedCallback);
+
+    private void flush() {
+        if (!flushing.compareAndSet(false, true)) return;
+
+        final SortedSet<Entry<K, V>> entries = sort(map.values());
+
+        requestFlush(entries, new FutureCallback<Void>() {
+            @Override
+            public void onSuccess(Void v) {
+                for (Entry<K, V> entry : entries) release(entry.key(), Nils.VOID);
+                flushing.set(false);
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                for (Entry<K, V> entry : entries) release(entry.key(), t);
+                flushing.set(false);
+            }
+        });
+    }
+
+    private SortedSet<Entry<K, V>> sort(Collection<Record> records) {
+        SortedSet<Entry<K, V>> sorted = new TreeSet<Entry<K, V>>();
+        for (Record record : records) sorted.add(new Entry<K, V>(record.key, record.value));
+        return sorted;
+    }
+
+    private void release(K key, Object voidOrThrowable) {
+        Record record = map.remove(key);
+        if (record != null) {
+            flowControl.release();
+            if (voidOrThrowable == Nils.VOID)
+                record.callback.onSuccess(Nils.VOID);
+            else
+                record.callback.onFailure((Throwable) voidOrThrowable);
+        }
+    }
+
+    protected class Record implements Comparable<Record> {
+
+        private final Long id;
+        private final K key;
+        private final V value;
+        private final FutureCallback<Void> callback;
+
+        public Record(long id, K key, V value, FutureCallback<Void> callback) {
+            this.id = id;
+            this.key = key;
+            this.value = value;
+            this.callback = callback;
+        }
+
+        @Override
+        public int compareTo(Record o) {
+            return id.compareTo(o.id);
+        }
+    }
+}
