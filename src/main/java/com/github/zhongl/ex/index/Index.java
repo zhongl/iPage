@@ -18,7 +18,7 @@ import java.util.Iterator;
 import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class Index extends SnapshotKeeper<Index.Snapshot, Entry<Md5Key, Cursor>> {
+public abstract class Index extends SnapshotKeeper<Index.Snapshot> {
 
     protected Index(File dir, Factory<Snapshot> factory) throws IOException {
         super(dir, factory);
@@ -26,6 +26,11 @@ public abstract class Index extends SnapshotKeeper<Index.Snapshot, Entry<Md5Key,
 
     @GuardedBy("volatile")
     public Cursor get(Md5Key key) { return currentSnapshot.get(key); }
+
+    public void merge(Iterator<Entry<Md5Key, Cursor>> input) throws IOException {
+        if (!input.hasNext()) return;
+        currentSnapshot = (Snapshot) currentSnapshot.merge(input);
+    }
 
     protected abstract static class Snapshot extends SnapshotBinder<Entry<Md5Key, Cursor>> {
         public Snapshot(File dir, Codec codec) throws IOException {super(dir, codec);}

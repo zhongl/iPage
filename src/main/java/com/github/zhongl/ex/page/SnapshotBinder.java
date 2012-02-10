@@ -8,12 +8,11 @@ import java.io.IOException;
 import java.util.Iterator;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class SnapshotBinder<I> extends Binder<Object> implements Snapshot<I> {
+public abstract class SnapshotBinder<I> extends Binder<Object> implements Snapshot {
     public SnapshotBinder(File dir, Codec codec) throws IOException {
         super(dir, codec);
     }
 
-    @Override
     public SnapshotBinder merge(Iterator<I> iterator) throws IOException {
         if (isEmpty()) {
             merge(iterator, this);

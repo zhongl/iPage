@@ -1,4 +1,4 @@
-package com.github.zhongl.ex.cycle;
+package com.github.zhongl.ex.blocks;
 
 import com.github.zhongl.ex.codec.Codec;
 import com.github.zhongl.ex.codec.ComposedCodecBuilder;
@@ -8,7 +8,7 @@ import com.github.zhongl.util.FileTestContext;
 import org.junit.Test;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class ConcentricCyclesTest extends FileTestContext {
+public class BlocksTest extends FileTestContext {
     @Test
     public void usage() throws Exception {
         dir = testDir("usage");
@@ -17,6 +17,6 @@ public class ConcentricCyclesTest extends FileTestContext {
                                           .build();
         int blockSize = 64;
         int pageCapacityOfBlocks = 10;
-        new ConcentricCycles(dir, codec, blockSize, pageCapacityOfBlocks);
+//        new Blocks(dir, codec, blockSize, pageCapacityOfBlocks, migrationListener);
     }
 }

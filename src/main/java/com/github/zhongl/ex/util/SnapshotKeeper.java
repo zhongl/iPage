@@ -8,11 +8,10 @@ import com.github.zhongl.util.Transformer;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class SnapshotKeeper<S extends Snapshot, I> implements Closable {
+public abstract class SnapshotKeeper<S extends Snapshot> implements Closable {
     protected volatile S currentSnapshot;
 
     protected SnapshotKeeper(File dir, final Factory<S> factory) throws IOException {
@@ -35,11 +34,6 @@ public abstract class SnapshotKeeper<S extends Snapshot, I> implements Closable 
             currentSnapshot = list.remove(0);
             for (S s : list) s.remove();
         }
-    }
-
-    public void merge(Iterator<I> input) throws IOException {
-        if (!input.hasNext()) return;
-        currentSnapshot = (S) currentSnapshot.merge(input);
     }
 
     @Override

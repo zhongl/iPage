@@ -24,15 +24,11 @@ import com.github.zhongl.ex.page.Cursor;
 import com.github.zhongl.ex.util.Entry;
 import com.github.zhongl.ex.util.Nils;
 import com.google.common.base.Function;
-import com.google.common.collect.AbstractIterator;
 import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.SortedMap;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Future;
@@ -136,18 +132,23 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
             public Void call() throws Exception {
                 if (appendings.isEmpty() && removings.isEmpty()) actor(Erasable.class).erase(checkpoint);
 
-                Iterator<Entry<Md5Key, Cursor>> removingsItr = new AbstractIterator<Entry<Md5Key, Cursor>>() {
-                    Iterator<Entry<Md5Key, Future<Cursor>>> itr = copyAndClear(removings).iterator();
+                List<Entry<Md5Key, Cursor>> removingList = new AbstractList<Entry<Md5Key,Cursor>>() {
+                    List<Entry<Md5Key, Future<Cursor>>> list = copyAndClear(removings);
 
                     @Override
-                    protected Entry<Md5Key, Cursor> computeNext() {
-                        if (!itr.hasNext()) return endOfData();
-                        Entry<Md5Key, Future<Cursor>> entry = itr.next();
+                    public Entry<Md5Key, Cursor> get(int index) {
+                        Entry<Md5Key, Future<Cursor>> entry = list.get(index);
                         return new Entry<Md5Key, Cursor>(entry.key(), getUnchecked(entry.value()));
+                    }
+
+                    @Override
+                    public int size() {
+                        return list.size();
                     }
                 };
 
-                actor(Durable.class).merge(copyAndClear(appendings).iterator(), removingsItr, checkpoint);
+                List<Entry<Md5Key, byte[]>> appendingList = copyAndClear(appendings);
+                actor(Durable.class).merge(removingList, appendingList, checkpoint);
 
                 return Nils.VOID;
             }
@@ -165,8 +166,8 @@ class DefaultBrowser extends Actor implements Browser, Updatable, Mergable {
         });
     }
 
-    private static <T> Queue<T> copyAndClear(Queue<T> queue) {
-        Queue<T> copy = new LinkedList<T>(queue);
+    private static <T> List<T> copyAndClear(Queue<T> queue) {
+        List<T> copy = new ArrayList<T>(queue);
         queue.clear();
         return copy;
     }

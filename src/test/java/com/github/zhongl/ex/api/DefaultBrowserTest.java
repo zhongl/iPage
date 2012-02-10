@@ -18,12 +18,14 @@ import org.junit.Test;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 
 import static java.util.Collections.singleton;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
@@ -165,16 +167,15 @@ public class DefaultBrowserTest {
 
     private class DurableMock extends Actor implements Durable {
 
-        private volatile Iterator<Entry<Md5Key, byte[]>> appendings;
-        private volatile Iterator<Entry<Md5Key, Cursor>> removings;
+        private volatile List<Entry<Md5Key, byte[]>> appendings;
+        private volatile List<Entry<Md5Key, Cursor>> removings;
         private volatile Checkpoint checkpoint;
 
         private final Semaphore mergeSemaphore = new Semaphore(0);
 
         @Override
         public void merge(
-                Iterator<Entry<Md5Key, byte[]>> appendings,
-                Iterator<Entry<Md5Key, Cursor>> removings,
+                List<Entry<Md5Key, Cursor>> removings, List<Entry<Md5Key, byte[]>> appendings,
                 Checkpoint checkpoint) {
             this.appendings = appendings;
             this.removings = removings;
@@ -197,10 +198,8 @@ public class DefaultBrowserTest {
             assertIteratorHas(removings, entries);
         }
 
-        private <T> void assertIteratorHas(Iterator<T> iterator, T[] entries) throws InterruptedException {
-            for (T entry : entries) {
-                assertThat(iterator.next(), is(entry));
-            }
+        private <T> void assertIteratorHas(List<T> list, T[] entries) throws InterruptedException {
+            assertThat(list,hasItems(entries));
         }
 
         public void assertCheckpointIs(Checkpoint checkpoint) throws Exception {
