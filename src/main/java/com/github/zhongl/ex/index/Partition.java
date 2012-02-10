@@ -8,6 +8,7 @@ import com.github.zhongl.ex.util.Entry;
 
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.util.AbstractList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -41,6 +42,8 @@ abstract class Partition extends Page implements Iterable<Entry<Md5Key, Cursor>>
 
     private abstract class RandomAccessList<T> extends AbstractList<T> implements RandomAccess {
 
+        private volatile MappedByteBuffer buffer;
+
         @Override
         public int size() {
             return (int) (file().length() / EntryCodec.LENGTH);
@@ -48,8 +51,10 @@ abstract class Partition extends Page implements Iterable<Entry<Md5Key, Cursor>>
 
         @Override
         public T get(int index) {
-            ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(file());
-            buffer.position(index * EntryCodec.LENGTH).limit((index + 1) * EntryCodec.LENGTH);
+            if (buffer == null)
+                buffer = (MappedByteBuffer) ReadOnlyMappedBuffers.getOrMap(file());
+
+            buffer.limit((index + 1) * EntryCodec.LENGTH).position(index * EntryCodec.LENGTH);
             return decode(buffer);
         }
 

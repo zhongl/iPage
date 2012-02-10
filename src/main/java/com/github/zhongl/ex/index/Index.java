@@ -71,8 +71,6 @@ public abstract class Index extends SnapshotKeeper<Index.Snapshot, Entry<Md5Key,
                 if (c.value() == Nils.CURSOR) continue; // remove entry
 
                 appendable.append(c, FutureCallbacks.<Cursor>ignore());
-                boolean force = !aItr.hasNext() && !bItr.hasNext();
-                if (force) appendable.force();
             }
 
         }
