@@ -87,7 +87,7 @@ public abstract class Ephemerons<K, V> {
     protected abstract V getMiss(K key);
 
     /** This method supposed be asynchronized. */
-    protected abstract void requestFlush(SortedSet<Entry<K, V>> records, FutureCallback<Void> flushedCallback);
+    protected abstract void requestFlush(SortedSet<Entry<K, V>> entries, FutureCallback<Void> flushedCallback);
 
     private void put(K key, V value, FutureCallback<Void> removedOrDurableCallback) {
         release(key, Nils.VOID);
