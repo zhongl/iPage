@@ -26,17 +26,30 @@ class Recorder<K, V> {
     Journal journal;
     Cache cache;
 
+    public void append(K key, V value) {
+
+    }
+
+    public void remove(K key) {
+
+    }
+
     void append(Entry<K, V> entry) {
         CallbackFuture<Revision> future = new CallbackFuture<Revision>();
         Record<Entry<K, V>> record = new Record<Entry<K, V>>(future, entry);
-        cache.put(record);
         journal.append(entry, future);
+        if (needForce()) journal.force();
 //        future.get();
+        cache.put(record);
+    }
+
+    private boolean needForce() {
+        return false;  // TODO needForce
     }
 
 
     public void eraseTo(Revision revision) {
-        // TODO eraseTo
+        journal.eraseTo(revision);
     }
 }
 
@@ -68,42 +81,24 @@ class Journal<K, V> {
     public void append(Entry<K, V> entry, FutureCallback<Revision> callback) {
         // TODO append
     }
+
+    public void force() {
+        // TODO force
+    }
+
+    public void eraseTo(Revision revision) {
+        // TODO eraseTo 
+    }
 }
 
 interface Revision extends Comparable<Revision> {}
 
 //@MBean
-class Cache<K, V> {
-    Semaphore flowController = new Semaphore(0);
+abstract class Cache<K, V> {
 
-    Map<K, Record<Entry<K, V>>> map;
+    private final Semaphore flowController = new Semaphore(0);
 
-    Store<K, V> store;
-
-    private void flush() {
-        SortedSet<Record<Entry<K, V>>> records = new TreeSet<Record<Entry<K, V>>>();
-        for (Record<Entry<K, V>> record : map.values()) {
-            records.add(record);
-        }
-        store.merge(records);
-    }
-
-    private boolean needFlush() {
-        return false;  // TODO needFlush
-    }
-
-
-    V get(K key) {
-        Record<Entry<K, V>> record = map.get(key);
-        if (record == null) return getMiss(key);
-        Entry<K, V> entry = record.entry();
-        if (entry == null) return null;
-        return entry.value();
-    }
-
-    private V getMiss(K key) {
-        return store.get(key);
-    }
+    private Map<K, Record<Entry<K, V>>> map;
 
     public void put(Record<Entry<K, V>> record) {
         flowController.acquireUninterruptibly();
@@ -114,18 +109,40 @@ class Cache<K, V> {
         if (needFlush()) flush();
     }
 
+    public V get(K key) {
+        Record<Entry<K, V>> record = map.get(key);
+        if (record == null) return getMiss(key);
+        Entry<K, V> entry = record.entry();
+        if (entry == null) return null;
+        return entry.value();
+    }
+
     public void remove(Set<K> keys) {
         for (K key : keys) {
             map.remove(key);
             flowController.release();
         }
     }
+
+    protected boolean needFlush() {
+        return false;  // TODO needFlush
+    }
+
+    protected abstract void flush(SortedSet<Record<Entry<K, V>>> records);
+
+    protected abstract V getMiss(K key);
+
+    private void flush() {
+        SortedSet<Record<Entry<K, V>>> records = new TreeSet<Record<Entry<K, V>>>();
+        for (Record<Entry<K, V>> record : map.values()) {
+            records.add(record);
+        }
+        flush(records);
+    }
 }
 
 
-class Store<K, V> implements Iterable<V> {
-    Recorder<K, V> recorder;
-    Cache<K, V> cache;
+abstract class Store<K, V> implements Iterable<V> {
 
     public void merge(SortedSet<Record<Entry<K, V>>> records) {
         if (records.isEmpty()) return;
@@ -140,14 +157,18 @@ class Store<K, V> implements Iterable<V> {
             if (entry.value() == null) removedKeys.add(entry.key());
         }
 
-        force(revision);
+        force();
 
-        cache.remove(removedKeys);
+        release(removedKeys);
 
-        recorder.eraseTo(revision);
+        saveCheckpoint(revision);
     }
 
-    private void force(Revision revision) {
+    protected abstract void saveCheckpoint(Revision revision);
+
+    protected abstract void release(Set<K> removedKeys);
+
+    private void force() {
         // TODO force
     }
 
@@ -158,7 +179,7 @@ class Store<K, V> implements Iterable<V> {
     public V get(K key) {
         return null;  // TODO get
     }
-    
+
     @Override
     public Iterator<V> iterator() {
         return null;  // TODO iterator
