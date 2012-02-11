@@ -4,7 +4,6 @@ import com.github.zhongl.ex.util.Entry;
 import com.github.zhongl.ex.util.FutureCallbacks;
 import com.github.zhongl.ex.util.Nils;
 import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
 import com.google.common.util.concurrent.FutureCallback;
 import org.softee.management.annotation.MBean;
 import org.softee.management.annotation.ManagedAttribute;
@@ -13,9 +12,8 @@ import org.softee.management.annotation.Parameter;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
-import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Semaphore;
@@ -71,28 +69,51 @@ public abstract class Ephemerons<K extends Comparable<K>, V> {
     public void flush() {
         if (!flushing.compareAndSet(false, true)) return;
 
-        final Collection<Entry<K, V>> entries = sort(map.values());
+        final Collection<Entry<K, V>> appendings = new TreeSet<Entry<K, V>>();
+        final Collection<K> removings = new ArrayList<K>();
 
-        requestFlush(entries.iterator(), new FutureCallback<Void>() {
+        for (Record record : map.values()) {
+            if (record.value == Nils.OBJECT) removings.add(record.key);
+            else appendings.add(new Entry<K, V>(record.key, record.value));
+        }
+
+        requestFlush(appendings, removings, new FutureCallback<Void>() {
             @Override
             public void onSuccess(Void v) {
-                for (Entry<K, V> entry : entries) release(entry.key(), Nils.VOID);
-                flushing.set(false);
+                foreachKey(new Function<K, Void>() {
+                    @Override
+                    public Void apply(@Nullable K key) {
+                        release(key, Nils.VOID);
+                        return Nils.VOID;
+                    }
+
+                });
             }
 
             @Override
-            public void onFailure(Throwable t) {
-                for (Entry<K, V> entry : entries) release(entry.key(), t);
+            public void onFailure(final Throwable t) {
+                foreachKey(new Function<K, Void>() {
+                    @Override
+                    public Void apply(@Nullable K key) {
+                        release(key, t);
+                        return Nils.VOID;
+                    }
+                });
+            }
+
+            private void foreachKey(Function<K, Void> function) {
+                for (K key : removings) function.apply(key);
+                for (Entry<K, V> entry : appendings) function.apply(entry.key());
                 flushing.set(false);
             }
         });
     }
 
+    /** This method supposed be asynchronized. */
+    protected abstract void requestFlush(Collection<Entry<K, V>> appendings, Collection<K> removings, FutureCallback<Void> flushedCallback);
+
     /** This method supposed be thread safed. */
     protected abstract V getMiss(K key);
-
-    /** This method supposed be asynchronized. */
-    protected abstract void requestFlush(Iterator<Entry<K, V>> entries, FutureCallback<Void> flushedCallback);
 
     private void put(K key, V value, FutureCallback<Void> removedOrDurableCallback) {
         release(key, Nils.VOID);
@@ -102,17 +123,6 @@ public abstract class Ephemerons<K extends Comparable<K>, V> {
             throw new IllegalStateException(e);
         }
         map.put(key, new Record(id.getAndIncrement(), key, value, removedOrDurableCallback));
-    }
-
-    private Collection<Entry<K, V>> sort(Collection<Record> records) {
-        SortedSet<Record> sorted = new TreeSet<Record>();
-        for (Record record : records) sorted.add(record);
-        return Collections2.transform(sorted, new Function<Record, Entry<K, V>>() {
-            @Override
-            public Entry<K, V> apply(@Nullable Record record) {
-                return new Entry<K, V>(record.key, record.value);
-            }
-        });
     }
 
     private boolean release(K key, Object voidOrThrowable) {
@@ -144,10 +154,7 @@ public abstract class Ephemerons<K extends Comparable<K>, V> {
 
         @Override
         public int compareTo(Record o) {
-            if (value != Nils.OBJECT && o.value != Nils.OBJECT) return id.compareTo(o.id); // append order
-            if (value == Nils.OBJECT && o.value != Nils.OBJECT) return -1; // removed first
-            if (value != Nils.OBJECT && o.value == Nils.OBJECT) return 1;  // removed first
-            return key.compareTo(o.key); // key first
+            return id.compareTo(o.id);
         }
     }
 }

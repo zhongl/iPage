@@ -9,7 +9,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-import java.util.Iterator;
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -56,16 +56,15 @@ public class EphemeronsTest {
 
         latch.await();
 
-        ArgumentCaptor<Iterator> argumentCaptor = ArgumentCaptor.forClass(Iterator.class);
-        verify(secondLevelStore, times(2)).merge(argumentCaptor.capture());
-
+        ArgumentCaptor<Collection> appendingsCaptor = ArgumentCaptor.forClass(Collection.class);
+        ArgumentCaptor<Collection> removingsCaptor = ArgumentCaptor.forClass(Collection.class);
+        verify(secondLevelStore, times(2)).merge(appendingsCaptor.capture(), removingsCaptor.capture());
 
         // verify the ordering
         int i = 0;
 
-        for (Iterator allValue : argumentCaptor.getAllValues()) {
-            while (allValue.hasNext()) {
-                Object o = allValue.next();
+        for (Collection allValue : appendingsCaptor.getAllValues()) {
+            for (Object o : allValue) {
                 Entry<Integer, Integer> entry = (Entry<Integer, Integer>) o;
                 assertThat(entry.key(), is(i++));
             }
@@ -76,18 +75,19 @@ public class EphemeronsTest {
     class SecondLevelStore {
         final Map<Integer, Integer> secondLevel = new ConcurrentSkipListMap<Integer, Integer>();
 
-        public void merge(Iterator<Entry<Integer, Integer>> entries) {
-            waitFor(10L); // mock long time flushing
-            while (entries.hasNext()) {
-                Entry<Integer, Integer> entry = entries.next();
-                if (entry.value() != Nils.OBJECT)
-                    secondLevel.put(entry.key(), entry.value());
-
-            }
-        }
-
         public Integer get(Integer key) {
             return secondLevel.get(key);
+        }
+
+        public void merge(Collection<Entry<Integer, Integer>> appendings, Collection<Integer> removings) {
+            waitFor(10L); // mock long time flushing
+            for (Entry<Integer, Integer> entry : appendings) {
+                if (entry.value() != Nils.OBJECT)
+                    secondLevel.put(entry.key(), entry.value());
+            }
+            for (Integer key : removings) {
+                secondLevel.remove(key);
+            }
         }
     }
 
@@ -107,14 +107,15 @@ public class EphemeronsTest {
         }
 
         @Override
+        protected void requestFlush(Collection<Entry<Integer, Integer>> appendings, Collection<Integer> removings, FutureCallback<Void> flushedCallback) {
+            secondLevelStore.merge(appendings, removings);
+            flushedCallback.onSuccess(Nils.VOID);
+        }
+
+        @Override
         protected Integer getMiss(Integer key) {
             return secondLevelStore.get(key);
         }
 
-        @Override
-        protected void requestFlush(Iterator<Entry<Integer, Integer>> entries, FutureCallback<Void> flushedCallback) {
-            secondLevelStore.merge(entries);
-            flushedCallback.onSuccess(Nils.VOID);
-        }
     }
 }
