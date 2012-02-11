@@ -9,8 +9,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.util.Iterator;
 import java.util.Map;
-import java.util.SortedSet;
 import java.util.concurrent.*;
 
 import static org.hamcrest.Matchers.is;
@@ -44,7 +44,11 @@ public class EphemeronsTest {
                 @Override
                 public void run() {
                     waitFor(num); // ensure order
-                    ephemerons4T.add(num, num, FutureCallbacks.<Void>ignore());
+                    try {
+                        ephemerons4T.add(num, num, FutureCallbacks.<Void>ignore());
+                    } catch (Exception e) {
+                        e.printStackTrace();  // TODO right
+                    }
                     latch.countDown();
                 }
             });
@@ -52,14 +56,16 @@ public class EphemeronsTest {
 
         latch.await();
 
-        ArgumentCaptor<SortedSet> argumentCaptor = ArgumentCaptor.forClass(SortedSet.class);
+        ArgumentCaptor<Iterator> argumentCaptor = ArgumentCaptor.forClass(Iterator.class);
         verify(secondLevelStore, times(2)).merge(argumentCaptor.capture());
 
 
         // verify the ordering
         int i = 0;
-        for (SortedSet allValue : argumentCaptor.getAllValues()) {
-            for (Object o : allValue) {
+
+        for (Iterator allValue : argumentCaptor.getAllValues()) {
+            while (allValue.hasNext()) {
+                Object o = allValue.next();
                 Entry<Integer, Integer> entry = (Entry<Integer, Integer>) o;
                 assertThat(entry.key(), is(i++));
             }
@@ -70,11 +76,13 @@ public class EphemeronsTest {
     class SecondLevelStore {
         final Map<Integer, Integer> secondLevel = new ConcurrentSkipListMap<Integer, Integer>();
 
-        public void merge(SortedSet<Entry<Integer, Integer>> entries) {
+        public void merge(Iterator<Entry<Integer, Integer>> entries) {
             waitFor(10L); // mock long time flushing
-            for (Entry<Integer, Integer> entry : entries) {
+            while (entries.hasNext()) {
+                Entry<Integer, Integer> entry = entries.next();
                 if (entry.value() != Nils.OBJECT)
                     secondLevel.put(entry.key(), entry.value());
+
             }
         }
 
@@ -104,7 +112,7 @@ public class EphemeronsTest {
         }
 
         @Override
-        protected void requestFlush(SortedSet<Entry<Integer, Integer>> entries, FutureCallback<Void> flushedCallback) {
+        protected void requestFlush(Iterator<Entry<Integer, Integer>> entries, FutureCallback<Void> flushedCallback) {
             secondLevelStore.merge(entries);
             flushedCallback.onSuccess(Nils.VOID);
         }
