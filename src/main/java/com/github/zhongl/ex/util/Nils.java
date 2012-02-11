@@ -11,5 +11,8 @@ public interface Nils {
     Void VOID = null;
 
     Cursor CURSOR = new Cursor() {};
+
     Checkpoint CHECKPOINT = new Checkpoint(0L);
+
+    Object OBJECT = new Object() {};
 }

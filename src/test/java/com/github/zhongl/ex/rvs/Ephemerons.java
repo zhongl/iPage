@@ -1,11 +1,13 @@
 package com.github.zhongl.ex.rvs;
 
+import com.github.zhongl.ex.util.Entry;
 import com.github.zhongl.ex.util.FutureCallbacks;
 import com.github.zhongl.ex.util.Nils;
 import com.google.common.util.concurrent.FutureCallback;
 import org.softee.management.annotation.MBean;
 import org.softee.management.annotation.ManagedAttribute;
 import org.softee.management.annotation.ManagedOperation;
+import org.softee.management.annotation.Parameter;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.Collection;
@@ -13,6 +15,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -21,11 +24,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @ThreadSafe
 @MBean
-public abstract class Ephemerons<K, V> {
+public abstract class Ephemerons<K extends Comparable<K>, V> {
 
-    private static final Object REMOVED = null;
-
-    private final Semaphore flowControl = new Semaphore(0);
+    private final Semaphore flowControl = new Semaphore(0, true);
     private final AtomicLong id = new AtomicLong(Long.MIN_VALUE);
     private final AtomicBoolean flushing = new AtomicBoolean(false);
 
@@ -34,18 +35,18 @@ public abstract class Ephemerons<K, V> {
     protected Ephemerons(ConcurrentMap<K, Record> map) {this.map = map;}
 
     @ManagedOperation
-    public int throughout(int delta) {
+    public int throughout(@Parameter("delta") int delta) {
         if (delta > 0) flowControl.release(delta);
         if (delta < 0) flowControl.acquireUninterruptibly(-delta);
         return flowControl.availablePermits();
     }
 
     @ManagedAttribute
-    public boolean isFlush() {
+    public boolean isFlushing() {
         return flushing.get();
     }
 
-    @ManagedAttribute
+    @ManagedOperation
     public int size() {
         return map.size();
     }
@@ -55,7 +56,7 @@ public abstract class Ephemerons<K, V> {
     }
 
     public void remove(K key) {
-        put(checkNotNull(key), (V) REMOVED, FutureCallbacks.<Void>ignore());
+        put(checkNotNull(key), (V) Nils.OBJECT, FutureCallbacks.<Void>ignore());
     }
 
     public V get(K key) {
@@ -91,7 +92,11 @@ public abstract class Ephemerons<K, V> {
 
     private void put(K key, V value, FutureCallback<Void> removedOrDurableCallback) {
         release(key, Nils.VOID);
-        if (!flowControl.tryAcquire()) flush(); // CAUTION cpu overload
+        try {
+            while (!flowControl.tryAcquire(500L, TimeUnit.MILLISECONDS)) flush();
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(e);
+        }
         map.put(key, new Record(id.getAndIncrement(), key, value, removedOrDurableCallback));
     }
 
