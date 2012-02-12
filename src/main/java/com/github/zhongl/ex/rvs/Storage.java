@@ -7,7 +7,6 @@ import com.google.common.util.concurrent.FutureCallback;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
 
@@ -16,7 +15,7 @@ import static com.google.common.collect.Collections2.transform;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public abstract class Storage<K extends Comparable<K>, V> implements Iterable<V> {
 
-    protected volatile Revision revision;
+    protected volatile Snapshot snapshot;
 
     protected final File dir;
     protected final File head;
@@ -24,7 +23,7 @@ public abstract class Storage<K extends Comparable<K>, V> implements Iterable<V>
     protected Storage(File dir) {
         this.dir = dir;
         this.head = new File(dir, "HEAD");
-        this.revision = loadHead();
+        this.snapshot = loadHead();
         cleanUp();
     }
 
@@ -34,7 +33,7 @@ public abstract class Storage<K extends Comparable<K>, V> implements Iterable<V>
         File tmp = begin();
         try {
 
-            revision.merge(
+            snapshot.merge(
                     transform(appendings, new Function<Entry<K, V>, Entry<Key, V>>() {
                         @Override
                         public Entry<Key, V> apply(@Nullable Entry<K, V> entry) {
@@ -50,21 +49,21 @@ public abstract class Storage<K extends Comparable<K>, V> implements Iterable<V>
                     tmp);
 
             commit(tmp);
-        } catch (IOException e) {
+        } catch (Throwable t) {
             rollback(tmp);
-            flushedCallback.onFailure(e);
+            flushedCallback.onFailure(t);
             return;
         }
         flushedCallback.onSuccess(Nils.VOID);
     }
 
     public V get(K key) {
-        return revision.get(toKey(key));
+        return snapshot.get(toKey(key));
     }
 
     @Override
     public Iterator<V> iterator() {
-        return revision.iterator();
+        return snapshot.iterator();
     }
 
     protected File begin() {
@@ -74,13 +73,15 @@ public abstract class Storage<K extends Comparable<K>, V> implements Iterable<V>
     }
 
     protected void commit(File tmp) {
-        revision = setHead(revision(tmp));
+        Snapshot previous = snapshot;
+        snapshot = setHead(revision(tmp));
         deleteDir(tmp);
+        previous.delete();
     }
 
-    protected Revision revision(File tmp) {
+    protected Snapshot revision(File tmp) {
         // scan files under tmp, move them to pages and create revision
-        return new Revision(tmp);
+        return new Snapshot(tmp);
     }
 
     protected void rollback(File tmp) {
@@ -91,9 +92,9 @@ public abstract class Storage<K extends Comparable<K>, V> implements Iterable<V>
 
     protected abstract Key toKey(K key);
 
-    protected abstract Revision loadHead();
+    protected abstract Snapshot loadHead();
 
-    protected abstract Revision setHead(Revision revision);
+    protected abstract Snapshot setHead(Snapshot snapshot);
 
     protected abstract void deleteDir(File tmp);
 

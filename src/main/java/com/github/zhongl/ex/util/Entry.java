@@ -55,4 +55,12 @@ public class Entry<K extends Comparable<K>, V> implements Comparable<Entry<K, V>
         result = 31 * result + value.hashCode();
         return result;
     }
+
+    @Override
+    public String toString() {
+        return "Entry{" +
+                "key=" + key +
+                ", value=" + value +
+                '}';
+    }
 }
