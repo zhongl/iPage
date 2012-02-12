@@ -1,6 +1,5 @@
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.util.CallbackFuture;
 import com.github.zhongl.util.FutureCallbacks;
 import com.google.common.base.Function;
 import com.google.common.util.concurrent.FutureCallback;
@@ -10,9 +9,7 @@ enum QuanlityOfService {
     RELIABLE {
         @Override
         public void call(Function<FutureCallback<Void>, Void> function) {
-            CallbackFuture<Void> future = new CallbackFuture<Void>();
-            function.apply(future);
-            FutureCallbacks.getUnchecked(future);
+            FutureCallbacks.call(function);
         }
     }, LATENCY {
         @Override

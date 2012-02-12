@@ -29,6 +29,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 @MBean
 public abstract class Ephemerons<K, V> {
 
+    static final Object PHANTOM = new Object();
     private final Semaphore flowControl = new Semaphore(0, true);
     private final AtomicLong id = new AtomicLong();
     private final AtomicBoolean flushing = new AtomicBoolean(false);
@@ -55,11 +56,18 @@ public abstract class Ephemerons<K, V> {
     }
 
     public void add(K key, V value, FutureCallback<Void> removedOrDurableCallback) {
-        put(checkNotNull(key), checkNotNull(value), checkNotNull(removedOrDurableCallback));
+        release(checkNotNull(key), Nils.VOID);
+        checkNotNull(value);
+        checkNotNull(removedOrDurableCallback);
+        acquire();
+        map.put(key, new Record(id.getAndIncrement(), key, value, removedOrDurableCallback));
     }
 
     public void remove(K key) {
-        put(checkNotNull(key), (V) Nils.OBJECT, FutureCallbacks.<Void>ignore());
+        boolean release = release(checkNotNull(key), Nils.VOID);
+        if (release) return;
+        acquire();
+        map.put(key, new Record(id.getAndIncrement(), key, (V) Nils.OBJECT, FutureCallbacks.<Void>ignore()));
     }
 
     public V get(K key) {
@@ -68,6 +76,7 @@ public abstract class Ephemerons<K, V> {
     }
 
     public void flush() {
+        if (map.isEmpty()) return;
         if (!flushing.compareAndSet(false, true)) return;
 
         final Collection<Entry<K, V>> appendings = new ArrayList<Entry<K, V>>();
@@ -118,14 +127,12 @@ public abstract class Ephemerons<K, V> {
     /** This method supposed be thread safed. */
     protected abstract V getMiss(K key);
 
-    private void put(K key, V value, FutureCallback<Void> removedOrDurableCallback) {
-        release(key, Nils.VOID);
+    private void acquire() {
         try {
             while (!flowControl.tryAcquire(500L, TimeUnit.MILLISECONDS)) flush();
         } catch (InterruptedException e) {
             throw new IllegalStateException(e);
         }
-        map.put(key, new Record(this.id.getAndIncrement(), key, value, removedOrDurableCallback));
     }
 
     private boolean release(K key, Object voidOrThrowable) {

@@ -2,6 +2,7 @@ package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.CallbackFuture;
 import com.github.zhongl.util.Entry;
+import com.github.zhongl.util.FutureCallbacks;
 import com.github.zhongl.util.Nils;
 import com.google.common.util.concurrent.FutureCallback;
 import org.junit.Before;
@@ -26,6 +27,14 @@ public class EphemeronsTest {
     public void setUp() throws Exception {
         secondLevelStore = spy(new SecondLevelStore());
         ephemerons4T = new Ephemerons4T();
+    }
+
+    @Test
+    public void phantom() throws Exception {
+        ephemerons4T.add(1, 1, FutureCallbacks.<Void>ignore());
+        ephemerons4T.remove(1);
+        ephemerons4T.flush();
+        verify(secondLevelStore, never()).merge(any(Collection.class), any(Collection.class));
     }
 
     @Test
