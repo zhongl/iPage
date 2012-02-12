@@ -1,6 +1,5 @@
 /*
  * Copyright 2012 zhongl
- *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -16,10 +15,10 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.util.Md5;
+
 import javax.annotation.concurrent.ThreadSafe;
 import java.math.BigInteger;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -29,28 +28,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 public class Key extends Number<Key> {
 
     public static final int BYTE_LENGTH = 16;
-
-    private static final char HEX_DIGITS[] = {'0', '1', '2', '3',
-            '4', '5', '6', '7',
-            '8', '9', 'a', 'b',
-            'c', 'd', 'e', 'f'};
-
-    public static byte[] md5(byte[] bytes) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("MD5");
-            return digest.digest(bytes);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static Key generate(byte[] bytes) {
-        return new Key(md5(bytes));
-    }
-
-    public static Key generate(String s) {
-        return generate(s.getBytes());
-    }
 
     private final byte[] md5;
 
@@ -79,12 +56,7 @@ public class Key extends Number<Key> {
 
     @Override
     public String toString() {
-        char[] chars = new char[BYTE_LENGTH * 2];
-        for (int i = 0; i < md5.length; i++) {
-            chars[i * 2] = HEX_DIGITS[md5[i] >>> 4 & 0xf];
-            chars[i * 2 + 1] = HEX_DIGITS[md5[i] & 0xf];
-        }
-        return new String(chars);
+        return Md5.toHex(md5);
     }
 
     @Override
