@@ -13,18 +13,24 @@ import static java.util.Collections.unmodifiableList;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class ReadOnlyIndex extends Index {
 
+    private volatile int alives;
+
     protected ReadOnlyIndex(final List<Entry<File, Key>> entries) {
         super(unmodifiableList(new PageList(entries)));
-
+        alives = -1;
     }
 
     public double aliveRadio(int delta) {
-        int alives = 0;
-        for (Entry<Key, Range> entry : entries()) {
-            if (!entry.value().equals(Range.NIL)) alives++;
+        if (alives < 0) {
+            alives = 0;
+            for (Entry<Key, Range> entry : entries()) {
+                if (!entry.value().equals(Range.NIL)) alives++;
+            }
         }
         return (alives + delta) * 1.0 / size();
     }
+
+    public int alives() {return alives;}
 
     public Collection<Entry<Key, Range>> entries() {
         return new AbstractCollection<Entry<Key, Range>>() {
@@ -44,7 +50,7 @@ public class ReadOnlyIndex extends Index {
         };
     }
 
-    private int size() {
+    public int size() {
         int sum = 0;
         for (Page page : pages) sum += ((InnerPage) page).size;
         return sum;

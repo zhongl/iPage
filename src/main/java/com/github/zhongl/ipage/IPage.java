@@ -5,10 +5,10 @@ import com.github.zhongl.util.Entry;
 import com.github.zhongl.util.Nils;
 import com.google.common.base.Function;
 import com.google.common.util.concurrent.FutureCallback;
+import org.softee.management.helper.MBeanRegistration;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.Callable;
@@ -27,7 +27,7 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
                  Codec<V> codec,
                  int ephemeronThroughout,
                  long flushMillis,
-                 int flushCount) throws IOException {
+                 int flushCount) throws Exception {
 
         super((flushMillis));
         this.quanlityOfService = quanlityOfService;
@@ -65,6 +65,8 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
             }
         });
 
+        new MBeanRegistration(ephemerons).register();
+        new MBeanRegistration(storage).register();
     }
 
     /**

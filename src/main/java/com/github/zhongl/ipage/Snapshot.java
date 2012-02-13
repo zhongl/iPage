@@ -119,7 +119,7 @@ class Snapshot<T> implements Iterable<T> {
         for (Entry<Key, T> entry : appendings) entries.add(new Entry<Key, Range>(entry.key(), Range.NIL));
         for (Key key : removings) entries.add(new Entry<Key, Range>(key, Range.NIL));
 
-        int capacity = readOnlyIndex.entries().size() + appendings.size() - removings.size();
+        int capacity = readOnlyIndex.alives() + appendings.size() - removings.size();
         final IndexMerger indexMerger = new IndexMerger(tmp, capacity) {
             @Override
             protected boolean remove(Entry<Key, Range> c) {
@@ -163,5 +163,13 @@ class Snapshot<T> implements Iterable<T> {
 
     public boolean isLinkTo(File file) {
         return textFile.contains(file);
+    }
+
+    public int size() {
+        return readOnlyIndex.size();
+    }
+
+    public int alives() {
+        return readOnlyIndex.alives();
     }
 }

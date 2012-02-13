@@ -41,7 +41,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @ThreadSafe
-@MBean
+@MBean(objectName = "com.github.zhongl.ipage:type=Ephemerons")
 public abstract class Ephemerons<V> {
 
     private final Semaphore flowControl = new Semaphore(0, true);

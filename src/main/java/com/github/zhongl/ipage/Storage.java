@@ -17,8 +17,11 @@ package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.Entry;
 import com.github.zhongl.util.Nils;
+import com.google.common.base.Stopwatch;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.FutureCallback;
+import org.softee.management.annotation.MBean;
+import org.softee.management.annotation.ManagedAttribute;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,6 +32,7 @@ import java.util.Iterator;
 import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+@MBean(objectName = "com.github.zhongl.ipage:type=Storage")
 public class Storage<V> implements Iterable<V> {
 
     protected volatile Snapshot<V> snapshot;
@@ -38,6 +42,8 @@ public class Storage<V> implements Iterable<V> {
     protected final File pages;
     protected final File tmp;
     protected final Codec<V> codec;
+
+    private volatile long lastMergeElapseMillis;
 
     protected Storage(File dir, Codec<V> codec) throws IOException {
         this.dir = dir;
@@ -53,14 +59,36 @@ public class Storage<V> implements Iterable<V> {
         this.snapshot = loadHead();
     }
 
+    @ManagedAttribute
+    public int getSize() {
+        return snapshot.size();
+    }
+
+    @ManagedAttribute
+    public long getLastMergeElapseMillis() {
+        return lastMergeElapseMillis;
+    }
+
+    @ManagedAttribute
+    public int getAlives() {
+        return snapshot.alives();
+    }
+
     public void merge(final Collection<Entry<Key, V>> appendings, Collection<Key> removings, FutureCallback<Void> flushedCallback) {
+        // TODO log merge starting
+
         if (appendings.isEmpty() && removings.isEmpty()) return;
 
         try {
-            commit(snapshot.merge(appendings, removings, tmp));
+            Stopwatch stopwatch = new Stopwatch().start();
+            String snapshotName = snapshot.merge(appendings, removings, tmp);
+            lastMergeElapseMillis = stopwatch.elapsedMillis();
+            commit(snapshotName);
+            // TODO log merge ending
         } catch (Throwable t) {
             rollback();
             flushedCallback.onFailure(t);
+            // TODO log merge error
             return;
         }
         flushedCallback.onSuccess(Nils.VOID);
