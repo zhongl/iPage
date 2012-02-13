@@ -162,7 +162,7 @@ class Snapshot<T> implements Iterable<T> {
         final IndexMerger indexMerger = new IndexMerger(tmp, capacity) {
             @Override
             protected boolean remove(Entry<Key, Range> c) {
-                return c.value() == Range.NIL;
+                return c.value().equals(Range.NIL);
             }
 
         };
@@ -176,7 +176,7 @@ class Snapshot<T> implements Iterable<T> {
 
             @Override
             public void migrate(Key key, ByteBuffer buffer) {
-                if (indexMerger.get(key) == Range.NIL) return;
+                if (indexMerger.get(key).equals(Range.NIL)) return;
                 int length = lineAppender.append(buffer);
                 indexMerger.set(key, new Range(position, position + length));
                 position += length;

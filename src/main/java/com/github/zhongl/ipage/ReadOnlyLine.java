@@ -41,6 +41,7 @@ public class ReadOnlyLine<T> extends Binder implements Iterable<Entry<Key, T>> {
     }
 
     public <T> T get(Range range) {
+        if (range.equals(Range.NIL)) return null;
         if (pages.isEmpty()) return null;
         ByteBuffer buffer = ((InnerPage) binarySearch(number(range))).bufferIn(range);
         LineEntryCodec.LazyDecoder<T> decoder = (LineEntryCodec.LazyDecoder<T>) lineEntryCodec.lazyDecoder(buffer);

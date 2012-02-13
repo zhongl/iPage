@@ -101,7 +101,7 @@ public class Storage<V> implements Iterable<V> {
     }
 
     protected void setHead(String snapshotName) throws IOException {
-        Files.write(snapshotName, head, Charset.defaultCharset());
+        Files.write(snapshotName + "\n", head, Charset.defaultCharset());
     }
 
     protected Snapshot<V> loadHead() throws IOException {
