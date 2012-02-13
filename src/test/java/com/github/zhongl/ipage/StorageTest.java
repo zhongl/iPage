@@ -6,7 +6,6 @@ import com.google.common.util.concurrent.FutureCallback;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -137,18 +136,4 @@ public class StorageTest extends FileTestContext {
 
     private Key key(String s) {return new Key(Md5.md5(s.getBytes()));}
 
-    private static class StringCodec implements Codec<String> {
-        @Override
-        public String decode(ByteBuffer buffer) {
-            int length = buffer.limit() - buffer.position();
-            byte[] bytes = new byte[length];
-            buffer.get(bytes);
-            return new String(bytes);
-        }
-
-        @Override
-        public ByteBuffer encode(String object) {
-            return ByteBuffer.wrap(object.getBytes());
-        }
-    }
 }

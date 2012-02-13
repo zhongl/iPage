@@ -56,10 +56,7 @@ public abstract class Actor {
         try {
             tasks.put(SHUTDOWN);
             core.join();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-        }
+        } catch (InterruptedException ignored) { }
     }
 
     protected final <T> Future<T> submit(Callable<T> task) {

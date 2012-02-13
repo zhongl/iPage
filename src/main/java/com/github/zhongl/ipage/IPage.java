@@ -1,5 +1,6 @@
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.util.CallByCountOrElapse;
 import com.github.zhongl.util.Entry;
 import com.github.zhongl.util.Nils;
 import com.google.common.base.Function;
@@ -19,12 +20,19 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
     private final Storage<V> storage;
     private final Ephemerons<V> ephemerons;
     private final QuanlityOfService quanlityOfService;
+    private final CallByCountOrElapse callByCountOrElapse;
 
-    public IPage(File dir, QuanlityOfService quanlityOfService, Codec<V> codec) throws IOException {
+    public IPage(File dir,
+                 QuanlityOfService quanlityOfService,
+                 Codec<V> codec,
+                 int ephemeronThroughout,
+                 long flushMillis,
+                 int flushCount) throws IOException {
+
+        super((flushMillis));
         this.quanlityOfService = quanlityOfService;
-        storage = new Storage<V>(dir, codec);
-
-        ephemerons = new Ephemerons<V>(new ConcurrentHashMap<Key, Ephemerons<V>.Record>()) {
+        this.storage = new Storage<V>(dir, codec);
+        this.ephemerons = new Ephemerons<V>(new ConcurrentHashMap<Key, Ephemerons<V>.Record>()) {
             @Override
             protected void requestFlush(
                     final Collection<Entry<Key, V>> appendings,
@@ -46,6 +54,17 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
             }
 
         };
+
+        ephemerons.throughout(ephemeronThroughout);
+
+        this.callByCountOrElapse = new CallByCountOrElapse(flushCount, flushMillis, new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                ephemerons.flush();
+                return Nils.VOID;
+            }
+        });
+
     }
 
     /**
@@ -62,10 +81,20 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
                 return null;
             }
         });
+        tryCallByCount();
+    }
+
+    private void tryCallByCount() {
+        try {
+            callByCountOrElapse.tryCallByCount();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public void remove(K key) {
         ephemerons.remove(transform(key));
+        tryCallByCount();
     }
 
     public V get(K key) {
@@ -75,6 +104,15 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
     @Override
     public Iterator<V> iterator() {
         return storage.iterator();
+    }
+
+    @Override
+    protected void hearbeat() {
+        try {
+            callByCountOrElapse.tryCallByElapse();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     protected abstract Key transform(K key);
