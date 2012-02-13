@@ -26,6 +26,8 @@ import java.nio.ByteBuffer;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class LineAppender {
 
+    private static final int BATCH_BUFFER_SIZE = Integer.getInteger("ipage.line.appender.batch.size", 1024) * 1024;// 1M
+
     private final InnerPage page;
 
     protected LineAppender(File dir, long position) {
@@ -53,7 +55,7 @@ public class LineAppender {
         protected InnerPage(File file, Offset number) {
             super(file, number);
             try {
-                batchBuffer = ByteBuffer.allocateDirect(1 << 20);// 1M
+                batchBuffer = ByteBuffer.allocateDirect(BATCH_BUFFER_SIZE);
                 channel = new RAFileChannel(file);
             } catch (IOException e) {
                 throw new RuntimeException(e);
