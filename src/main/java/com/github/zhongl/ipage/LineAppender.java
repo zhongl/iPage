@@ -15,6 +15,7 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.util.DirectByteBufferCleaner;
 import com.github.zhongl.util.RAFileChannel;
 import com.google.common.io.Closeables;
 
@@ -47,10 +48,12 @@ public class LineAppender {
     private static class InnerPage extends Page {
 
         private final RAFileChannel channel;
+        private final ByteBuffer batchBuffer;
 
         protected InnerPage(File file, Offset number) {
             super(file, number);
             try {
+                batchBuffer = ByteBuffer.allocateDirect(1 << 20);// 1M
                 channel = new RAFileChannel(file);
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -58,8 +61,19 @@ public class LineAppender {
         }
 
         public int append(ByteBuffer buffer) {
+            int length = buffer.remaining();
+            if (length > batchBuffer.remaining()) {
+                write0();
+            }
+            batchBuffer.put(buffer);
+            return length;
+        }
+
+        private void write0() {
             try {
-                return channel.write(buffer);
+                batchBuffer.flip();
+                channel.write(batchBuffer);
+                batchBuffer.rewind();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -67,7 +81,9 @@ public class LineAppender {
 
         public void force() {
             try {
+                if (batchBuffer.position() > 0) write0();
                 channel.force(false);
+                DirectByteBufferCleaner.clean(batchBuffer);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             } finally {
