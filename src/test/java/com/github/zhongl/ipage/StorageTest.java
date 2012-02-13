@@ -1,11 +1,8 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.*;
-import com.google.common.base.Function;
-import com.google.common.util.concurrent.FutureCallback;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -27,31 +24,16 @@ public class StorageTest extends FileTestContext {
 
         final Storage<String> storage = new Storage<String>(dir, new StringCodec());
 
-        FutureCallbacks.call(new Function<FutureCallback<Void>, Void>() {
-            @Override
-            public Void apply(@Nullable FutureCallback<Void> callback) {
-                storage.merge(
-                        Arrays.asList(new Entry<Key, String>(key, value)),
-                        Collections.<Key>emptyList(),
-                        callback
-                );
-                return Nils.VOID;
-            }
-        });
+        CallbackFuture<Void> callback;
+        callback = new CallbackFuture<Void>();
+        storage.merge(Arrays.asList(new Entry<Key, String>(key, value)), Collections.<Key>emptyList(), callback);
+        FutureCallbacks.getUnchecked(callback);
 
         assertThat(storage.get(key), is(value));
 
-        FutureCallbacks.call(new Function<FutureCallback<Void>, Void>() {
-            @Override
-            public Void apply(@Nullable FutureCallback<Void> callback) {
-                storage.merge(
-                        Collections.<Entry<Key, String>>emptyList(),
-                        Arrays.asList(key),
-                        callback
-                );
-                return Nils.VOID;
-            }
-        });
+        callback = new CallbackFuture<Void>();
+        storage.merge(Collections.<Entry<Key, String>>emptyList(), Arrays.asList(key), callback);
+        FutureCallbacks.getUnchecked(callback);
 
         assertThat(storage.get(key), is(nullValue()));
     }
@@ -64,17 +46,9 @@ public class StorageTest extends FileTestContext {
 
         final Storage<String> storage = new Storage<String>(dir, new StringCodec());
 
-        FutureCallbacks.call(new Function<FutureCallback<Void>, Void>() {
-            @Override
-            public Void apply(@Nullable FutureCallback<Void> callback) {
-                storage.merge(
-                        Arrays.asList(new Entry<Key, String>(key(value), value)),
-                        Collections.<Key>emptyList(),
-                        callback
-                );
-                return Nils.VOID;
-            }
-        });
+        CallbackFuture<Void> callback = new CallbackFuture<Void>();
+        storage.merge(Arrays.asList(new Entry<Key, String>(key(value), value)), Collections.<Key>emptyList(), callback);
+        FutureCallbacks.getUnchecked(callback);
 
         assertThat(storage.get(key("nonexist")), is(nullValue()));
     }
@@ -91,45 +65,23 @@ public class StorageTest extends FileTestContext {
                 new Entry<Key, String>(key("3"), "3")
         );
 
-        FutureCallbacks.call(new Function<FutureCallback<Void>, Void>() {
-            @Override
-            public Void apply(@Nullable FutureCallback<Void> callback) {
-                storage.merge(
-                        appendings,
-                        Collections.<Key>emptyList(),
-                        callback
-                );
-                return Nils.VOID;
-            }
-        });
+        CallbackFuture<Void> callback;
+
+        callback = new CallbackFuture<Void>();
+        storage.merge(appendings, Collections.<Key>emptyList(), callback);
+        FutureCallbacks.getUnchecked(callback);
 
         assertThat(storage, hasItems("1", "2", "3"));
 
-        FutureCallbacks.call(new Function<FutureCallback<Void>, Void>() {
-            @Override
-            public Void apply(@Nullable FutureCallback<Void> callback) {
-                storage.merge(
-                        Collections.<Entry<Key, String>>emptyList(),
-                        Arrays.asList(key("2")),
-                        callback
-                );
-                return Nils.VOID;
-            }
-        });
+        callback = new CallbackFuture<Void>();
+        storage.merge(Collections.<Entry<Key, String>>emptyList(), Arrays.asList(key("2")), callback);
+        FutureCallbacks.getUnchecked(callback);
 
         assertThat(storage, hasItems("1", "3"));
 
-        FutureCallbacks.call(new Function<FutureCallback<Void>, Void>() {
-            @Override
-            public Void apply(@Nullable FutureCallback<Void> callback) {
-                storage.merge(
-                        Collections.<Entry<Key, String>>emptyList(),
-                        Arrays.asList(key("1")),
-                        callback
-                );
-                return Nils.VOID;
-            }
-        });
+        callback = new CallbackFuture<Void>();
+        storage.merge(Collections.<Entry<Key, String>>emptyList(), Arrays.asList(key("1")), callback);
+        FutureCallbacks.getUnchecked(callback);
 
         assertThat(storage, hasItems("3"));
     }

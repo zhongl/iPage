@@ -47,7 +47,7 @@ public abstract class Actor {
     public Actor(long timeout) {
         this.timeout = timeout;
         this.tasks = new LinkedBlockingQueue<Runnable>();
-        core = new Core(getClass().getSimpleName());
+        core = new Core("iPage.Actor-" + getClass().getSimpleName());
         core.start();
     }
 

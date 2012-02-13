@@ -64,8 +64,8 @@ public abstract class Ephemerons<V> {
         return flushing.get();
     }
 
-    @ManagedOperation
-    public int size() {
+    @ManagedAttribute
+    public int getSize() {
         return map.size();
     }
 

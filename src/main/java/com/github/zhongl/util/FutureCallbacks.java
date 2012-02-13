@@ -15,7 +15,6 @@
 
 package com.github.zhongl.util;
 
-import com.google.common.base.Function;
 import com.google.common.util.concurrent.FutureCallback;
 
 import java.util.concurrent.ExecutionException;
@@ -33,12 +32,6 @@ public class FutureCallbacks {
             @Override
             public void onFailure(Throwable t) { }
         };
-    }
-
-    public static <T> T call(Function<FutureCallback<T>, Void> function) {
-        CallbackFuture<T> callback = new CallbackFuture<T>();
-        function.apply(callback);
-        return getUnchecked(callback);
     }
 
     public static <T> T getUnchecked(Future<T> future) {

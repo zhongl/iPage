@@ -3,11 +3,10 @@ package com.github.zhongl.ipage;
 import com.github.zhongl.util.CallByCountOrElapse;
 import com.github.zhongl.util.Entry;
 import com.github.zhongl.util.Nils;
-import com.google.common.base.Function;
 import com.google.common.util.concurrent.FutureCallback;
 import org.softee.management.helper.MBeanRegistration;
 
-import javax.annotation.Nullable;
+import javax.annotation.concurrent.ThreadSafe;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import java.io.File;
@@ -18,6 +17,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+@ThreadSafe
 public abstract class IPage<K, V> extends Actor implements Iterable<V> {
 
     private static final String EPHEMERONS = "Ephemerons";
@@ -25,18 +25,15 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
 
     private final Storage<V> storage;
     private final Ephemerons<V> ephemerons;
-    private final QuanlityOfService quanlityOfService;
     private final CallByCountOrElapse callByCountOrElapse;
 
     public IPage(File dir,
-                 QuanlityOfService quanlityOfService,
                  Codec<V> codec,
                  int ephemeronThroughout,
                  long flushMillis,
                  int flushCount) throws Exception {
 
         super((flushMillis / 2));
-        this.quanlityOfService = quanlityOfService;
         this.storage = new Storage<V>(dir, codec);
         this.ephemerons = new Ephemerons<V>(new ConcurrentHashMap<Key, Ephemerons<V>.Record>()) {
             @Override
@@ -75,20 +72,8 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
         new MBeanRegistration(storage, objectName(STORAGE)).register();
     }
 
-    /**
-     * @param key
-     * @param value
-     *
-     * @throws IllegalStateException cause by {@link QuanlityOfService#RELIABLE}
-     */
-    public void add(final K key, final V value) {
-        quanlityOfService.call(new Function<FutureCallback<Void>, Void>() {
-            @Override
-            public Void apply(@Nullable FutureCallback<Void> removedOrDurableCallback) {
-                ephemerons.add(transform(key), value, removedOrDurableCallback);
-                return null;
-            }
-        });
+    public void add(final K key, final V value, FutureCallback<Void> removedOrDurableCallback) {
+        ephemerons.add(transform(key), value, removedOrDurableCallback);
         tryCallByCount();
     }
 

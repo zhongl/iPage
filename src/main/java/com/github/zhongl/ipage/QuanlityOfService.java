@@ -15,23 +15,35 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.util.CallbackFuture;
 import com.github.zhongl.util.FutureCallbacks;
-import com.google.common.base.Function;
-import com.google.common.util.concurrent.FutureCallback;
+
+import javax.annotation.concurrent.ThreadSafe;
+import java.util.concurrent.Future;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public enum QuanlityOfService {
-    RELIABLE {
-        @Override
-        public void call(Function<FutureCallback<Void>, Void> function) {
-            FutureCallbacks.call(function);
-        }
-    }, LATENCY {
-        @Override
-        public void call(Function<FutureCallback<Void>, Void> function) {
-            function.apply(FutureCallbacks.<Void>ignore());
-        }
-    };
+@ThreadSafe
+public class QuanlityOfService<K, V> {
 
-    public abstract void call(Function<FutureCallback<Void>, Void> function);
+    private final IPage<K, V> iPage;
+
+    public QuanlityOfService(IPage<K, V> iPage) {this.iPage = iPage;}
+
+    public void sendAdd(K key, V value) {
+        iPage.add(key, value, FutureCallbacks.<Void>ignore());
+    }
+
+    public void callAdd(K key, V value) {
+        CallbackFuture<Void> callback = new CallbackFuture<Void>();
+        iPage.add(key, value, callback);
+        FutureCallbacks.getUnchecked(callback);
+    }
+
+    public Future<Void> futureAdd(K key, V value) {
+        CallbackFuture<Void> callback = new CallbackFuture<Void>();
+        iPage.add(key, value, callback);
+        return callback;
+    }
+
+
 }
