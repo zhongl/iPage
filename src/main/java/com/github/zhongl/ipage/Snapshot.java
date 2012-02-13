@@ -30,6 +30,7 @@ import java.util.TreeSet;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class Snapshot<T> implements Iterable<T> {
 
+    private static final double DEFRAG_RADIO = Integer.getInteger("ipage.snapshot.defrag.radio", 2) * 0.1;
     private final LineEntryCodec<T> lineEntryCodec;
     private final ReadOnlyLine<T> readOnlyLine;
     private final ReadOnlyIndex readOnlyIndex;
@@ -63,7 +64,7 @@ class Snapshot<T> implements Iterable<T> {
     }
 
     public String merge(Collection<Entry<Key, T>> appendings, Collection<Key> removings, File tmp) {
-        if (readOnlyIndex.aliveRadio(-removings.size()) < 0.5)
+        if (readOnlyIndex.aliveRadio(-removings.size()) < DEFRAG_RADIO)
             return defrag(readOnlyLine, readOnlyIndex, appendings, removings, tmp);
         else
             return append(readOnlyLine, readOnlyIndex, appendings, removings, tmp);
