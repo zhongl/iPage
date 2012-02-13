@@ -46,16 +46,16 @@ import static com.google.common.base.Preconditions.checkState;
  *
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
  */
-abstract class Snapshot implements Iterable {
+class Snapshot<T> implements Iterable<T> {
 
+    private final File file;
     private final List<Tuple> linePageTuples;
     private final List<Tuple> indexPageTuples;
-
-    private final ReadOnlyLine readOnlyLine;
+    private final LineEntryCodec<T> lineEntryCodec;
+    private final ReadOnlyLine<T> readOnlyLine;
     private final ReadOnlyIndex readOnlyIndex;
-    private final File file;
 
-    public Snapshot(@Nullable final File file) throws IOException {
+    public Snapshot(@Nullable final File file, Codec<T> codec) throws IOException {
         this.file = file;
         linePageTuples = new LinkedList<Tuple>();
         indexPageTuples = new LinkedList<Tuple>();
@@ -76,28 +76,23 @@ abstract class Snapshot implements Iterable {
             });
         }
 
-        readOnlyLine = new ReadOnlyLine(linePageTuples) {
-            @Override
-            protected <T> T decode(ByteBuffer buffer) {
-                return Snapshot.this.decode(buffer);
-            }
-
-        };
+        lineEntryCodec = new LineEntryCodec<T>(codec);
+        readOnlyLine = new ReadOnlyLine<T>(linePageTuples, lineEntryCodec);
         readOnlyIndex = new ReadOnlyIndex(indexPageTuples);
     }
 
-    public <T> T get(Key key) {
+    public T get(Key key) {
         return readOnlyLine.get(readOnlyIndex.get(key));
     }
 
     @Override
-    public Iterator iterator() {
-        final Iterator iterator = readOnlyLine.iterator();
-        return new AbstractIterator() {
+    public Iterator<T> iterator() {
+        final Iterator<Entry<Key, T>> iterator = readOnlyLine.iterator();
+        return new AbstractIterator<T>() {
             @Override
-            protected Object computeNext() {
+            protected T computeNext() {
                 while (iterator.hasNext()) {
-                    Entry<Key, Object> entry = (Entry<Key, Object>) iterator.next();
+                    Entry<Key, T> entry = iterator.next();
                     Range range = readOnlyIndex.get(entry.key());
                     if (range != null) return entry.value();
                 }
@@ -106,14 +101,14 @@ abstract class Snapshot implements Iterable {
         };
     }
 
-    public <T> String merge(Collection<Entry<Key, T>> appendings, Collection<Key> removings, File tmp) {
+    public String merge(Collection<Entry<Key, T>> appendings, Collection<Key> removings, File tmp) {
         if (readOnlyIndex.aliveRadio(-removings.size()) < 0.5)
             return defrag(readOnlyLine, readOnlyIndex, appendings, removings, tmp);
         else
             return append(readOnlyLine, readOnlyIndex, appendings, removings, tmp);
     }
 
-    protected <T> String append(
+    protected String append(
             ReadOnlyLine readOnlyLine,
             ReadOnlyIndex readOnlyIndex,
             Collection<Entry<Key, T>> appendings,
@@ -126,7 +121,7 @@ abstract class Snapshot implements Iterable {
         long position = readOnlyLine.length();
 
         for (Entry<Key, T> entry : appendings) {
-            int length = lineAppender.append(encode(entry));
+            int length = lineAppender.append(lineEntryCodec.encode(entry));
             entries.add(new Entry<Key, Range>(entry.key(), new Range(position, position + length)));
             position += length;
         }
@@ -152,7 +147,7 @@ abstract class Snapshot implements Iterable {
         return createSnapshotFile(indexMerger, lineAppender, tmp, true).getName();
     }
 
-    protected <T> String defrag(
+    protected String defrag(
             ReadOnlyLine readOnlyLine,
             final ReadOnlyIndex readOnlyIndex,
             Collection<Entry<Key, T>> appendings,
@@ -191,7 +186,7 @@ abstract class Snapshot implements Iterable {
         readOnlyLine.migrateBy(migrater);
 
         for (Entry<Key, T> entry : appendings) {
-            migrater.migrate(entry.key(), encode(entry));
+            migrater.migrate(entry.key(), lineEntryCodec.encode(entry));
         }
 
         indexMerger.force();
@@ -239,7 +234,4 @@ abstract class Snapshot implements Iterable {
         for (Tuple tuple : tuples) checkState(tuple.<File>get(1).delete());
     }
 
-    protected abstract <T> ByteBuffer encode(Entry<Key, T> entry);
-
-    protected abstract <T> T decode(ByteBuffer buffer);
 }

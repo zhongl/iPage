@@ -1,9 +1,6 @@
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.util.CallbackFuture;
-import com.github.zhongl.util.Entry;
-import com.github.zhongl.util.FutureCallbacks;
-import com.github.zhongl.util.Nils;
+import com.github.zhongl.util.*;
 import com.google.common.util.concurrent.FutureCallback;
 import org.junit.Before;
 import org.junit.Test;
@@ -31,8 +28,9 @@ public class EphemeronsTest {
 
     @Test
     public void phantom() throws Exception {
-        ephemerons4T.add(1, 1, FutureCallbacks.<Void>ignore());
-        ephemerons4T.remove(1);
+        Key key = key(1);
+        ephemerons4T.add(key, 1, FutureCallbacks.<Void>ignore());
+        ephemerons4T.remove(key);
         ephemerons4T.flush();
         verify(secondLevelStore, never()).merge(any(Collection.class), any(Collection.class));
     }
@@ -42,12 +40,11 @@ public class EphemeronsTest {
 
         CallbackFuture<Void> future = null;
         for (int i = 0; i < 8; i++) {
-            final int num = i;
             try {
                 future = new CallbackFuture<Void>();
-                ephemerons4T.add(num, num, future);
+                ephemerons4T.add(key(i), i, future);
             } catch (Exception e) {
-                e.printStackTrace();  // TODO right
+                e.printStackTrace();
             }
         }
 
@@ -63,27 +60,29 @@ public class EphemeronsTest {
 
         for (Collection allValue : appendingsCaptor.getAllValues()) {
             for (Object o : allValue) {
-                Entry<Integer, Integer> entry = (Entry<Integer, Integer>) o;
-                assertThat(entry.key(), is(i++));
+                Entry<Key, Integer> entry = (Entry<Key, Integer>) o;
+                assertThat(entry.value(), is(i++));
             }
         }
 
     }
 
-    class SecondLevelStore {
-        final Map<Integer, Integer> secondLevel = new ConcurrentSkipListMap<Integer, Integer>();
+    private Key key(int i) {return new Key(Md5.md5((i + "").getBytes()));}
 
-        public Integer get(Integer key) {
+    class SecondLevelStore {
+        final Map<Key, Integer> secondLevel = new ConcurrentSkipListMap<Key, Integer>();
+
+        public Integer get(Key key) {
             return secondLevel.get(key);
         }
 
-        public void merge(Collection<Entry<Integer, Integer>> appendings, Collection<Integer> removings) {
+        public void merge(Collection<Entry<Key, Integer>> appendings, Collection<Key> removings) {
             waitFor(10L); // mock long time flushing
-            for (Entry<Integer, Integer> entry : appendings) {
+            for (Entry<Key, Integer> entry : appendings) {
                 if (entry.value() != Nils.OBJECT)
                     secondLevel.put(entry.key(), entry.value());
             }
-            for (Integer key : removings) {
+            for (Key key : removings) {
                 secondLevel.remove(key);
             }
         }
@@ -97,21 +96,21 @@ public class EphemeronsTest {
         }
     }
 
-    class Ephemerons4T extends Ephemerons<Integer, Integer> {
+    class Ephemerons4T extends Ephemerons<Integer> {
 
         protected Ephemerons4T() {
-            super(new ConcurrentHashMap<Integer, Record>());
+            super(new ConcurrentHashMap<Key, Record>());
             throughout(4);
         }
 
         @Override
-        protected void requestFlush(Collection<Entry<Integer, Integer>> appendings, Collection<Integer> removings, FutureCallback<Void> flushedCallback) {
+        protected void requestFlush(Collection<Entry<Key, Integer>> appendings, Collection<Key> removings, FutureCallback<Void> flushedCallback) {
             secondLevelStore.merge(appendings, removings);
             flushedCallback.onSuccess(Nils.VOID);
         }
 
         @Override
-        protected Integer getMiss(Integer key) {
+        protected Integer getMiss(Key key) {
             return secondLevelStore.get(key);
         }
 

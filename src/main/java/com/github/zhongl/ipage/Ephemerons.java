@@ -42,15 +42,15 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @ThreadSafe
 @MBean
-public abstract class Ephemerons<K, V> {
+public abstract class Ephemerons<V> {
 
     private final Semaphore flowControl = new Semaphore(0, true);
     private final AtomicLong id = new AtomicLong();
     private final AtomicBoolean flushing = new AtomicBoolean(false);
 
-    private final ConcurrentMap<K, Record> map;
+    private final ConcurrentMap<Key, Record> map;
 
-    protected Ephemerons(ConcurrentMap<K, Record> map) {this.map = map;}
+    protected Ephemerons(ConcurrentMap<Key, Record> map) {this.map = map;}
 
     @ManagedOperation
     public int throughout(@Parameter("delta") int delta) {
@@ -69,7 +69,7 @@ public abstract class Ephemerons<K, V> {
         return map.size();
     }
 
-    public void add(K key, V value, FutureCallback<Void> removedOrDurableCallback) {
+    public void add(Key key, V value, FutureCallback<Void> removedOrDurableCallback) {
         release(checkNotNull(key), Nils.VOID);
         checkNotNull(value);
         checkNotNull(removedOrDurableCallback);
@@ -77,14 +77,14 @@ public abstract class Ephemerons<K, V> {
         map.put(key, new Record(id.getAndIncrement(), key, value, removedOrDurableCallback));
     }
 
-    public void remove(K key) {
+    public void remove(Key key) {
         boolean release = release(checkNotNull(key), Nils.VOID);
         if (release) return;
         acquire();
         map.put(key, new Record(id.getAndIncrement(), key, (V) Nils.OBJECT, FutureCallbacks.<Void>ignore()));
     }
 
-    public V get(K key) {
+    public V get(Key key) {
         Record record = map.get(key);
         return record == null ? getMiss(key) : record.value;
     }
@@ -93,22 +93,22 @@ public abstract class Ephemerons<K, V> {
         if (map.isEmpty()) return;
         if (!flushing.compareAndSet(false, true)) return;
 
-        final Collection<Entry<K, V>> appendings = new ArrayList<Entry<K, V>>();
-        final Collection<K> removings = new ArrayList<K>();
+        final Collection<Entry<Key, V>> appendings = new ArrayList<Entry<Key, V>>();
+        final Collection<Key> removings = new ArrayList<Key>();
 
         SortedSet<Record> records = new TreeSet<Record>(map.values());
 
         for (Record record : records) {
             if (record.value == Nils.OBJECT) removings.add(record.key);
-            else appendings.add(new Entry<K, V>(record.key, record.value));
+            else appendings.add(new Entry<Key, V>(record.key, record.value));
         }
 
         requestFlush(appendings, removings, new FutureCallback<Void>() {
             @Override
             public void onSuccess(Void v) {
-                foreachKey(new Function<K, Void>() {
+                foreachKey(new Function<Key, Void>() {
                     @Override
-                    public Void apply(@Nullable K key) {
+                    public Void apply(@Nullable Key key) {
                         release(key, Nils.VOID);
                         return Nils.VOID;
                     }
@@ -118,28 +118,28 @@ public abstract class Ephemerons<K, V> {
 
             @Override
             public void onFailure(final Throwable t) {
-                foreachKey(new Function<K, Void>() {
+                foreachKey(new Function<Key, Void>() {
                     @Override
-                    public Void apply(@Nullable K key) {
+                    public Void apply(@Nullable Key key) {
                         release(key, t);
                         return Nils.VOID;
                     }
                 });
             }
 
-            private void foreachKey(Function<K, Void> function) {
-                for (K key : removings) function.apply(key);
-                for (Entry<K, V> entry : appendings) function.apply(entry.key());
+            private void foreachKey(Function<Key, Void> function) {
+                for (Key key : removings) function.apply(key);
+                for (Entry<Key, V> entry : appendings) function.apply(entry.key());
                 flushing.set(false);
             }
         });
     }
 
     /** This method supposed be asynchronized. */
-    protected abstract void requestFlush(Collection<Entry<K, V>> appendings, Collection<K> removings, FutureCallback<Void> flushedCallback);
+    protected abstract void requestFlush(Collection<Entry<Key, V>> appendings, Collection<Key> removings, FutureCallback<Void> flushedCallback);
 
     /** This method supposed be thread safed. */
-    protected abstract V getMiss(K key);
+    protected abstract V getMiss(Key key);
 
     private void acquire() {
         try {
@@ -149,7 +149,7 @@ public abstract class Ephemerons<K, V> {
         }
     }
 
-    private boolean release(K key, Object voidOrThrowable) {
+    private boolean release(Key key, Object voidOrThrowable) {
         Record record = map.remove(key);
 
         if (record == null) return false;
@@ -165,11 +165,11 @@ public abstract class Ephemerons<K, V> {
     protected class Record implements Comparable<Record> {
 
         private final Long id;
-        private final K key;
+        private final Key key;
         private final V value;
         private final FutureCallback<Void> callback;
 
-        public Record(long id, K key, V value, FutureCallback<Void> callback) {
+        public Record(long id, Key key, V value, FutureCallback<Void> callback) {
             this.id = id;
             this.key = key;
             this.value = value;

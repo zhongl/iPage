@@ -17,60 +17,48 @@ package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.Entry;
 import com.github.zhongl.util.Nils;
-import com.google.common.base.Function;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.FutureCallback;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Collection;
 import java.util.Iterator;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.Collections2.transform;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public abstract class Storage<K, V> implements Iterable<V> {
+public class Storage<V> implements Iterable<V> {
 
-    protected volatile Snapshot snapshot;
+    protected volatile Snapshot<V> snapshot;
 
     protected final File dir;
     protected final File head;
     protected final File pages;
     protected final File tmp;
+    protected final Codec<V> codec;
 
-    protected Storage(File dir) throws IOException {
+    protected Storage(File dir, Codec<V> codec) throws IOException {
         this.dir = dir;
+        this.codec = codec;
         this.head = new File(dir, "HEAD");
+
         this.pages = new File(dir, "pages");
+        tryMkdir(pages);
+
         this.tmp = new File(dir, "tmp");
+        tryMkdir(tmp);
+
         this.snapshot = loadHead();
         cleanUp();
     }
 
-    public void merge(final Collection<Entry<K, V>> appendings, Collection<K> removings, FutureCallback<Void> flushedCallback) {
+    public void merge(final Collection<Entry<Key, V>> appendings, Collection<Key> removings, FutureCallback<Void> flushedCallback) {
         if (appendings.isEmpty() && removings.isEmpty()) return;
+
         try {
-
-            String newSnapshotName = snapshot.merge(
-                    transform(appendings, new Function<Entry<K, V>, Entry<Key, V>>() {
-                        @Override
-                        public Entry<Key, V> apply(@Nullable Entry<K, V> entry) {
-                            return new Entry<Key, V>(toKey(entry.key()), entry.value());
-                        }
-                    }),
-                    transform(removings, new Function<K, Key>() {
-                        @Override
-                        public Key apply(@Nullable K key) {
-                            return toKey(key);
-                        }
-                    }),
-                    tmp);
-
-            commit(newSnapshotName);
+            commit(snapshot.merge(appendings, removings, tmp));
         } catch (Throwable t) {
             rollback();
             flushedCallback.onFailure(t);
@@ -79,8 +67,8 @@ public abstract class Storage<K, V> implements Iterable<V> {
         flushedCallback.onSuccess(Nils.VOID);
     }
 
-    public V get(K key) {
-        return snapshot.get(toKey(key));
+    public V get(Key key) {
+        return snapshot.get(key);
     }
 
     @Override
@@ -89,9 +77,8 @@ public abstract class Storage<K, V> implements Iterable<V> {
     }
 
     protected void commit(String snapshotName) throws IOException {
-        if (!pages.exists()) pages.mkdirs();
         for (File file : tmp.listFiles()) {
-            file.renameTo(new File(pages, file.getName()));
+            checkState(file.renameTo(new File(pages, file.getName())));
         }
         Snapshot previous = snapshot;
         setHead(snapshotName);
@@ -99,30 +86,25 @@ public abstract class Storage<K, V> implements Iterable<V> {
         previous.delete();
     }
 
-    protected Snapshot snapshot(File file) throws IOException {
-        // scan files under file, move them to pages and create revision
-        return new Snapshot(file) {
-            @Override
-            protected <T> ByteBuffer encode(Entry<Key, T> entry) {
-                return null;  // TODO encode
-            }
+    private void tryMkdir(File dir) {
+        if (!dir.exists()) checkState(dir.mkdirs());
+    }
 
-            @Override
-            protected <T> T decode(ByteBuffer buffer) {
-                return null;  // TODO decode
-            }
-        };
+    protected Snapshot<V> snapshot(File file) throws IOException {
+        return new Snapshot<V>(file, codec);
     }
 
     protected void rollback() {
-        for (File file : tmp.listFiles()) checkState(file.delete());
+        if (tmp.exists()) {
+            for (File file : tmp.listFiles()) checkState(file.delete());
+        }
     }
 
     protected void setHead(String snapshotName) throws IOException {
         Files.write(snapshotName, head, Charset.defaultCharset());
     }
 
-    protected Snapshot loadHead() throws IOException {
+    protected Snapshot<V> loadHead() throws IOException {
         if (head.exists()) {
             String name = Files.readFirstLine(head, Charset.defaultCharset());
             return snapshot(new File(pages, name));
@@ -130,8 +112,9 @@ public abstract class Storage<K, V> implements Iterable<V> {
         return snapshot(null);
     }
 
-    protected abstract void cleanUp(); // clean tmp and files which were not linked by revision.
+    protected void cleanUp() {
+        // TODO cleanUp
+    }
 
-    protected abstract Key toKey(K key);
 
 }

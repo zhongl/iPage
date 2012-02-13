@@ -29,34 +29,34 @@ public class Key extends Number<Key> {
 
     public static final int BYTE_LENGTH = 16;
 
-    private final byte[] md5;
+    private final byte[] bytes;
 
     final BigInteger bigInteger;
 
     public Key(String hex) {
-        checkArgument(hex.length() == BYTE_LENGTH * 2, "Invalid md5 string length %s", hex.length());
+        checkArgument(hex.length() == BYTE_LENGTH * 2, "Invalid hex length %s", hex.length());
         this.bigInteger = new BigInteger(hex, 16);
-        this.md5 = toByteArray(bigInteger);
+        this.bytes = toByteArray(bigInteger);
     }
 
     public Key(BigInteger bigInteger) {
         this.bigInteger = bigInteger;
-        this.md5 = toByteArray(bigInteger);
+        this.bytes = toByteArray(bigInteger);
     }
 
-    public Key(byte[] md5) {
-        checkArgument(md5.length == BYTE_LENGTH, "Invalid md5 bytes length %s", md5.length);
-        this.md5 = md5;
-        bigInteger = new BigInteger(1, md5);
+    public Key(byte[] bytes) {
+        checkArgument(bytes.length == BYTE_LENGTH, "Invalid bytes length %s", bytes.length);
+        this.bytes = bytes;
+        bigInteger = new BigInteger(1, bytes);
     }
 
     public byte[] bytes() {
-        return md5;
+        return bytes;
     }
 
     @Override
     public String toString() {
-        return Md5.toHex(md5);
+        return Md5.toHex(bytes);
     }
 
     @Override
@@ -64,12 +64,12 @@ public class Key extends Number<Key> {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Key md5Key = (Key) o;
-        return Arrays.equals(md5, md5Key.md5);
+        return Arrays.equals(bytes, md5Key.bytes);
     }
 
     @Override
     public int hashCode() {
-        return Arrays.hashCode(md5);
+        return Arrays.hashCode(bytes);
     }
 
     @Override

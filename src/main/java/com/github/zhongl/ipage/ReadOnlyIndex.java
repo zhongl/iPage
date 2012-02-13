@@ -40,7 +40,7 @@ public class ReadOnlyIndex extends Index {
 
             @Override
             public int size() {
-                return size();
+                return ReadOnlyIndex.this.size();
             }
         };
     }
