@@ -32,7 +32,7 @@ import java.util.Iterator;
 import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-@MBean(objectName = "com.github.zhongl.ipage:type=Storage")
+@MBean
 public class Storage<V> implements Iterable<V> {
 
     protected volatile Snapshot<V> snapshot;

@@ -66,7 +66,9 @@ public abstract class Actor {
     }
 
     /** Overwrite this method for some time-sensitive stuff. */
-    protected void hearbeat() {}
+    protected void heartbeat() throws Throwable {}
+
+    protected boolean onInterruptedBy(Throwable t) { return true; }
 
     private class Core extends Thread {
 
@@ -79,18 +81,17 @@ public abstract class Actor {
 
         @Override
         public void run() {
-            boolean interrupted = false;
             while (running) {
                 try {
                     Runnable task = tasks.poll(timeout, MILLISECONDS);
-                    hearbeat();
+                    heartbeat();
                     if (task == null) continue;
                     task.run();
-                } catch (InterruptedException e) {
-                    interrupted = true;
+                } catch (Throwable t) {
+                    running = onInterruptedBy(t);
+
                 }
             }
-            if (interrupted) Thread.currentThread().interrupt();
         }
 
     }

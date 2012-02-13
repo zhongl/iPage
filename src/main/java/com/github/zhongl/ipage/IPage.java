@@ -8,7 +8,10 @@ import com.google.common.util.concurrent.FutureCallback;
 import org.softee.management.helper.MBeanRegistration;
 
 import javax.annotation.Nullable;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
 import java.io.File;
+import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.Callable;
@@ -16,6 +19,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public abstract class IPage<K, V> extends Actor implements Iterable<V> {
+
+    private static final String EPHEMERONS = "Ephemerons";
+    private static final String STORAGE = "Storage";
 
     private final Storage<V> storage;
     private final Ephemerons<V> ephemerons;
@@ -29,7 +35,7 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
                  long flushMillis,
                  int flushCount) throws Exception {
 
-        super((flushMillis));
+        super((flushMillis / 2));
         this.quanlityOfService = quanlityOfService;
         this.storage = new Storage<V>(dir, codec);
         this.ephemerons = new Ephemerons<V>(new ConcurrentHashMap<Key, Ephemerons<V>.Record>()) {
@@ -65,8 +71,8 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
             }
         });
 
-        new MBeanRegistration(ephemerons).register();
-        new MBeanRegistration(storage).register();
+        new MBeanRegistration(ephemerons, objectName(EPHEMERONS)).register();
+        new MBeanRegistration(storage, objectName(STORAGE)).register();
     }
 
     /**
@@ -86,14 +92,6 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
         tryCallByCount();
     }
 
-    private void tryCallByCount() {
-        try {
-            callByCountOrElapse.tryCallByCount();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     public void remove(K key) {
         ephemerons.remove(transform(key));
         tryCallByCount();
@@ -109,13 +107,37 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
     }
 
     @Override
-    protected void hearbeat() {
+    public void stop() {
+        super.stop();
         try {
-            callByCountOrElapse.tryCallByElapse();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+            new MBeanRegistration(ephemerons, objectName(EPHEMERONS)).unregister();
+            new MBeanRegistration(storage, objectName(STORAGE)).unregister();
+        } catch (Exception ignored) { }
+    }
+
+    @Override
+    protected void heartbeat() throws Throwable {
+        callByCountOrElapse.tryCallByElapse();
+    }
+
+    @Override
+    protected boolean onInterruptedBy(Throwable t) {
+        return super.onInterruptedBy(t);    // TODO log error
     }
 
     protected abstract Key transform(K key);
+
+    private void tryCallByCount() {
+        submit(new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                callByCountOrElapse.tryCallByCount();
+                return Nils.VOID;
+            }
+        });
+    }
+
+    private ObjectName objectName(String ephemerons1) throws MalformedObjectNameException {
+        return new ObjectName(MessageFormat.format("com.github.zhongl.ipage:type={0},belongs={1}", ephemerons1, this));
+    }
 }
