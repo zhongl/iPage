@@ -15,7 +15,7 @@ class LineEntryCodec<V> {
 
     public ByteBuffer encode(Entry<Key, V> entry) {
         ByteBuffer buffer = vCodec.encode(entry.value());
-        int length = buffer.limit() - buffer.position();
+        int length = buffer.remaining();
         ByteBuffer aggregated = ByteBuffer.allocate(KEY_AND_LEN + length);
         return (ByteBuffer) aggregated.put(entry.key().bytes())
                                       .putInt(length)

@@ -6,8 +6,7 @@ import java.nio.ByteBuffer;
 public class BytesCodec implements Codec<byte[]> {
     @Override
     public byte[] decode(ByteBuffer buffer) {
-        int length = buffer.limit() - buffer.position();
-        byte[] bytes = new byte[length];
+        byte[] bytes = new byte[buffer.remaining()];
         buffer.get(bytes);
         return bytes;
     }
