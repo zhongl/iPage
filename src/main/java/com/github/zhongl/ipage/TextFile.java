@@ -77,7 +77,8 @@ class TextFile {
         }
 
         Page line = lineAppender.page();
-        appendLineTo(sb, TextFile.Type.L, line.number(), Md5.renameToMd5(line.file()));
+        if (line.file().length() > 0)
+            appendLineTo(sb, TextFile.Type.L, line.number(), Md5.renameToMd5(line.file()));
 
         for (Page page : indexMerger.pages) {
             appendLineTo(sb, TextFile.Type.I, page.number(), Md5.renameToMd5(page.file()));
