@@ -2,7 +2,6 @@ package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.Entry;
 import com.github.zhongl.util.FileTestContext;
-import com.github.zhongl.util.Tuple;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -54,7 +53,8 @@ public class IndexMergerTest extends FileTestContext {
         indexMerger.set(key1, range);
         indexMerger.force();
 
-        ReadOnlyIndex index = new ReadOnlyIndex(Arrays.asList(new Tuple(key1, new File(dir, key1.toString() + ".index"))));
+        File file = new File(dir, key1.toString() + ".index");
+        ReadOnlyIndex index = new ReadOnlyIndex(Arrays.asList(new Entry<File, Key>(file, key1)));
 
         assertThat(index.entries(), hasItems(new Entry<Key, Range>(key1, range), entry2));
     }
@@ -83,7 +83,8 @@ public class IndexMergerTest extends FileTestContext {
         indexMerger.merge(a.iterator(), b.iterator());
         indexMerger.force();
 
-        ReadOnlyIndex index = new ReadOnlyIndex(Arrays.asList(new Tuple(key1, new File(dir, key1.toString() + ".index"))));
+        File file = new File(dir, key1.toString() + ".index");
+        ReadOnlyIndex index = new ReadOnlyIndex(Arrays.asList(new Entry<File, Key>(file, key1)));
 
         assertThat(index.entries(), hasItems(entry1, entry2, entry3));
     }

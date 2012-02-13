@@ -50,7 +50,7 @@ class LineEntryCodec<V> {
 
             @Override
             public ByteBuffer origin() {
-                return origin;
+                return (ByteBuffer) origin.position(0);
             }
         };
     }

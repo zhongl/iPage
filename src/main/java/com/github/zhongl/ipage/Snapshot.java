@@ -16,69 +16,30 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.Entry;
-import com.github.zhongl.util.Md5;
-import com.github.zhongl.util.Nils;
-import com.github.zhongl.util.Tuple;
 import com.google.common.collect.AbstractIterator;
-import com.google.common.io.Files;
-import com.google.common.io.LineProcessor;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
-import java.util.*;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
-import static com.google.common.base.Preconditions.checkState;
-
-/**
- * Text File Format:
- * <p/>
- * <pre>
- *  TYPE[L, I] NUMBER FILE_NAME \n
- * </pre>
- * <p/>
- * eg:
- * <pre>
- *  L 287463 b8d1b43eae73587ba56baef574709ecb \n
- * </pre>
- *
- * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a>
- */
+/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class Snapshot<T> implements Iterable<T> {
 
-    private final File file;
-    private final List<Tuple> linePageTuples;
-    private final List<Tuple> indexPageTuples;
     private final LineEntryCodec<T> lineEntryCodec;
     private final ReadOnlyLine<T> readOnlyLine;
     private final ReadOnlyIndex readOnlyIndex;
+    private final TextFile textFile;
 
     public Snapshot(@Nullable final File file, Codec<T> codec) throws IOException {
-        this.file = file;
-        linePageTuples = new LinkedList<Tuple>();
-        indexPageTuples = new LinkedList<Tuple>();
-
-        if (file != null) {
-            Files.readLines(file, Charset.defaultCharset(), new LineProcessor<Void>() {
-                @Override
-                public boolean processLine(String line) throws IOException {
-                    String[] parts = line.split(" ");
-                    Type.valueOf(parts[0]).apply(parts[1], parts[2], file.getParentFile(), linePageTuples, indexPageTuples);
-                    return true;
-                }
-
-                @Override
-                public Void getResult() {
-                    return Nils.VOID;
-                }
-            });
-        }
-
+        textFile = new TextFile(file);
         lineEntryCodec = new LineEntryCodec<T>(codec);
-        readOnlyLine = new ReadOnlyLine<T>(linePageTuples, lineEntryCodec);
-        readOnlyIndex = new ReadOnlyIndex(indexPageTuples);
+        readOnlyLine = new ReadOnlyLine<T>(textFile.lineEntries(), lineEntryCodec);
+        readOnlyIndex = new ReadOnlyIndex(textFile.indexEntres());
     }
 
     public T get(Key key) {
@@ -196,42 +157,11 @@ class Snapshot<T> implements Iterable<T> {
     }
 
     private File createSnapshotFile(IndexMerger indexMerger, LineAppender lineAppender, File tmp, boolean append) {
-        File sFile = new File(tmp, "snapshot");
-
-        StringBuilder sb = new StringBuilder();
-        if (append) {
-            for (Page page : readOnlyLine.pages) {
-                appendLineTo(sb, Type.L, page.number(), page.file());
-            }
-        }
-
-        Page line = lineAppender.page();
-        appendLineTo(sb, Type.L, line.number(), Md5.renameToMd5(line.file()));
-
-        for (Page page : indexMerger.pages) {
-            appendLineTo(sb, Type.I, page.number(), Md5.renameToMd5(page.file()));
-        }
-
-        try {
-            Files.write(sb.toString(), sFile, Charset.defaultCharset());
-            return Md5.renameToMd5(sFile);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return textFile.create(indexMerger, lineAppender, tmp, append);
     }
 
-    private void appendLineTo(StringBuilder sb, Type type, Number number, File file) {
-        sb.append(type).append(" ").append(number).append(" ").append(file.getName()).append('\n');
-    }
 
-    public void delete() {
-        deleteFilesIn(linePageTuples);
-        deleteFilesIn(indexPageTuples);
-        if (file != null) checkState(file.delete());
+    public boolean isLinkTo(File file) {
+        return textFile.contains(file);
     }
-
-    private void deleteFilesIn(List<Tuple> tuples) {
-        for (Tuple tuple : tuples) checkState(tuple.<File>get(1).delete());
-    }
-
 }

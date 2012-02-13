@@ -86,7 +86,9 @@ public abstract class Ephemerons<V> {
 
     public V get(Key key) {
         Record record = map.get(key);
-        return record == null ? getMiss(key) : record.value;
+        if (record == null) return getMiss(key);
+        if (record.value == Nils.OBJECT) return null;
+        return record.value;
     }
 
     public void flush() {

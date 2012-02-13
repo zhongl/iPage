@@ -17,7 +17,6 @@ package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.Entry;
 import com.github.zhongl.util.ReadOnlyMappedBuffers;
-import com.github.zhongl.util.Tuple;
 import com.google.common.collect.AbstractIterator;
 
 import javax.annotation.concurrent.ThreadSafe;
@@ -35,7 +34,7 @@ public class ReadOnlyLine<T> extends Binder implements Iterable<Entry<Key, T>> {
 
     protected final LineEntryCodec<T> lineEntryCodec;
 
-    protected ReadOnlyLine(final List<Tuple> tuples, LineEntryCodec<T> lineEntryCodec) {
+    protected ReadOnlyLine(final List<Entry<File, Offset>> tuples, LineEntryCodec<T> lineEntryCodec) {
         super(unmodifiableList(new PageList(tuples)));
         this.lineEntryCodec = lineEntryCodec;
     }
@@ -105,19 +104,19 @@ public class ReadOnlyLine<T> extends Binder implements Iterable<Entry<Key, T>> {
     }
 
     private static class PageList extends AbstractList<Page> {
-        private final List<Tuple> tuples;
+        private final List<Entry<File, Offset>> entries;
 
-        public PageList(List<Tuple> tuples) {this.tuples = tuples;}
+        public PageList(List<Entry<File, Offset>> entries) {this.entries = entries;}
 
         @Override
         public Page get(int index) {
-            Tuple tuple = tuples.get(index);
-            return new InnerPage(tuple.<File>get(1), tuple.<Offset>get(0));
+            Entry<File, Offset> entry = entries.get(index);
+            return new InnerPage(entry.key(), entry.value());
         }
 
         @Override
         public int size() {
-            return tuples.size();
+            return entries.size();
         }
     }
 }

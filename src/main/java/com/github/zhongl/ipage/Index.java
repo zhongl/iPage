@@ -7,8 +7,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.RandomAccess;
 
-import static com.google.common.base.Preconditions.checkState;
-
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public abstract class Index extends Binder {
     public static final int ENTRY_LENGTH = Key.BYTE_LENGTH + 16;
@@ -19,7 +17,11 @@ public abstract class Index extends Binder {
 
     public Range get(Key key) {
         if (pages.isEmpty()) return Range.NIL;
-        return ((InnerPage) binarySearch(key)).get(key);
+        try {
+            return ((InnerPage) binarySearch(key)).get(key);
+        } catch (IndexOutOfBoundsException e) {
+            return Range.NIL;
+        }
     }
 
     protected static abstract class InnerPage extends Page {
@@ -31,17 +33,13 @@ public abstract class Index extends Binder {
         }
 
         public Range get(Key key) {
-            try {
-                ByteBuffer byteBuffer = positionedBufferByBinarySearch(key);
-                return new Range(byteBuffer.getLong(), byteBuffer.getLong());
-            } catch (IllegalStateException e) {
-                return Range.NIL;
-            }
+            ByteBuffer byteBuffer = positionedBufferByBinarySearch(key);
+            return new Range(byteBuffer.getLong(), byteBuffer.getLong());
         }
 
         protected ByteBuffer positionedBufferByBinarySearch(Key key) {
             int index = Collections.binarySearch(keys, key);
-            checkState(index > -1);
+            if (index < 0) throw new IndexOutOfBoundsException(index + "");
             int position = index * ENTRY_LENGTH + Key.BYTE_LENGTH;
             return (ByteBuffer) buffer().position(position);
         }

@@ -28,10 +28,6 @@ public class Offset extends Number<Offset> {
         this(Long.parseLong(text));
     }
 
-    public Offset add(long length) {
-        return new Offset(value + length);
-    }
-
     public long value() {
         return value;
     }

@@ -6,12 +6,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
 
@@ -33,6 +35,15 @@ public class EphemeronsTest {
         ephemerons4T.remove(key);
         ephemerons4T.flush();
         verify(secondLevelStore, never()).merge(any(Collection.class), any(Collection.class));
+    }
+
+    @Test
+    public void remove() throws Exception {
+        Key key = key(1);
+        ephemerons4T.remove(key);
+        assertThat(ephemerons4T.get(key), is(nullValue()));
+        ephemerons4T.flush();
+        verify(secondLevelStore).merge(any(Collection.class), eq(Arrays.asList(key)));
     }
 
     @Test

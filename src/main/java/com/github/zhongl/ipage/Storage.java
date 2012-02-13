@@ -51,7 +51,6 @@ public class Storage<V> implements Iterable<V> {
         tryMkdir(tmp);
 
         this.snapshot = loadHead();
-        cleanUp();
     }
 
     public void merge(final Collection<Entry<Key, V>> appendings, Collection<Key> removings, FutureCallback<Void> flushedCallback) {
@@ -80,10 +79,9 @@ public class Storage<V> implements Iterable<V> {
         for (File file : tmp.listFiles()) {
             checkState(file.renameTo(new File(pages, file.getName())));
         }
-        Snapshot previous = snapshot;
         setHead(snapshotName);
         snapshot = snapshot(new File(pages, snapshotName));
-        previous.delete();
+        cleanUp();
     }
 
     private void tryMkdir(File dir) {
@@ -113,7 +111,10 @@ public class Storage<V> implements Iterable<V> {
     }
 
     protected void cleanUp() {
-        // TODO cleanUp
+        File[] files = pages.listFiles();
+        for (File file : files) {
+            if (!snapshot.isLinkTo(file)) checkState(file.delete());
+        }
     }
 
 

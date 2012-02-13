@@ -2,7 +2,6 @@ package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.Entry;
 import com.github.zhongl.util.ReadOnlyMappedBuffers;
-import com.github.zhongl.util.Tuple;
 import com.google.common.collect.Iterators;
 
 import java.io.File;
@@ -14,8 +13,8 @@ import static java.util.Collections.unmodifiableList;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class ReadOnlyIndex extends Index {
 
-    protected ReadOnlyIndex(final List<Tuple> tuples) {
-        super(unmodifiableList(new PageList(tuples)));
+    protected ReadOnlyIndex(final List<Entry<File, Key>> entries) {
+        super(unmodifiableList(new PageList(entries)));
 
     }
 
@@ -88,19 +87,19 @@ public class ReadOnlyIndex extends Index {
     }
 
     private static class PageList extends AbstractList<Page> implements RandomAccess {
-        private final List<Tuple> tuples;
+        private final List<Entry<File, Key>> entries;
 
-        public PageList(List<Tuple> tuples) {this.tuples = tuples;}
+        public PageList(List<Entry<File, Key>> entries) {this.entries = entries;}
 
         @Override
         public Page get(int index) {
-            Tuple tuple = tuples.get(index);
-            return new InnerPage(tuple.<File>get(1), tuple.<Key>get(0));
+            Entry<File, Key> entry = entries.get(index);
+            return new InnerPage(entry.key(), entry.value());
         }
 
         @Override
         public int size() {
-            return tuples.size();
+            return entries.size();
         }
     }
 }
