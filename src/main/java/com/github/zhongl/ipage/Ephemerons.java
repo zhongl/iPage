@@ -16,7 +16,6 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.Entry;
-import com.github.zhongl.util.FutureCallbacks;
 import com.github.zhongl.util.Nils;
 import com.google.common.base.Function;
 import com.google.common.util.concurrent.FutureCallback;
@@ -77,11 +76,14 @@ public abstract class Ephemerons<V> {
         map.put(key, new Record(id.getAndIncrement(), key, value, removedOrDurableCallback));
     }
 
-    public void remove(Key key) {
+    public void remove(Key key, FutureCallback<Void> appliedCallback) {
         boolean release = release(checkNotNull(key), Nils.VOID);
-        if (release) return;
+        if (release) {
+            appliedCallback.onSuccess(Nils.VOID);
+            return;
+        }
         acquire();
-        map.put(key, new Record(id.getAndIncrement(), key, (V) Nils.OBJECT, FutureCallbacks.<Void>ignore()));
+        map.put(key, new Record(id.getAndIncrement(), key, (V) Nils.OBJECT, appliedCallback));
     }
 
     public V get(Key key) {

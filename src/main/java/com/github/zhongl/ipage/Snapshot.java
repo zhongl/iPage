@@ -105,7 +105,7 @@ class Snapshot<T> implements Iterable<T> {
         indexMerger.merge(readOnlyIndex.entries().iterator(), entries.iterator());
         indexMerger.force();
 
-        return createSnapshotFile(indexMerger, lineAppender, tmp, true).getName();
+        return textFile.create(indexMerger, lineAppender, tmp, true).getName();
     }
 
     protected String defrag(
@@ -153,11 +153,7 @@ class Snapshot<T> implements Iterable<T> {
         indexMerger.force();
         lineAppender.force();
 
-        return createSnapshotFile(indexMerger, lineAppender, tmp, false).getName();
-    }
-
-    private File createSnapshotFile(IndexMerger indexMerger, LineAppender lineAppender, File tmp, boolean append) {
-        return textFile.create(indexMerger, lineAppender, tmp, append);
+        return textFile.create(indexMerger, lineAppender, tmp, false).getName();
     }
 
 

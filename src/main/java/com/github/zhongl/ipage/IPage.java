@@ -77,8 +77,8 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
         tryCallByCount();
     }
 
-    public void remove(K key) {
-        ephemerons.remove(transform(key));
+    public void remove(K key, FutureCallback<Void> appliedCallback) {
+        ephemerons.remove(transform(key), appliedCallback);
         tryCallByCount();
     }
 

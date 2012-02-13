@@ -32,7 +32,7 @@ public class EphemeronsTest {
     public void phantom() throws Exception {
         Key key = key(1);
         ephemerons4T.add(key, 1, FutureCallbacks.<Void>ignore());
-        ephemerons4T.remove(key);
+        ephemerons4T.remove(key, FutureCallbacks.<Void>ignore());
         ephemerons4T.flush();
         verify(secondLevelStore, never()).merge(any(Collection.class), any(Collection.class));
     }
@@ -40,7 +40,7 @@ public class EphemeronsTest {
     @Test
     public void remove() throws Exception {
         Key key = key(1);
-        ephemerons4T.remove(key);
+        ephemerons4T.remove(key, FutureCallbacks.<Void>ignore());
         assertThat(ephemerons4T.get(key), is(nullValue()));
         ephemerons4T.flush();
         verify(secondLevelStore).merge(any(Collection.class), eq(Arrays.asList(key)));

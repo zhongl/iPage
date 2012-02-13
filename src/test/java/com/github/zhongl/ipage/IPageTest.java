@@ -34,17 +34,17 @@ public class IPageTest extends FileTestContext {
 
         service.sendAdd(key, value);
         assertThat(iPage.get(key), is(value));
-        iPage.remove(key);
+        service.sendRemove(key);
         assertThat(iPage.get(key), is(nullValue()));
 
         service.callAdd(key, value);
         assertThat(iPage.get(key), is(value));
-        iPage.remove(key);
+        service.callRemove(key);
         assertThat(iPage.get(key), is(nullValue()));
 
         service.futureAdd(key, value).get();
         assertThat(iPage.get(key), is(value));
-        iPage.remove(key);
+        service.futureRemove(key).get();
         assertThat(iPage.get(key), is(nullValue()));
 
         iPage.stop();

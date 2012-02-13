@@ -33,9 +33,19 @@ public class QuanlityOfService<K, V> {
         iPage.add(key, value, FutureCallbacks.<Void>ignore());
     }
 
+    public void sendRemove(K key) {
+        iPage.remove(key, FutureCallbacks.<Void>ignore());
+    }
+
     public void callAdd(K key, V value) {
         CallbackFuture<Void> callback = new CallbackFuture<Void>();
         iPage.add(key, value, callback);
+        FutureCallbacks.getUnchecked(callback);
+    }
+
+    public void callRemove(K key) {
+        CallbackFuture<Void> callback = new CallbackFuture<Void>();
+        iPage.remove(key, callback);
         FutureCallbacks.getUnchecked(callback);
     }
 
@@ -45,5 +55,13 @@ public class QuanlityOfService<K, V> {
         return callback;
     }
 
+    public Future<Void> futureRemove(K key) {
+        CallbackFuture<Void> callback = new CallbackFuture<Void>();
+        iPage.remove(key, callback);
+        return callback;
+    }
 
+    public V get(K key) {
+        return iPage.get(key);
+    }
 }
