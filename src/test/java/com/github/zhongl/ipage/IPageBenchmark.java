@@ -16,6 +16,7 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.Benchmarks;
+import com.github.zhongl.util.CallbackFuture;
 import com.github.zhongl.util.FileTestContext;
 import com.github.zhongl.util.Md5;
 import com.google.common.util.concurrent.FutureCallback;
@@ -34,12 +35,17 @@ public class IPageBenchmark extends FileTestContext {
     public static final int FLUSH_COUNT = Integer.getInteger("ipage.benchmark.flush.count", 10000);
     private IPage<Integer, byte[]> iPage;
     private ExecutorService service;
+    private int avaliableProcessors;
 
     @Override
     @Before
     public void setUp() throws Exception {
         super.setUp();
-        int threads = Runtime.getRuntime().availableProcessors();
+        avaliableProcessors = Runtime.getRuntime().availableProcessors();
+
+    }
+
+    private void initService(int threads) {
         service = new ThreadPoolExecutor(
                 threads,
                 threads,
@@ -53,7 +59,8 @@ public class IPageBenchmark extends FileTestContext {
     public void addThenRemove() throws Exception {
         dir = testDir("addThenRemove");
 
-        initIPage(100000, 5000L, 10000);
+        initService(avaliableProcessors);
+        initIPage(EPHEMERON_THROUGHOUT, FLUSH_MILLIS, FLUSH_COUNT);
 
         final int times = 1000000;
         final CountDownLatch aLatch = new CountDownLatch(times);
@@ -124,19 +131,11 @@ public class IPageBenchmark extends FileTestContext {
 
     }
 
-    private void initIPage(final int ephemeronThroughout, final long flushMillis, final int flushCount) throws Exception {
-        iPage = new IPage<Integer, byte[]>(dir, new BytesCodec(), ephemeronThroughout, flushMillis, flushCount) {
-            @Override
-            protected Key transform(Integer key) {
-                return new Key(Md5.md5(key.toString().getBytes()));
-            }
-        };
-    }
-
     @Test
     public void get() throws Exception {
         dir = testDir("get");
 
+        initService(avaliableProcessors);
         initIPage(EPHEMERON_THROUGHOUT, FLUSH_MILLIS, FLUSH_COUNT);
 
         final int times = 100000;
@@ -191,6 +190,55 @@ public class IPageBenchmark extends FileTestContext {
                 }
             }
         }, times * 10);
+    }
+
+    @Test
+    public void reliableAdd() throws Exception {
+        dir = testDir("addThenRemove");
+
+        int count = avaliableProcessors * 32;
+        initService(count);
+        initIPage(EPHEMERON_THROUGHOUT, FLUSH_MILLIS, count);
+
+        final int times = 10000;
+        final CountDownLatch aLatch = new CountDownLatch(times);
+
+        Benchmarks.benchmark("add", new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < times; i++) {
+                    final int num = i;
+                    service.submit(new Runnable() {
+                        @Override
+                        public void run() {
+                            CallbackFuture<Void> future = new CallbackFuture<Void>();
+                            iPage.add(num, new byte[1024], future);
+                            try {
+                                future.get();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            aLatch.countDown();
+                        }
+                    });
+                }
+
+                try {
+                    aLatch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, times);
+    }
+
+    private void initIPage(final int ephemeronThroughout, final long flushMillis, final int flushCount) throws Exception {
+        iPage = new IPage<Integer, byte[]>(dir, new BytesCodec(), ephemeronThroughout, flushMillis, flushCount) {
+            @Override
+            protected Key transform(Integer key) {
+                return new Key(Md5.md5(key.toString().getBytes()));
+            }
+        };
     }
 
     @Override

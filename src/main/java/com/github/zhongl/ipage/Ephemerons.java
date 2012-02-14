@@ -28,8 +28,8 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -48,8 +48,12 @@ public abstract class Ephemerons<V> {
     private final AtomicBoolean flushing = new AtomicBoolean(false);
 
     private final ConcurrentMap<Key, Record> map;
+    private final Queue<Entry<Key, V>> incomingOrderQueue;
 
-    protected Ephemerons(ConcurrentMap<Key, Record> map) {this.map = map;}
+    protected Ephemerons(ConcurrentMap<Key, Record> map) {
+        this.map = map;
+        incomingOrderQueue = new ConcurrentLinkedQueue<Entry<Key, V>>();
+    }
 
     @ManagedOperation
     public int throughout(@Parameter("delta") int delta) {
@@ -73,7 +77,8 @@ public abstract class Ephemerons<V> {
         checkNotNull(value);
         checkNotNull(removedOrDurableCallback);
         acquire();
-        map.put(key, new Record(id.getAndIncrement(), key, value, removedOrDurableCallback));
+        incomingOrderQueue.add(new Entry<Key, V>(key, value));
+        map.put(key, new Record(value, removedOrDurableCallback));
     }
 
     public void remove(Key key, FutureCallback<Void> appliedCallback) {
@@ -83,7 +88,8 @@ public abstract class Ephemerons<V> {
             return;
         }
         acquire();
-        map.put(key, new Record(id.getAndIncrement(), key, (V) Nils.OBJECT, appliedCallback));
+        incomingOrderQueue.add(new Entry<Key, V>(key, (V) Nils.OBJECT));
+        map.put(key, new Record((V) Nils.OBJECT, appliedCallback));
     }
 
     public V get(Key key) {
@@ -94,17 +100,23 @@ public abstract class Ephemerons<V> {
     }
 
     public void flush() {
-        if (map.isEmpty()) return;
         if (!flushing.compareAndSet(false, true)) return;
+        Queue<Entry<Key, V>> batch = incomingOrderQueue;
 
         final Collection<Entry<Key, V>> appendings = new ArrayList<Entry<Key, V>>();
         final Collection<Key> removings = new ArrayList<Key>();
 
-        SortedSet<Record> records = new TreeSet<Record>(map.values());
+        while (true) {
+            Entry<Key, V> entry = batch.poll();
+            if (entry == null) break;
+            if (!map.containsKey(entry.key())) continue; // removed key
+            if (entry.value().equals(Nils.OBJECT)) removings.add(entry.key());
+            else appendings.add(entry);
+        }
 
-        for (Record record : records) {
-            if (record.value == Nils.OBJECT) removings.add(record.key);
-            else appendings.add(new Entry<Key, V>(record.key, record.value));
+        if (appendings.isEmpty() && removings.isEmpty()) {
+            flushing.set(false);
+            return;
         }
 
         requestFlush(appendings, removings, new FutureCallback<Void>() {
@@ -166,23 +178,15 @@ public abstract class Ephemerons<V> {
         return true;
     }
 
-    protected class Record implements Comparable<Record> {
+    protected class Record {
 
-        private final Long id;
-        private final Key key;
         private final V value;
         private final FutureCallback<Void> callback;
 
-        public Record(long id, Key key, V value, FutureCallback<Void> callback) {
-            this.id = id;
-            this.key = key;
+        public Record(V value, FutureCallback<Void> callback) {
             this.value = value;
             this.callback = callback;
         }
 
-        @Override
-        public int compareTo(Record o) {
-            return id.compareTo(o.id);
-        }
     }
 }
