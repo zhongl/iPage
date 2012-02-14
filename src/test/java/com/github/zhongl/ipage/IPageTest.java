@@ -15,9 +15,14 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.util.CallbackFuture;
 import com.github.zhongl.util.FileTestContext;
+import com.github.zhongl.util.FutureCallbacks;
 import com.github.zhongl.util.Md5;
 import org.junit.Test;
+
+import javax.annotation.concurrent.ThreadSafe;
+import java.util.concurrent.Future;
 
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNull.nullValue;
@@ -65,4 +70,45 @@ public class IPageTest extends FileTestContext {
         iPage.stop();
     }
 
+    /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+    @ThreadSafe
+    public static class QuanlityOfService<K, V> {
+
+        private final IPage<K, V> iPage;
+
+        public QuanlityOfService(IPage<K, V> iPage) {this.iPage = iPage;}
+
+        public void sendAdd(K key, V value) {
+            iPage.add(key, value, FutureCallbacks.<Void>ignore());
+        }
+
+        public void sendRemove(K key) {
+            iPage.remove(key, FutureCallbacks.<Void>ignore());
+        }
+
+        public void callAdd(K key, V value) {
+            CallbackFuture<Void> callback = new CallbackFuture<Void>();
+            iPage.add(key, value, callback);
+            FutureCallbacks.getUnchecked(callback);
+        }
+
+        public void callRemove(K key) {
+            CallbackFuture<Void> callback = new CallbackFuture<Void>();
+            iPage.remove(key, callback);
+            FutureCallbacks.getUnchecked(callback);
+        }
+
+        public Future<Void> futureAdd(K key, V value) {
+            CallbackFuture<Void> callback = new CallbackFuture<Void>();
+            iPage.add(key, value, callback);
+            return callback;
+        }
+
+        public Future<Void> futureRemove(K key) {
+            CallbackFuture<Void> callback = new CallbackFuture<Void>();
+            iPage.remove(key, callback);
+            return callback;
+        }
+
+    }
 }

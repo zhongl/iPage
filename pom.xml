@@ -75,12 +75,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.github.zhongl</groupId>
-            <artifactId>benchmarker</artifactId>
-            <version>0.1</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest-all</artifactId>
             <version>1.1</version>

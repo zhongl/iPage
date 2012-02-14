@@ -29,6 +29,9 @@ import java.util.concurrent.*;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class IPageBenchmark extends FileTestContext {
 
+    public static final int EPHEMERON_THROUGHOUT = Integer.getInteger("ipage.benchmark.throughout", 100000);
+    public static final long FLUSH_MILLIS = Long.getLong("ipage.benchmark.flush.millis", 5000L);
+    public static final int FLUSH_COUNT = Integer.getInteger("ipage.benchmark.flush.count", 10000);
     private IPage<Integer, byte[]> iPage;
     private ExecutorService service;
 
@@ -134,7 +137,7 @@ public class IPageBenchmark extends FileTestContext {
     public void get() throws Exception {
         dir = testDir("get");
 
-        initIPage(100000, 5000L, 10000);
+        initIPage(EPHEMERON_THROUGHOUT, FLUSH_MILLIS, FLUSH_COUNT);
 
         final int times = 100000;
         final CountDownLatch aLatch = new CountDownLatch(times);
