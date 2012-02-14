@@ -27,6 +27,8 @@ import org.junit.Test;
 import java.util.Random;
 import java.util.concurrent.*;
 
+import static java.text.MessageFormat.format;
+
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class IPageBenchmark extends FileTestContext {
 
@@ -43,16 +45,6 @@ public class IPageBenchmark extends FileTestContext {
         super.setUp();
         avaliableProcessors = Runtime.getRuntime().availableProcessors();
 
-    }
-
-    private void initService(int threads) {
-        service = new ThreadPoolExecutor(
-                threads,
-                threads,
-                0L,
-                TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<Runnable>(1000),
-                new ThreadPoolExecutor.CallerRunsPolicy());
     }
 
     @Test
@@ -194,7 +186,7 @@ public class IPageBenchmark extends FileTestContext {
 
     @Test
     public void reliableAdd() throws Exception {
-        dir = testDir("addThenRemove");
+        dir = testDir("reliableAdd");
 
         int count = avaliableProcessors * 32;
         initService(count);
@@ -233,12 +225,31 @@ public class IPageBenchmark extends FileTestContext {
     }
 
     private void initIPage(final int ephemeronThroughout, final long flushMillis, final int flushCount) throws Exception {
+        System.out.println(format(
+                "throughout: {0}, flush millis: {1}, flush count: {2}",
+                ephemeronThroughout,
+                flushMillis,
+                flushCount
+        ));
+
         iPage = new IPage<Integer, byte[]>(dir, new BytesCodec(), ephemeronThroughout, flushMillis, flushCount) {
             @Override
             protected Key transform(Integer key) {
                 return new Key(Md5.md5(key.toString().getBytes()));
             }
         };
+    }
+
+    private void initService(int threads) {
+        System.out.println(format("concurrency: {0}", threads));
+
+        service = new ThreadPoolExecutor(
+                threads,
+                threads,
+                0L,
+                TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<Runnable>(1000),
+                new ThreadPoolExecutor.CallerRunsPolicy());
     }
 
     @Override
