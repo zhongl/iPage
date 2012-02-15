@@ -24,7 +24,6 @@ import org.mockito.ArgumentCaptor;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import static org.hamcrest.Matchers.is;
@@ -125,7 +124,7 @@ public class EphemeronsTest {
     class Ephemerons4T extends Ephemerons<Integer> {
 
         protected Ephemerons4T() {
-            super(new ConcurrentHashMap<Key, Record>());
+            super("Ephemerons");
             throughout(4);
         }
 

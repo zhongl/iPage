@@ -29,7 +29,6 @@ import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @ThreadSafe
@@ -48,9 +47,9 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
                  long flushMillis,
                  int flushCount) throws Exception {
 
-        super((flushMillis / 2));
+        super("IPage", (flushMillis / 2));
         this.storage = new Storage<V>(dir, codec);
-        this.ephemerons = new Ephemerons<V>(new ConcurrentHashMap<Key, Ephemerons<V>.Record>()) {
+        this.ephemerons = new Ephemerons<V>("Ephemerons") {
             @Override
             protected void requestFlush(
                     final Collection<Entry<Key, V>> appendings,

@@ -36,16 +36,18 @@ public class ReadOnlyIndex extends Index {
     }
 
     public double aliveRadio(int delta) {
+        return (alives() + delta) * 1.0 / size();
+    }
+
+    public int alives() {
         if (alives < 0) {
             alives = 0;
             for (Entry<Key, Range> entry : entries()) {
                 if (!entry.value().equals(Range.NIL)) alives++;
             }
         }
-        return (alives + delta) * 1.0 / size();
+        return alives;
     }
-
-    public int alives() {return alives;}
 
     public Collection<Entry<Key, Range>> entries() {
         return new AbstractCollection<Entry<Key, Range>>() {

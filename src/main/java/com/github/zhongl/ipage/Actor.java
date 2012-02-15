@@ -39,14 +39,14 @@ public abstract class Actor {
     };
     private final long timeout;
 
-    protected Actor() {
-        this(TIMEOUT);
+    protected Actor(String name) {
+        this(name, TIMEOUT);
     }
 
-    public Actor(long timeout) {
+    public Actor(String name, long timeout) {
         this.timeout = timeout;
         this.tasks = new LinkedBlockingQueue<Runnable>();
-        core = new Core("iPage.Actor-" + getClass().getSimpleName());
+        core = new Core(name);
         core.start();
     }
 

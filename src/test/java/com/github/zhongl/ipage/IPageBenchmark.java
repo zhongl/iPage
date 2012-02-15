@@ -188,11 +188,11 @@ public class IPageBenchmark extends FileTestContext {
     public void reliableAdd() throws Exception {
         dir = testDir("reliableAdd");
 
-        int count = avaliableProcessors * 32;
+        int count = 32;
         initService(count);
-        initIPage(EPHEMERON_THROUGHOUT, FLUSH_MILLIS, count);
+        initIPage(EPHEMERON_THROUGHOUT, 20000L, count);
 
-        final int times = 10000;
+        final int times = 1 << 14;
         final CountDownLatch aLatch = new CountDownLatch(times);
 
         Benchmarks.benchmark("add", new Runnable() {
