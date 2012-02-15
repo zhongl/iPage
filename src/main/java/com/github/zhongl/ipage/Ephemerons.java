@@ -98,7 +98,10 @@ public abstract class Ephemerons<V> extends Actor {
 
     public V get(final Key key) {
         checkNotNull(key);
-        return getUnchecked(submit(new GetTask(key)));
+        Record record = getUnchecked(submit(new GetTask(key)));
+        if (record == null) return getMiss(key);
+        if (record.value == Nils.OBJECT) return null;
+        return record.value;
     }
 
     public void flush() {
@@ -195,17 +198,14 @@ public abstract class Ephemerons<V> extends Actor {
         }
     }
 
-    private class GetTask implements Callable<V> {
+    private class GetTask implements Callable<Record> {
         private final Key key;
 
         public GetTask(Key key) {this.key = key;}
 
         @Override
-        public V call() throws Exception {
-            Record record = map.get(key);
-            if (record == null) return getMiss(key);
-            if (record.value == Nils.OBJECT) return null;
-            return record.value;
+        public Record call() throws Exception {
+            return map.get(key);
         }
     }
 
