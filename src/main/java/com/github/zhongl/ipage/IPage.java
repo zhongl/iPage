@@ -47,7 +47,7 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
                  long flushMillis,
                  int flushCount) throws Exception {
 
-        super("IPage", (flushMillis / 2));
+        super("I", (flushMillis / 2));
         this.storage = new Storage<V>(dir, codec);
         this.ephemerons = new Ephemerons<V>("Ephemerons") {
             @Override
@@ -56,13 +56,7 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
                     final Collection<Key> removings,
                     final FutureCallback<Void> flushedCallback
             ) {
-                submit(new Callable<Void>() {
-                    @Override
-                    public Void call() throws Exception {
-                        storage.merge(appendings, removings, flushedCallback);
-                        return Nils.VOID;
-                    }
-                });
+                merge(appendings, removings, flushedCallback);
             }
 
             @Override
@@ -84,6 +78,20 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
 
         new MBeanRegistration(ephemerons, objectName(EPHEMERONS)).register();
         new MBeanRegistration(storage, objectName(STORAGE)).register();
+    }
+
+    private void merge(
+            final Collection<Entry<Key, V>> appendings,
+            final Collection<Key> removings,
+            final FutureCallback<Void> flushedCallback
+    ) {
+        submit(new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                storage.merge(appendings, removings, flushedCallback);
+                return Nils.VOID;
+            }
+        });
     }
 
     public void add(final K key, final V value, FutureCallback<Void> removedOrDurableCallback) {
