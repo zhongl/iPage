@@ -115,6 +115,7 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
 
     @Override
     public void stop() {
+        ephemerons.stop();
         super.stop();
         try {
             new MBeanRegistration(ephemerons, objectName(EPHEMERONS)).unregister();
