@@ -32,7 +32,7 @@ public class LineAppender {
 
     protected LineAppender(File dir, long position) {
         Offset offset = new Offset(position);
-        page = new InnerPage(new File(dir, offset.toString() + ".line"), offset);
+        page = new InnerPage(new File(dir, System.nanoTime() + ".l"), offset);
     }
 
     public int append(ByteBuffer buffer) {

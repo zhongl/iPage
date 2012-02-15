@@ -40,7 +40,6 @@ public class Storage<V> implements Iterable<V> {
     protected final File dir;
     protected final File head;
     protected final File pages;
-    protected final File tmp;
     protected final Codec<V> codec;
 
     private volatile long lastMergeElapseMillis;
@@ -49,12 +48,7 @@ public class Storage<V> implements Iterable<V> {
         this.dir = dir;
         this.codec = codec;
         this.head = new File(dir, "HEAD");
-
-        this.pages = new File(dir, "pages");
-        tryMkdir(pages);
-
-        this.tmp = new File(dir, "tmp");
-        tryMkdir(tmp);
+        this.pages = tryMkdir(new File(dir, "pages"));
 
         this.snapshot = loadHead();
     }
@@ -77,21 +71,22 @@ public class Storage<V> implements Iterable<V> {
     public void merge(final Collection<Entry<Key, V>> appendings, Collection<Key> removings, FutureCallback<Void> flushedCallback) {
         // TODO log merge starting
 
-        if (appendings.isEmpty() && removings.isEmpty()) return;
-
         try {
             Stopwatch stopwatch = new Stopwatch().start();
-            String snapshotName = snapshot.merge(appendings, removings, tmp);
+            String snapshotName = snapshot.merge(appendings, removings);
             lastMergeElapseMillis = stopwatch.elapsedMillis();
-            commit(snapshotName);
+
+            setHead(snapshotName);
+            snapshot = new Snapshot<V>(pages, snapshotName, codec);
+            flushedCallback.onSuccess(Nils.VOID);
             // TODO log merge ending
         } catch (Throwable t) {
-            rollback();
             flushedCallback.onFailure(t);
             // TODO log merge error
             return;
+        } finally {
+            cleanUp();
         }
-        flushedCallback.onSuccess(Nils.VOID);
     }
 
     public V get(Key key) {
@@ -103,27 +98,9 @@ public class Storage<V> implements Iterable<V> {
         return snapshot.iterator();
     }
 
-    protected void commit(String snapshotName) throws IOException {
-        for (File file : tmp.listFiles()) {
-            checkState(file.renameTo(new File(pages, file.getName())));
-        }
-        setHead(snapshotName);
-        snapshot = snapshot(new File(pages, snapshotName));
-        cleanUp();
-    }
-
-    private void tryMkdir(File dir) {
+    private File tryMkdir(File dir) {
         if (!dir.exists()) checkState(dir.mkdirs());
-    }
-
-    protected Snapshot<V> snapshot(File file) throws IOException {
-        return new Snapshot<V>(file, codec);
-    }
-
-    protected void rollback() {
-        if (tmp.exists()) {
-            for (File file : tmp.listFiles()) checkState(file.delete());
-        }
+        return dir;
     }
 
     protected void setHead(String snapshotName) throws IOException {
@@ -131,11 +108,9 @@ public class Storage<V> implements Iterable<V> {
     }
 
     protected Snapshot<V> loadHead() throws IOException {
-        if (head.exists()) {
-            String name = Files.readFirstLine(head, Charset.defaultCharset());
-            return snapshot(new File(pages, name));
-        }
-        return snapshot(null);
+        if (!head.exists()) return new Snapshot<V>(pages, "null.s", codec);
+        String name = Files.readFirstLine(head, Charset.defaultCharset());
+        return new Snapshot<V>(pages, name, codec);
     }
 
     protected void cleanUp() {

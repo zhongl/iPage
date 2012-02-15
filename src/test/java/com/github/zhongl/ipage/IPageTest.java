@@ -47,25 +47,28 @@ public class IPageTest extends FileTestContext {
             }
         };
 
-        String key = "key";
         String value = "value";
 
         QuanlityOfService<String, String> service = new QuanlityOfService<String, String>(iPage);
 
-        service.sendAdd(key, value);
-        assertThat(iPage.get(key), is(value));
-        service.sendRemove(key);
-        assertThat(iPage.get(key), is(nullValue()));
+        String key1 = "key1";
+        service.sendAdd(key1, value);
+        assertThat(iPage.get(key1), is(value));
+        service.sendRemove(key1);
+        assertThat(iPage.get(key1), is(nullValue()));
 
-        service.callAdd(key, value);
-        assertThat(iPage.get(key), is(value));
-        service.callRemove(key);
-        assertThat(iPage.get(key), is(nullValue()));
+        String key2 = "key2";
+        service.callAdd(key2, value);
+        assertThat(iPage.get(key2), is(value));
+        service.callRemove(key2);
+        assertThat(iPage.get(key2), is(nullValue()));
 
-        service.futureAdd(key, value).get();
-        assertThat(iPage.get(key), is(value));
-        service.futureRemove(key).get();
-        assertThat(iPage.get(key), is(nullValue()));
+        String key3 = "key3";
+        service.futureAdd(key3, value).get();
+        System.out.println("get");
+        assertThat(iPage.get(key3), is(value));
+        service.futureRemove(key3).get();
+        assertThat(iPage.get(key3), is(nullValue()));
 
         iPage.stop();
     }

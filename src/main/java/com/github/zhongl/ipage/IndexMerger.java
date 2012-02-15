@@ -104,7 +104,7 @@ abstract class IndexMerger extends Index {
         private final MappedByteBuffer buffer;
 
         protected InnerPage(Key key) {
-            super(new File(dir, key.toString() + ".index"), key);
+            super(new File(dir, System.nanoTime() + ".i"), key);
             try {
                 int size = Math.min(PAGE_CAPACITY, capacity - position) * ENTRY_LENGTH;
                 buffer = Files.map(file(), FileChannel.MapMode.READ_WRITE, size);

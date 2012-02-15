@@ -16,13 +16,14 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.Entry;
-import com.github.zhongl.util.Md5;
 import com.google.common.io.Files;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.*;
+
+import static com.google.common.io.Files.readLines;
 
 /**
  * Text File Format:
@@ -40,21 +41,31 @@ import java.util.*;
  */
 class TextFile {
 
-    private final List<Entry<File, Offset>> lineEntries = new LinkedList<Entry<File, Offset>>();
-    private final List<Entry<File, Key>> indexEntries = new LinkedList<Entry<File, Key>>();
-    private final Set<File> pageFiles = new HashSet<File>();
+    private final File parent;
+    private final Set<File> links;
+    private final List<Entry<File, Offset>> lineEntries;
+    private final List<Entry<File, Key>> indexEntries;
 
-    public TextFile(File file) throws IOException {
-        List<String> strings = (file == null) ?
-                Collections.<String>emptyList() :
-                Files.readLines(file, Charset.defaultCharset());
+    public TextFile(File parent, String name) throws IOException {
+        this.parent = parent;
 
-        pageFiles.add(file);
+        File file = new File(parent, name);
+        links = new HashSet<File>();
+        links.add(file);
 
+        lineEntries = new LinkedList<Entry<File, Offset>>();
+        indexEntries = new LinkedList<Entry<File, Key>>();
+
+        load((file.exists())
+                ? readLines(file, Charset.defaultCharset())
+                : Collections.<String>emptyList());
+    }
+
+    private void load(List<String> strings) {
         for (String string : strings) {
             String[] parts = string.split(" ");
-            File pageFile = new File(file.getParentFile(), parts[2]);
-            pageFiles.add(pageFile);
+            File pageFile = new File(this.parent, parts[2]);
+            links.add(pageFile);
 
             switch (Type.valueOf(parts[0])) {
                 case L:
@@ -79,10 +90,14 @@ class TextFile {
 
     public boolean contains(File file) {
 
-        return pageFiles.contains(file);
+        return links.contains(file);
     }
 
-    public File create(IndexMerger indexMerger, LineAppender lineAppender, File tmp, boolean append) {
+    public File parent() {
+        return parent;
+    }
+
+    public File create(IndexMerger indexMerger, LineAppender lineAppender, boolean append) {
         StringBuilder sb = new StringBuilder();
 
         if (append) {
@@ -93,16 +108,15 @@ class TextFile {
 
         Page line = lineAppender.page();
         if (line.file().length() > 0)
-            appendLineTo(sb, TextFile.Type.L, line.number(), Md5.renameToMd5(line.file()));
+            appendLineTo(sb, TextFile.Type.L, line.number(), line.file());
 
-        for (Page page : indexMerger.pages) {
-            appendLineTo(sb, TextFile.Type.I, page.number(), Md5.renameToMd5(page.file()));
-        }
+        for (Page page : indexMerger.pages)
+            appendLineTo(sb, Type.I, page.number(), page.file());
 
         try {
-            File sFile = new File(tmp, "snapshot");
+            File sFile = new File(parent, System.nanoTime() + ".s");
             Files.write(sb.toString(), sFile, Charset.defaultCharset());
-            return Md5.renameToMd5(sFile);
+            return sFile;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

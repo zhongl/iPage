@@ -36,8 +36,8 @@ class Snapshot<T> implements Iterable<T> {
     private final ReadOnlyIndex readOnlyIndex;
     private final TextFile textFile;
 
-    public Snapshot(@Nullable final File file, Codec<T> codec) throws IOException {
-        textFile = new TextFile(file);
+    public Snapshot(@Nullable final File parent, String name, Codec<T> codec) throws IOException {
+        textFile = new TextFile(parent, name);
         lineEntryCodec = new LineEntryCodec<T>(codec);
         readOnlyLine = new ReadOnlyLine<T>(textFile.lineEntries(), lineEntryCodec);
         readOnlyIndex = new ReadOnlyIndex(textFile.indexEntres());
@@ -63,22 +63,22 @@ class Snapshot<T> implements Iterable<T> {
         };
     }
 
-    public String merge(Collection<Entry<Key, T>> appendings, Collection<Key> removings, File tmp) {
+    public String merge(Collection<Entry<Key, T>> appendings, Collection<Key> removings) {
         if (readOnlyIndex.aliveRadio(-removings.size()) < DEFRAG_RADIO)
-            return defrag(readOnlyLine, readOnlyIndex, appendings, removings, tmp);
+            return defrag(readOnlyLine, readOnlyIndex, appendings, removings);
         else
-            return append(readOnlyLine, readOnlyIndex, appendings, removings, tmp);
+            return append(readOnlyLine, readOnlyIndex, appendings, removings);
     }
 
     protected String append(
             ReadOnlyLine readOnlyLine,
             ReadOnlyIndex readOnlyIndex,
             Collection<Entry<Key, T>> appendings,
-            Collection<Key> removings, File tmp
+            Collection<Key> removings
     ) {
         SortedSet<Entry<Key, Range>> entries = new TreeSet<Entry<Key, Range>>();
 
-        LineAppender lineAppender = new LineAppender(tmp, readOnlyLine.length());
+        LineAppender lineAppender = new LineAppender(textFile.parent(), readOnlyLine.length());
 
         long position = readOnlyLine.length();
 
@@ -94,7 +94,7 @@ class Snapshot<T> implements Iterable<T> {
 
         int capacity = readOnlyIndex.entries().size() + appendings.size();
 
-        IndexMerger indexMerger = new IndexMerger(tmp, capacity) {
+        IndexMerger indexMerger = new IndexMerger(textFile.parent(), capacity) {
 
             @Override
             protected boolean remove(Entry<Key, Range> c) {
@@ -106,14 +106,14 @@ class Snapshot<T> implements Iterable<T> {
         indexMerger.merge(readOnlyIndex.entries().iterator(), entries.iterator());
         indexMerger.force();
 
-        return textFile.create(indexMerger, lineAppender, tmp, true).getName();
+        return textFile.create(indexMerger, lineAppender, true).getName();
     }
 
     protected String defrag(
             ReadOnlyLine readOnlyLine,
             final ReadOnlyIndex readOnlyIndex,
             Collection<Entry<Key, T>> appendings,
-            Collection<Key> removings, File tmp
+            Collection<Key> removings
     ) {
         SortedSet<Entry<Key, Range>> entries = new TreeSet<Entry<Key, Range>>();
 
@@ -121,7 +121,7 @@ class Snapshot<T> implements Iterable<T> {
         for (Key key : removings) entries.add(new Entry<Key, Range>(key, Range.NIL));
 
         int capacity = readOnlyIndex.alives() + appendings.size() - removings.size();
-        final IndexMerger indexMerger = new IndexMerger(tmp, capacity) {
+        final IndexMerger indexMerger = new IndexMerger(textFile.parent(), capacity) {
             @Override
             protected boolean remove(Entry<Key, Range> c) {
                 return c.value().equals(Range.NIL);
@@ -131,7 +131,7 @@ class Snapshot<T> implements Iterable<T> {
 
         indexMerger.merge(readOnlyIndex.entries().iterator(), entries.iterator());
 
-        final LineAppender lineAppender = new LineAppender(tmp, 0L);
+        final LineAppender lineAppender = new LineAppender(textFile.parent(), 0L);
 
         Migrater migrater = new Migrater() {
             long position;
@@ -154,7 +154,7 @@ class Snapshot<T> implements Iterable<T> {
         indexMerger.force();
         lineAppender.force();
 
-        return textFile.create(indexMerger, lineAppender, tmp, false).getName();
+        return textFile.create(indexMerger, lineAppender, false).getName();
     }
 
 
