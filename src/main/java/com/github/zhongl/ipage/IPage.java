@@ -47,7 +47,7 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
                  long flushMillis,
                  int flushCount) throws Exception {
 
-        super("I", (flushMillis / 2));
+        super("IPage", (flushMillis / 2));
         this.storage = new Storage<V>(dir, codec);
         this.ephemerons = new Ephemerons<V>("Ephemerons") {
             @Override
