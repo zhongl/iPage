@@ -21,6 +21,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -68,8 +69,7 @@ public class IndexMergerTest extends FileTestContext {
         indexMerger.set(key1, range);
         indexMerger.force();
 
-        File file = new File(dir, key1.toString() + ".index");
-        ReadOnlyIndex index = new ReadOnlyIndex(Arrays.asList(new Entry<File, Key>(file, key1)));
+        ReadOnlyIndex index = new ReadOnlyIndex(Arrays.asList(new Entry<File, Key>(indexFile(), key1)));
 
         assertThat(index.entries(), hasItems(new Entry<Key, Range>(key1, range), entry2));
     }
@@ -98,9 +98,17 @@ public class IndexMergerTest extends FileTestContext {
         indexMerger.merge(a.iterator(), b.iterator());
         indexMerger.force();
 
-        File file = new File(dir, key1.toString() + ".index");
-        ReadOnlyIndex index = new ReadOnlyIndex(Arrays.asList(new Entry<File, Key>(file, key1)));
+        ReadOnlyIndex index = new ReadOnlyIndex(Arrays.asList(new Entry<File, Key>(indexFile(), key1)));
 
         assertThat(index.entries(), hasItems(entry1, entry2, entry3));
+    }
+
+    private File indexFile() {
+        return dir.listFiles(new FilenameFilter() {
+            @Override
+            public boolean accept(File dir, String name) {
+                return name.contains(".i");
+            }
+        })[0];
     }
 }
