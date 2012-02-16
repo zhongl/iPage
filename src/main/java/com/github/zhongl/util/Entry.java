@@ -13,45 +13,54 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.ipage;
+package com.github.zhongl.util;
 
-/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */ // [from, to)
-class Range {
+import static com.google.common.base.Preconditions.checkNotNull;
 
-    public static final Range NIL = new Range(-1L, 0L);
+/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+public class Entry<K, V> implements Comparable<Entry<K, V>> {
 
-    private final long from;
-    private final long to;
+    private final K key;
+    private final V value;
 
-    public Range(long from, long to) {
-        this.from = from;
-        this.to = to;
+    public Entry(K key, V value) {
+        this.key = checkNotNull(key);
+        this.value = checkNotNull(value);
     }
 
-    public long from() {return from;}
+    public K key() {
+        return key;
+    }
 
-    public long to() {return to;}
+    public V value() {
+        return value;
+    }
+
+    @Override
+    public int compareTo(Entry<K, V> o) {
+        return ((Comparable) key).compareTo(o.key);
+    }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Range range = (Range) o;
-        return from == range.from && to == range.to;
+        Entry entry = (Entry) o;
+        return key.equals(entry.key) && value.equals(entry.value);
     }
 
     @Override
     public int hashCode() {
-        int result = (int) (from ^ (from >>> 32));
-        result = 31 * result + (int) (to ^ (to >>> 32));
+        int result = key.hashCode();
+        result = 31 * result + value.hashCode();
         return result;
     }
 
     @Override
     public String toString() {
-        return "Range{" +
-                "from=" + from +
-                ", to=" + to +
+        return "Entry{" +
+                "key=" + key +
+                ", value=" + value +
                 '}';
     }
 }

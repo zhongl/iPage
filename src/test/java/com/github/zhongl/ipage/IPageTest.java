@@ -1,6 +1,5 @@
 /*
- * Copyright 2011 zhongl
- *
+ * Copyright 2012 zhongl
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -16,155 +15,103 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.nio.CommonAccessors;
-import com.github.zhongl.integrity.Validator;
-import com.github.zhongl.util.FileBase;
-import com.github.zhongl.util.FileContentAsserter;
-import org.junit.After;
+import com.github.zhongl.util.CallbackFuture;
+import com.github.zhongl.util.FileTestContext;
+import com.github.zhongl.util.FutureCallbacks;
+import com.github.zhongl.util.Md5;
 import org.junit.Test;
 
-import java.io.File;
-import java.io.IOException;
+import javax.annotation.concurrent.ThreadSafe;
+import java.util.concurrent.Future;
 
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsNull.nullValue;
 import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class IPageTest extends FileBase {
-    public static final boolean CLOSE = true;
-    public static final boolean FLUSH = false;
-
-    private IPage<String> iPage;
-
-    @After
-    public void tearDown() throws Exception {
-        if (iPage != null) iPage.close();
-    }
+public class IPageTest extends FileTestContext {
 
     @Test
-    public void createAndAppendAndClose() throws Exception {
-        dir = testDir("createAndAppendAndClose");
-        assertThat(dir.exists(), is(false));
-        newIPage();
-        assertAppendAndDurableBy(CLOSE);
-    }
+    public void usage() throws Exception {
+        dir = testDir("usage");
 
-    @Test
-    public void createAndAppendAndFlush() throws Exception {
-        dir = testDir("createAndAppendAndFlush");
-        assertThat(dir.exists(), is(false));
-        newIPage();
-        assertAppendAndDurableBy(FLUSH);
-    }
+        long flushMillis = 100L;
+        int flushCount = 1000;
+        IPage<String, String> iPage;
+        int ephemeronThroughout = 1;
+        iPage = new IPage<String, String>(dir, new StringCodec(), ephemeronThroughout, flushMillis, flushCount) {
 
-    @Test
-    public void getAfterAppended() throws Exception {
-        dir = testDir("getAfterAppended");
-
-        newIPage();
-        assertThat(iPage.get(0L), is(nullValue()));
-
-        String record = "lastValue";
-        long offset = iPage.append(record);
-
-        assertThat(iPage.get(offset), is(record));
-    }
-
-    @Test
-    public void getFromNonAppendingChunk() throws Exception {
-        dir = testDir("getFromNonAppendingChunk");
-        newIPage();
-        String record = "0123456789ab";
-        for (int i = 0; i < 257; i++) {
-            iPage.append(record);
-        }
-        assertExistFile("0");
-        assertExistFile("4096");
-
-        assertThat(iPage.get(0L), is(record));
-        assertThat(iPage.get(4080L), is(record));
-        assertThat(iPage.get(4096L), is(record));
-    }
-
-    @Test
-    public void loadExist() throws Exception {
-        dir = testDir("loadExist");
-
-        // create a iPage with two chunk
-        newIPage();
-        String record = "0123456789ab";
-        for (int i = 0; i < 257; i++) {
-            iPage.append(record);
-        }
-        iPage.close();
-
-        assertExistFile("0");
-        assertExistFile("4096");
-
-        // load and verify
-        newIPage();
-        String newRecord = "newRecord";
-        long offset = iPage.append(newRecord);
-
-        assertThat(iPage.get(0L), is(record));
-        assertThat(iPage.get(offset), is(newRecord));
-    }
-
-    @Test
-    public void recovery() throws Exception {
-        dir = testDir("recovery");
-        newIPage();
-
-        for (int i = 0; i < 10; i++) {
-            iPage.append("" + i);
-        }
-        assertThat(iPage.get(35L), is(7 + ""));
-
-        Validator<String, IOException> stringValidator = new Validator<String, IOException>() {
             @Override
-            public boolean validate(String value) throws IOException {
-                return !value.equals(7 + "");
+            protected Key transform(String key) {
+                return new Key(Md5.md5(key.getBytes()));
             }
         };
-        iPage.validateOrRecoverBy(stringValidator);
 
-        assertThat(iPage.get(30L), is(6 + ""));
-        assertThat(iPage.get(35L), is(nullValue()));
+        String value = "value";
+
+        QuanlityOfService<String, String> service = new QuanlityOfService<String, String>(iPage);
+
+        String key1 = "key1";
+        service.sendAdd(key1, value);
+        assertThat(iPage.get(key1), is(value));
+        service.sendRemove(key1);
+        assertThat(iPage.get(key1), is(nullValue()));
+
+        String key2 = "key2";
+        service.callAdd(key2, value);
+        assertThat(iPage.get(key2), is(value));
+        service.callRemove(key2);
+        assertThat(iPage.get(key2), is(nullValue()));
+
+        String key3 = "key3";
+        service.futureAdd(key3, value).get();
+        System.out.println("get");
+        assertThat(iPage.get(key3), is(value));
+        service.futureRemove(key3).get();
+        assertThat(iPage.get(key3), is(nullValue()));
+
+        iPage.stop();
     }
 
-    @Test
-    public void nextCursor() throws Exception {
-        dir = testDir("nextCursor");
-        newIPage();
+    /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+    @ThreadSafe
+    public static class QuanlityOfService<K, V> {
 
-        String record = "0123456789ab";
-        for (int i = 0; i < 257; i++) {
-            iPage.append(record);
+        private final IPage<K, V> iPage;
+
+        public QuanlityOfService(IPage<K, V> iPage) {this.iPage = iPage;}
+
+        public void sendAdd(K key, V value) {
+            iPage.add(key, value, FutureCallbacks.<Void>ignore());
         }
 
-        Cursor<String> cursor = Cursor.head();
-        for (int i = 0; i < 257; i++) {
-            cursor = iPage.next(cursor);
-            assertThat(cursor.lastValue(), is(record));
+        public void sendRemove(K key) {
+            iPage.remove(key, FutureCallbacks.<Void>ignore());
+        }
+
+        public void callAdd(K key, V value) {
+            CallbackFuture<Void> callback = new CallbackFuture<Void>();
+            iPage.add(key, value, callback);
+            FutureCallbacks.getUnchecked(callback);
+        }
+
+        public void callRemove(K key) {
+            CallbackFuture<Void> callback = new CallbackFuture<Void>();
+            iPage.remove(key, callback);
+            FutureCallbacks.getUnchecked(callback);
+        }
+
+        public Future<Void> futureAdd(K key, V value) {
+            CallbackFuture<Void> callback = new CallbackFuture<Void>();
+            iPage.add(key, value, callback);
+            return callback;
+        }
+
+        public Future<Void> futureRemove(K key) {
+            CallbackFuture<Void> callback = new CallbackFuture<Void>();
+            iPage.remove(key, callback);
+            return callback;
         }
 
     }
-
-    private void newIPage() throws IOException {
-        iPage = IPage.<String>baseOn(dir).accessor(CommonAccessors.STRING).maximizeChunkCapacity(4096).build();
-    }
-
-    private void assertAppendAndDurableBy(boolean close) throws IOException {
-        assertThat(iPage.append("item1"), is(0L));
-        assertThat(iPage.append("item2"), is(9L));
-        if (close) {
-            iPage.close();
-        } else {
-            iPage.flush();
-        }
-        byte[] expect = ChunkContentUtils.concatToChunkContentWith("item1".getBytes(), "item2".getBytes());
-        FileContentAsserter.of(new File(dir, "0")).assertIs(expect);
-    }
-
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2011 zhongl
- *
+ * Copyright 2012 zhongl
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -16,142 +15,136 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.nio.Accessor;
-import com.github.zhongl.builder.*;
-import com.github.zhongl.integrity.ValidateOrRecover;
-import com.github.zhongl.integrity.Validator;
-import com.github.zhongl.util.FileHandler;
-import com.github.zhongl.util.NumberNamedFilesLoader;
+import com.github.zhongl.util.CallByCountOrElapse;
+import com.github.zhongl.util.Entry;
+import com.github.zhongl.util.Nils;
+import com.google.common.util.concurrent.FutureCallback;
+import org.softee.management.helper.MBeanRegistration;
 
-import javax.annotation.concurrent.NotThreadSafe;
-import java.io.Closeable;
+import javax.annotation.concurrent.ThreadSafe;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
 import java.io.File;
-import java.io.IOException;
-import java.nio.BufferOverflowException;
-import java.util.ArrayList;
-
-import static com.google.common.base.Preconditions.checkArgument;
+import java.text.MessageFormat;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.concurrent.Callable;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-@NotThreadSafe
-public class IPage<T> implements Closeable, ValidateOrRecover<T, IOException> {
+@ThreadSafe
+public abstract class IPage<K, V> extends Actor implements Iterable<V> {
 
-    private final ChunkList<T> chunkList;
-    private final ChunkFactory<T> chunkFactory;
-    private final GarbageCollector<T> garbageCollector;
+    private static final String EPHEMERONS = "Ephemerons";
+    private static final String STORAGE = "Storage";
 
-    public static <T> Builder<T> baseOn(File dir) {
-        Builder<T> builder = Builders.newInstanceOf(Builder.class);
-        builder.dir(dir);
-        return builder;
-    }
+    private final Storage<V> storage;
+    private final Ephemerons<V> ephemerons;
+    private final CallByCountOrElapse callByCountOrElapse;
 
-    IPage(File baseDir,
-          Accessor<T> accessor,
-          int maximizeChunkCapacity,
-          long minimizeCollectLength,
-          long maxChunkIdleTimeMillis) throws IOException {
-        this.chunkFactory = new ChunkFactory<T>(baseDir, accessor, maximizeChunkCapacity, maxChunkIdleTimeMillis);
-        this.chunkList = new ChunkList<T>(loadExistChunksBy(baseDir, chunkFactory));
-        this.garbageCollector = new GarbageCollector<T>(chunkList, minimizeCollectLength);
-    }
+    public IPage(File dir,
+                 Codec<V> codec,
+                 int ephemeronThroughout,
+                 long flushMillis,
+                 int flushCount) throws Exception {
 
-    public long append(T record) throws IOException {
-        try {
-            if (!chunkList.isEmpty()) return chunkList.last().append(record);
-        } catch (BufferOverflowException noSpaceForAppending) {} // chunk no space for appending
-        grow();
-        return append(record);
-    }
-
-    public T get(long offset) throws IOException {
-        try {
-            return chunkList.chunkIn(offset).get(offset);
-        } catch (ArrayIndexOutOfBoundsException canNotFindChunk) {
-        } catch (IndexOutOfBoundsException canNotFindChunk) {}
-        return null;
-    }
-
-    public Cursor<T> next(Cursor<T> cursor) throws IOException {
-
-        try {
-            long beginPosition = chunkList.first().beginPosition();
-            if (cursor.offset() < beginPosition) cursor = cursor.skipTo(beginPosition);// TODO Class cast problem.
-            return chunkList.chunkIn(cursor.offset()).next(cursor);
-        } catch (ArrayIndexOutOfBoundsException e) { // over end of list
-        } catch (IndexOutOfBoundsException e) {} // empty list
-        return cursor.tail();
-    }
-
-    public long garbageCollect(long begin, long end) throws IOException {
-        return garbageCollector.collect(begin, end);
-    }
-
-    public void flush() throws IOException {
-        if (!chunkList.isEmpty()) chunkList.last().flush();
-    }
-
-    @Override
-    public boolean validateOrRecoverBy(Validator<T, IOException> validator) throws IOException {
-        return chunkList.last().validateOrRecoverBy(validator);
-    }
-
-    @Override
-    public void close() throws IOException { chunkList.close(); }
-
-    private ArrayList<Chunk<T>> loadExistChunksBy(File baseDir, final ChunkFactory<T> chunkFactory) throws IOException {
-        baseDir.mkdirs();
-        checkArgument(baseDir.isDirectory(), "%s should be a directory", baseDir);
-        return new NumberNamedFilesLoader<Chunk<T>>(baseDir, new FileHandler<Chunk<T>>() {
+        super("IPage", (flushMillis / 2));
+        this.storage = new Storage<V>(dir, codec);
+        this.ephemerons = new Ephemerons<V>() {
             @Override
-            public Chunk<T> handle(File file, boolean last) throws IOException {
-                return last ? chunkFactory.appendableChunkOn(file) : chunkFactory.readOnlyChunkOn(file);
+            protected void requestFlush(
+                    final Collection<Entry<Key, V>> appendings,
+                    final Collection<Key> removings,
+                    final FutureCallback<Void> flushedCallback
+            ) {
+                merge(appendings, removings, flushedCallback);
             }
 
-        }).loadTo(new ArrayList<Chunk<T>>());
+            @Override
+            protected V getMiss(Key key) {
+                return storage.get(key);
+            }
+
+        };
+
+        ephemerons.throughout(ephemeronThroughout);
+
+        this.callByCountOrElapse = new CallByCountOrElapse(flushCount, flushMillis, new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                ephemerons.flush();
+                return Nils.VOID;
+            }
+        });
+
+        new MBeanRegistration(ephemerons, objectName(EPHEMERONS)).register();
+        new MBeanRegistration(storage, objectName(STORAGE)).register();
     }
 
-    private Chunk<T> grow() throws IOException {
-        Chunk<T> chunk;
-        if (chunkList.isEmpty()) chunk = chunkFactory.newFirstAppendableChunk();
-        else {
-            chunk = chunkFactory.newAppendableAfter(chunkList.last());
-            convertLastRecentlyUsedChunkToReadOnly();
-        }
-        chunkList.append(chunk);
-        return chunk;
+    private void merge(
+            final Collection<Entry<Key, V>> appendings,
+            final Collection<Key> removings,
+            final FutureCallback<Void> flushedCallback
+    ) {
+        submit(new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                storage.merge(appendings, removings, flushedCallback);
+                return Nils.VOID;
+            }
+        });
     }
 
-    private void convertLastRecentlyUsedChunkToReadOnly() throws IOException {
-        chunkList.set(chunkList.lastIndex(), chunkList.last().asReadOnly());
+    public void add(final K key, final V value, FutureCallback<Void> removedOrDurableCallback) {
+        ephemerons.add(transform(key), value, removedOrDurableCallback);
+        tryCallByCount();
     }
 
-    public static interface Builder<T> extends BuilderConvention {
+    public void remove(K key, FutureCallback<Void> appliedCallback) {
+        ephemerons.remove(transform(key), appliedCallback);
+        tryCallByCount();
+    }
 
-        @ArgumentIndex(0)
-        @NotNull
-        Builder<T> dir(File dir);
+    public V get(K key) {
+        return ephemerons.get(transform(key));
+    }
 
-        @ArgumentIndex(1)
-        @NotNull
-        Builder<T> accessor(Accessor<T> value);
+    @Override
+    public Iterator<V> iterator() {
+        return storage.iterator();
+    }
 
-        @ArgumentIndex(2)
-        @DefaultValue("4096")
-        @GreaterThanOrEqual("4096")
-        Builder<T> maximizeChunkCapacity(int value);
+    @Override
+    public void stop() {
+        super.stop();
+        try {
+            new MBeanRegistration(ephemerons, objectName(EPHEMERONS)).unregister();
+            new MBeanRegistration(storage, objectName(STORAGE)).unregister();
+        } catch (Exception ignored) { }
+    }
 
-        @ArgumentIndex(3)
-        @DefaultValue("4096")
-        @GreaterThanOrEqual("4096")
-        Builder<T> minimizeCollectLength(long value);
+    @Override
+    protected void heartbeat() throws Throwable {
+        callByCountOrElapse.tryCallByElapse();
+    }
 
-        @ArgumentIndex(4)
-        @DefaultValue("4000")
-        @GreaterThanOrEqual("1000")
-        Builder<T> maxChunkIdleTimeMillis(long value);
+    @Override
+    protected boolean onInterruptedBy(Throwable t) {
+        return super.onInterruptedBy(t);    // TODO log error
+    }
 
-        IPage<T> build();
+    protected abstract Key transform(K key);
 
+    private void tryCallByCount() {
+        submit(new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                callByCountOrElapse.tryCallByCount();
+                return Nils.VOID;
+            }
+        });
+    }
+
+    private ObjectName objectName(String ephemerons1) throws MalformedObjectNameException {
+        return new ObjectName(MessageFormat.format("com.github.zhongl.ipage:type={0},belongs={1}", ephemerons1, this));
     }
 }

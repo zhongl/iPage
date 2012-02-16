@@ -1,0 +1,121 @@
+/*
+ * Copyright 2012 zhongl
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
+package com.github.zhongl.util;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
+
+/** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+public class RAFileChannel extends FileChannel {
+    private final RandomAccessFile file;
+
+    public RAFileChannel(File file) throws IOException {
+        this.file = new RandomAccessFile(file, "rw");
+        this.file.getChannel().position(this.file.length());
+    }
+
+    @Override
+    public int read(ByteBuffer dst) throws IOException {
+        return file.getChannel().read(dst);
+    }
+
+    @Override
+    public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
+        return file.getChannel().read(dsts, offset, length);
+    }
+
+    @Override
+    public int write(ByteBuffer src) throws IOException {
+        return file.getChannel().write(src);
+    }
+
+    @Override
+    public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
+        return file.getChannel().write(srcs, offset, length);
+    }
+
+    @Override
+    public long position() throws IOException {
+        return file.getChannel().position();
+    }
+
+    @Override
+    public FileChannel position(long newPosition) throws IOException {
+        return file.getChannel().position(newPosition);
+    }
+
+    @Override
+    public long size() throws IOException {
+        return file.getChannel().size();
+    }
+
+    @Override
+    public FileChannel truncate(long size) throws IOException {
+        return file.getChannel().truncate(size);
+    }
+
+    @Override
+    public void force(boolean metaData) throws IOException {
+        file.getChannel().force(metaData);
+    }
+
+    @Override
+    public long transferTo(long position, long count, WritableByteChannel target) throws IOException {
+        return file.getChannel().transferTo(position, count, target);
+    }
+
+    @Override
+    public long transferFrom(ReadableByteChannel src, long position, long count) throws IOException {
+        return file.getChannel().transferFrom(src, position, count);
+    }
+
+    @Override
+    public int read(ByteBuffer dst, long position) throws IOException {
+        return file.getChannel().read(dst, position);
+    }
+
+    @Override
+    public int write(ByteBuffer src, long position) throws IOException {
+        return file.getChannel().write(src, position);
+    }
+
+    @Override
+    public MappedByteBuffer map(MapMode mode, long position, long size) throws IOException {
+        return file.getChannel().map(mode, position, size);
+    }
+
+    @Override
+    public FileLock lock(long position, long size, boolean shared) throws IOException {
+        return file.getChannel().lock(position, size, shared);
+    }
+
+    @Override
+    public FileLock tryLock(long position, long size, boolean shared) throws IOException {
+        return file.getChannel().tryLock(position, size, shared);
+    }
+
+    @Override
+    protected void implCloseChannel() throws IOException {
+        file.close();
+    }
+}
