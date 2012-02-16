@@ -44,14 +44,6 @@ Make sure your enviroment has:
 * [Git](http://git-scm.com/)
 * [Maven](http://maven.apache.org/)
 
-## Install [Benchmarker](https://github.com/zhongl/Benchmarker)
-
-iPage need it to run benchmark:
-
-    > git clone git@github.com:zhongl/Benchmarker.git
-    > cd Benchmarker
-    > mvn clean install
-
 ## Run test
 
     > git clone git@github.com:zhongl/iPage.git
