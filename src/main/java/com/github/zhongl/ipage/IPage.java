@@ -49,7 +49,7 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
 
         super("IPage", (flushMillis / 2));
         this.storage = new Storage<V>(dir, codec);
-        this.ephemerons = new Ephemerons<V>("Ephemerons") {
+        this.ephemerons = new Ephemerons<V>() {
             @Override
             protected void requestFlush(
                     final Collection<Entry<Key, V>> appendings,
@@ -115,7 +115,6 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
 
     @Override
     public void stop() {
-        ephemerons.stop();
         super.stop();
         try {
             new MBeanRegistration(ephemerons, objectName(EPHEMERONS)).unregister();

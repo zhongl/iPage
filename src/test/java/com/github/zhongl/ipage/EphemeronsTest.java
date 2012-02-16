@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.Semaphore;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
@@ -48,7 +49,7 @@ public class EphemeronsTest {
         ephemerons4T.add(key, 1, FutureCallbacks.<Void>ignore());
         ephemerons4T.remove(key, FutureCallbacks.<Void>ignore());
         ephemerons4T.flush();
-        verify(secondLevelStore, never()).merge(any(Collection.class), any(Collection.class));
+        verify(secondLevelStore, never()).merge(any(Collection.class), any(Collection.class), any(FutureCallback.class));
     }
 
     @Test
@@ -57,7 +58,50 @@ public class EphemeronsTest {
         ephemerons4T.remove(key, FutureCallbacks.<Void>ignore());
         assertThat(ephemerons4T.get(key), is(nullValue()));
         ephemerons4T.flush();
-        verify(secondLevelStore).merge(any(Collection.class), eq(Arrays.asList(key)));
+        verify(secondLevelStore).merge(any(Collection.class), eq(Arrays.asList(key)), any(FutureCallback.class));
+    }
+
+    @Test
+    public void removeDuringFlushing() throws Exception {
+        final Semaphore before = new Semaphore(0);
+        final Semaphore after = new Semaphore(0);
+        Ephemerons<Integer> ephemerons = new Ephemerons<Integer>() {
+            @Override
+            protected void requestFlush(final Collection<Entry<Key, Integer>> appendings,
+                                        final Collection<Key> removings,
+                                        final FutureCallback<Void> flushedCallback) {
+                before.release();
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        secondLevelStore.merge(appendings, removings, flushedCallback);
+                        after.release();
+                    }
+                }).start();
+            }
+
+            @Override
+            protected Integer getMiss(Key key) {
+                return secondLevelStore.get(key);
+            }
+        };
+        ephemerons.throughout(5);
+        Key key = key(1);
+        ephemerons.add(key, 1, FutureCallbacks.<Void>ignore());
+        ephemerons.flush();
+        before.acquire();
+        ephemerons.remove(key, FutureCallbacks.<Void>ignore());
+        assertThat(ephemerons.get(key), is(nullValue()));
+        after.acquire();
+
+        assertThat(secondLevelStore.get(key), is(1));
+        assertThat(ephemerons.get(key), is(nullValue()));
+
+        ephemerons.flush();
+        after.acquire();
+
+        assertThat(secondLevelStore.get(key), is(nullValue()));
+        assertThat(ephemerons.get(key), is(nullValue()));
     }
 
     @Test
@@ -78,7 +122,7 @@ public class EphemeronsTest {
 
         ArgumentCaptor<Collection> appendingsCaptor = ArgumentCaptor.forClass(Collection.class);
         ArgumentCaptor<Collection> removingsCaptor = ArgumentCaptor.forClass(Collection.class);
-        verify(secondLevelStore, times(2)).merge(appendingsCaptor.capture(), removingsCaptor.capture());
+        verify(secondLevelStore, times(2)).merge(appendingsCaptor.capture(), removingsCaptor.capture(), any(FutureCallback.class));
 
         // verify the ordering
         int i = 0;
@@ -101,7 +145,7 @@ public class EphemeronsTest {
             return secondLevel.get(key);
         }
 
-        public void merge(Collection<Entry<Key, Integer>> appendings, Collection<Key> removings) {
+        public void merge(Collection<Entry<Key, Integer>> appendings, Collection<Key> removings, FutureCallback<Void> flushedCallback) {
             waitFor(10L); // mock long time flushing
             for (Entry<Key, Integer> entry : appendings) {
                 if (entry.value() != Nils.OBJECT)
@@ -110,6 +154,7 @@ public class EphemeronsTest {
             for (Key key : removings) {
                 secondLevel.remove(key);
             }
+            flushedCallback.onSuccess(null);
         }
     }
 
@@ -124,13 +169,12 @@ public class EphemeronsTest {
     class Ephemerons4T extends Ephemerons<Integer> {
 
         protected Ephemerons4T() {
-            super("Ephemerons");
             throughout(4);
         }
 
         @Override
         protected void requestFlush(Collection<Entry<Key, Integer>> appendings, Collection<Key> removings, FutureCallback<Void> flushedCallback) {
-            secondLevelStore.merge(appendings, removings);
+            secondLevelStore.merge(appendings, removings, flushedCallback);
             flushedCallback.onSuccess(Nils.VOID);
         }
 

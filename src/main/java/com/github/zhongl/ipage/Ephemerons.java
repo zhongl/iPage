@@ -16,6 +16,7 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.Entry;
+import com.github.zhongl.util.FutureCallbacks;
 import com.github.zhongl.util.Nils;
 import com.google.common.base.Function;
 import com.google.common.util.concurrent.FutureCallback;
@@ -26,33 +27,34 @@ import org.softee.management.annotation.Parameter;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
-import java.util.*;
-import java.util.concurrent.Callable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
-import static com.github.zhongl.util.FutureCallbacks.getUnchecked;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @ThreadSafe
 @MBean
-public abstract class Ephemerons<V> extends Actor {
+public abstract class Ephemerons<V> {
 
+    private final AtomicLong id;
     private final Map<Key, Record> map;
-    private final FlushTask flushTask;
     private final Semaphore flowControl;
-    private final Queue<Entry<Key, V>> incomingOrderQueue;
+    private final AtomicBoolean flushing;
 
-    private volatile boolean flushing;
 
-    protected Ephemerons(String name) {
-        super(name);
-        map = new HashMap<Key, Record>();
+    protected Ephemerons() {
+        id = new AtomicLong(0L);
+        map = new ConcurrentHashMap<Key, Record>();
         flowControl = new Semaphore(0, true);
-        incomingOrderQueue = new LinkedList<Entry<Key, V>>();
-        flushing = false;
-        flushTask = new FlushTask();
+        flushing = new AtomicBoolean(false);
     }
 
     @ManagedOperation
@@ -64,17 +66,12 @@ public abstract class Ephemerons<V> extends Actor {
 
     @ManagedAttribute
     public boolean isFlushing() {
-        return flushing;
+        return flushing.get();
     }
 
     @ManagedAttribute
     public int getSize() {
-        return getUnchecked(submit(new Callable<Integer>() {
-            @Override
-            public Integer call() throws Exception {
-                return map.size();
-            }
-        }));
+        return map.size();
     }
 
     public void add(final Key key, final V value, final FutureCallback<Void> removedOrDurableCallback) {
@@ -82,30 +79,81 @@ public abstract class Ephemerons<V> extends Actor {
         checkNotNull(value);
         checkNotNull(removedOrDurableCallback);
 
+        release(key, Nils.VOID);
         acquire();
-        submit(new AddTask(key, value, removedOrDurableCallback));
+        map.put(key, new Record(id.getAndIncrement(), key, value, removedOrDurableCallback));
     }
 
     public void remove(final Key key, final FutureCallback<Void> appliedCallback) {
         checkNotNull(key);
         checkNotNull(appliedCallback);
 
-        if (getUnchecked(submit(new TryReleasePhantomTask(key, appliedCallback)))) return;
+        if (release(key, Nils.VOID)) {
+            appliedCallback.onSuccess(Nils.VOID);
+            return;
+        }
 
         acquire();
-        submit(new RemoveTask(key, appliedCallback));
+        map.put(key, new Record(id.getAndIncrement(), key, (V) Nils.OBJECT, appliedCallback));
     }
 
     public V get(final Key key) {
         checkNotNull(key);
-        Record record = getUnchecked(submit(new GetTask(key)));
+        Record record = map.get(key);
         if (record == null) return getMiss(key);
         if (record.value == Nils.OBJECT) return null;
         return record.value;
     }
 
     public void flush() {
-        submit(flushTask);
+        if (!flushing.compareAndSet(false, true)) return; // only one can trigger the flushing.
+
+        final Collection<Entry<Key, V>> appendings = new ArrayList<Entry<Key, V>>();
+        final Collection<Key> removings = new ArrayList<Key>();
+
+        for (Record record : new TreeSet<Record>(map.values())) {
+            if (record.value.equals(Nils.OBJECT)) removings.add(record.key);
+            else appendings.add(new Entry<Key, V>(record.key, record.value));
+        }
+
+        if (appendings.isEmpty() && removings.isEmpty()) {
+            flushing.set(false);
+            return;
+        }
+
+        requestFlush(appendings, removings, new FutureCallback<Void>() {
+            @Override
+            public void onSuccess(Void v) {
+                foreachKey(new Function<Key, Void>() {
+                    @Override
+                    public Void apply(@Nullable Key key) {
+                        if (!release(key, Nils.VOID)) {
+                            // Remove the key which had been removed during flushing
+                            remove(key, FutureCallbacks.<Void>ignore());
+                        }
+                        return Nils.VOID;
+                    }
+
+                });
+            }
+
+            @Override
+            public void onFailure(final Throwable t) {
+                foreachKey(new Function<Key, Void>() {
+                    @Override
+                    public Void apply(@Nullable Key key) {
+                        release(key, t);
+                        return Nils.VOID;
+                    }
+                });
+            }
+
+            private void foreachKey(Function<Key, Void> function) {
+                for (Key key : removings) function.apply(key);
+                for (Entry<Key, V> entry : appendings) function.apply(entry.key());
+                flushing.set(false);
+            }
+        });
     }
 
     /** This method supposed be asynchronized. */
@@ -134,131 +182,23 @@ public abstract class Ephemerons<V> extends Actor {
         return true;
     }
 
-    protected class Record {
+    protected class Record implements Comparable<Record> {
+        private Long id;
+        private Key key;
         private final V value;
         private final FutureCallback<Void> callback;
 
-        public Record(V value, FutureCallback<Void> callback) {
+        public Record(long id, Key key, V value, FutureCallback<Void> callback) {
+            this.id = id;
+            this.key = key;
             this.value = value;
             this.callback = callback;
         }
-    }
-
-    private class AddTask implements Callable<Void> {
-        private final Key key;
-        private final V value;
-        private final FutureCallback<Void> removedOrDurableCallback;
-
-        public AddTask(Key key, V value, FutureCallback<Void> removedOrDurableCallback) {
-            this.key = key;
-            this.value = value;
-            this.removedOrDurableCallback = removedOrDurableCallback;
-        }
 
         @Override
-        public Void call() throws Exception {
-            release(key, Nils.VOID);
-            incomingOrderQueue.add(new Entry<Key, V>(key, value));
-            map.put(key, new Record(value, removedOrDurableCallback));
-            return Nils.VOID;
+        public int compareTo(Record o) {
+            return id.compareTo(o.id);
         }
     }
 
-    private class TryReleasePhantomTask implements Callable<Boolean> {
-        private final Key key;
-        private final FutureCallback<Void> appliedCallback;
-
-        public TryReleasePhantomTask(Key key, FutureCallback<Void> appliedCallback) {
-            this.key = key;
-            this.appliedCallback = appliedCallback;
-        }
-
-        @Override
-        public Boolean call() throws Exception {
-            if (!release(key, Nils.VOID)) return false;
-            appliedCallback.onSuccess(Nils.VOID);
-            return true;
-        }
-    }
-
-    private class RemoveTask implements Callable<Void> {
-        private final Key key;
-        private final FutureCallback<Void> appliedCallback;
-
-        public RemoveTask(Key key, FutureCallback<Void> appliedCallback) {
-            this.key = key;
-            this.appliedCallback = appliedCallback;
-        }
-
-        @Override
-        public Void call() throws Exception {
-            incomingOrderQueue.add(new Entry<Key, V>(key, (V) Nils.OBJECT));
-            map.put(key, new Record((V) Nils.OBJECT, appliedCallback));
-            return Nils.VOID;
-        }
-    }
-
-    private class GetTask implements Callable<Record> {
-        private final Key key;
-
-        public GetTask(Key key) {this.key = key;}
-
-        @Override
-        public Record call() throws Exception {
-            return map.get(key);
-        }
-    }
-
-    private class FlushTask implements Callable<Void> {
-
-        @Override
-        public Void call() throws Exception {
-            if (flushing || incomingOrderQueue.isEmpty()) return Nils.VOID;
-
-            final Collection<Entry<Key, V>> appendings = new ArrayList<Entry<Key, V>>();
-            final Collection<Key> removings = new ArrayList<Key>();
-
-            while (true) {
-                Entry<Key, V> entry = incomingOrderQueue.poll();
-                if (entry == null) break;
-                if (!map.containsKey(entry.key())) continue; // phantom key
-                if (entry.value().equals(Nils.OBJECT)) removings.add(entry.key());
-                else appendings.add(entry);
-            }
-
-            flushing = true;
-            requestFlush(appendings, removings, new FutureCallback<Void>() {
-                @Override
-                public void onSuccess(Void v) {
-                    foreachKey(new Function<Key, Void>() {
-                        @Override
-                        public Void apply(@Nullable Key key) {
-                            release(key, Nils.VOID);
-                            return Nils.VOID;
-                        }
-
-                    });
-                }
-
-                @Override
-                public void onFailure(final Throwable t) {
-                    foreachKey(new Function<Key, Void>() {
-                        @Override
-                        public Void apply(@Nullable Key key) {
-                            release(key, t);
-                            return Nils.VOID;
-                        }
-                    });
-                }
-
-                private void foreachKey(Function<Key, Void> function) {
-                    for (Key key : removings) function.apply(key);
-                    for (Entry<Key, V> entry : appendings) function.apply(entry.key());
-                    flushing = false;
-                }
-            });
-
-            return Nils.VOID;
-        }
-    }
 }
