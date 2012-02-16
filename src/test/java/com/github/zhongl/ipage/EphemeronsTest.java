@@ -65,6 +65,7 @@ public class EphemeronsTest {
     public void removeDuringFlushing() throws Exception {
         final Semaphore before = new Semaphore(0);
         final Semaphore after = new Semaphore(0);
+
         Ephemerons<Integer> ephemerons = new Ephemerons<Integer>() {
             @Override
             protected void requestFlush(final Collection<Entry<Key, Integer>> appendings,
@@ -154,7 +155,7 @@ public class EphemeronsTest {
             for (Key key : removings) {
                 secondLevel.remove(key);
             }
-            flushedCallback.onSuccess(null);
+            flushedCallback.onSuccess(Nils.VOID);
         }
     }
 
@@ -175,7 +176,6 @@ public class EphemeronsTest {
         @Override
         protected void requestFlush(Collection<Entry<Key, Integer>> appendings, Collection<Key> removings, FutureCallback<Void> flushedCallback) {
             secondLevelStore.merge(appendings, removings, flushedCallback);
-            flushedCallback.onSuccess(Nils.VOID);
         }
 
         @Override
