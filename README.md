@@ -1,6 +1,6 @@
 # What is it?
 
-iPage is a key-value store library for java (or any others base on JVM).
+iPage is a java key-value store library, which is designed for message system.
 
 # Features
 
@@ -18,25 +18,14 @@ Please see [issues](https://github.com/zhongl/iPage/issues?sort=created&directio
 
 # Benchmark
 
-    | Operation(sync) |   Times   | Total Eplase | Average Elapse | Minimize Elapse | Maximzie Elapse |
-    |-----------------|-----------|--------------|----------------|-----------------|-----------------|
-    | Get             | 1,000     | 36ms         | 0ms            | 0ms             | 1ms             |
-    | Remove          | 1,000     | 97ms         | 0ms            | 0ms             | 11ms            |
-    | Put             | 1,000     | 1,583ms      | 1ms            | 0ms             | 28ms            |
-    |-----------------|-----------|--------------|----------------|-----------------|-----------------|
-    | Get             | 1,000,000 | 9,850ms      | 0ms            | 0ms             | 25ms            |
-    | Remove          | 1,000,000 | 32,421ms     | 0ms            | 0ms             | 74ms            |
-    | Put             | 1,000,000 | 1,111,221ms  | 0ms            | 0ms             | 257ms           |
+    | Case            |   Times   | Total Eplase | Average Elapse | TPS         | Concurrency |
+    |-----------------|-----------|--------------|----------------|-------------|-------------|
+    | Random get      | 1,000,000 | 7.034 s      | 7,033ns        | 142,186.83  | 8           |
+    | Async remove    | 1,000,000 | 23.04 s      | 23,044ns       | 43,395.24   | 2           |
+    | Async add       | 1,000,000 | 18.18 s      | 18,180ns       | 55,005.5    | 2           |
+    | Sync add        | 16,384    | 4.820 s      | 294,214ns      | 3,399.17    | 32          |
 
-## Configuration
-
-* Concurrency threads is 8
 * Read and write data is 1KB
-* Synchronize invocation
-* Flush by count 4 or elapse 10ms
-* Chunk capacity is 128MB
-* Initial bucket size is 8192
-* Group commit is on
 
 ## Enviroment
 
@@ -71,11 +60,4 @@ iPage need it to run benchmark:
 
 ## Run benchmark
 
-    > mvn clean test -Dtest=BlockingKVEngineBenchmark -Dblocking.kvengine.benchmark.times=1000
-
-more about `-D` options you can find in [BlockingKVEngineBenchmark.java](https://github.com/zhongl/iPage/blob/master/src/test/java/com/github/zhongl/kvengine/BlockingKVEngineBenchmark.java).
-
-
-# Documents
-
-Please see the [wiki](https://github.com/zhongl/iPage/wiki).
+    > mvn clean test -Dtest=IPageBenchmark -DargLine="-Xmx512m -Xms512m"
