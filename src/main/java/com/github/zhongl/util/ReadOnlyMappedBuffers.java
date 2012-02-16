@@ -24,7 +24,7 @@ import java.nio.MappedByteBuffer;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.nio.channels.FileChannel.MapMode.READ_ONLY;
+import static java.nio.channels.FileChannel.MapMode.PRIVATE;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class ReadOnlyMappedBuffers {
@@ -45,7 +45,7 @@ public class ReadOnlyMappedBuffers {
                             .build(new CacheLoader<File, MappedByteBuffer>() {
                                 @Override
                                 public MappedByteBuffer load(File key) throws Exception {
-                                    return Files.map(key, READ_ONLY, key.length());
+                                    return Files.map(key, PRIVATE, key.length());
                                 }
                             });
     }

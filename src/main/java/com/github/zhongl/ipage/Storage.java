@@ -17,17 +17,20 @@ package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.Entry;
 import com.github.zhongl.util.Nils;
+import com.google.common.base.Function;
 import com.google.common.base.Stopwatch;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.FutureCallback;
 import org.softee.management.annotation.MBean;
 import org.softee.management.annotation.ManagedAttribute;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -35,22 +38,35 @@ import static com.google.common.base.Preconditions.checkState;
 @MBean
 public class Storage<V> implements Iterable<V> {
 
-    protected volatile Snapshot<V> snapshot;
+    public static final double DEFEAG_RADIO = 0.8;
+    private final File head;
+    private final File pages;
+    private final Codec<V> codec;
 
-    protected final File dir;
-    protected final File head;
-    protected final File pages;
-    protected final Codec<V> codec;
+    private final AtomicInteger total;
+    private final AtomicInteger removed;
 
     private volatile long lastMergeElapseMillis;
+    private volatile Snapshot<V> snapshot;
 
-    protected Storage(File dir, Codec<V> codec) throws IOException {
-        this.dir = dir;
+
+    public Storage(File dir, Codec<V> codec) throws IOException {
         this.codec = codec;
         this.head = new File(dir, "HEAD");
         this.pages = tryMkdir(new File(dir, "pages"));
 
         this.snapshot = loadHead();
+        this.total = new AtomicInteger(0);
+        this.removed = new AtomicInteger(0);
+
+        snapshot.foreachIndexEntry(new Function<Boolean, Void>() {
+            @Override
+            public Void apply(@Nullable Boolean alived) {
+                total.incrementAndGet();
+                if (!alived) removed.incrementAndGet();
+                return Nils.VOID;
+            }
+        });
     }
 
     @ManagedAttribute
@@ -65,15 +81,28 @@ public class Storage<V> implements Iterable<V> {
 
     @ManagedAttribute
     public int getAlives() {
-        return snapshot.alives();
+        return total.get() - removed.get();
     }
 
     public void merge(final Collection<Entry<Key, V>> appendings, Collection<Key> removings, FutureCallback<Void> flushedCallback) {
+        int cTotal = total.addAndGet(appendings.size());
+        int cRemoved = removed.addAndGet(removings.size());
+
+        boolean needDefrag = cRemoved * 1.0 / cTotal > DEFEAG_RADIO;
+
         // TODO log merge starting
 
         try {
             Stopwatch stopwatch = new Stopwatch().start();
-            String snapshotName = snapshot.merge(appendings, removings);
+            String snapshotName;
+            if (needDefrag) {
+                int alive = cTotal - cRemoved;
+                snapshotName = snapshot.defrag(appendings, removings, alive);
+                total.set(alive);
+                removed.set(0);
+            } else {
+                snapshotName = snapshot.append(appendings, removings);
+            }
             lastMergeElapseMillis = stopwatch.elapsedMillis();
 
             setHead(snapshotName);

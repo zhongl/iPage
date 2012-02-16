@@ -16,6 +16,7 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.Entry;
+import com.google.common.base.Function;
 import com.google.common.collect.AbstractIterator;
 
 import javax.annotation.Nullable;
@@ -63,19 +64,7 @@ class Snapshot<T> implements Iterable<T> {
         };
     }
 
-    public String merge(Collection<Entry<Key, T>> appendings, Collection<Key> removings) {
-        if (readOnlyIndex.aliveRadio(-removings.size()) < DEFRAG_RADIO)
-            return defrag(readOnlyLine, readOnlyIndex, appendings, removings);
-        else
-            return append(readOnlyLine, readOnlyIndex, appendings, removings);
-    }
-
-    protected String append(
-            ReadOnlyLine readOnlyLine,
-            ReadOnlyIndex readOnlyIndex,
-            Collection<Entry<Key, T>> appendings,
-            Collection<Key> removings
-    ) {
+    protected String append(Collection<Entry<Key, T>> appendings, Collection<Key> removings) {
         SortedSet<Entry<Key, Range>> entries = new TreeSet<Entry<Key, Range>>();
 
         LineAppender lineAppender = new LineAppender(textFile.parent(), readOnlyLine.length());
@@ -109,18 +98,12 @@ class Snapshot<T> implements Iterable<T> {
         return textFile.create(indexMerger, lineAppender, true).getName();
     }
 
-    protected String defrag(
-            ReadOnlyLine readOnlyLine,
-            final ReadOnlyIndex readOnlyIndex,
-            Collection<Entry<Key, T>> appendings,
-            Collection<Key> removings
-    ) {
+    protected String defrag(Collection<Entry<Key, T>> appendings, Collection<Key> removings, int capacity) {
         SortedSet<Entry<Key, Range>> entries = new TreeSet<Entry<Key, Range>>();
 
         for (Entry<Key, T> entry : appendings) entries.add(new Entry<Key, Range>(entry.key(), Range.NIL));
         for (Key key : removings) entries.add(new Entry<Key, Range>(key, Range.NIL));
 
-        int capacity = readOnlyIndex.alives() + appendings.size() - removings.size();
         final IndexMerger indexMerger = new IndexMerger(textFile.parent(), capacity) {
             @Override
             protected boolean remove(Entry<Key, Range> c) {
@@ -166,7 +149,7 @@ class Snapshot<T> implements Iterable<T> {
         return readOnlyIndex.size();
     }
 
-    public int alives() {
-        return readOnlyIndex.alives();
+    public void foreachIndexEntry(Function<Boolean, Void> function) {
+        readOnlyIndex.foreachEntry(function);
     }
 }

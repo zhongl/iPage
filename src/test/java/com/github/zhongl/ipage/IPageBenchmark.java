@@ -127,7 +127,7 @@ public class IPageBenchmark extends FileTestContext {
     public void get() throws Exception {
         dir = testDir("get");
 
-        initService(avaliableProcessors);
+        initService(8);
         initIPage(EPHEMERON_THROUGHOUT, FLUSH_MILLIS, FLUSH_COUNT);
 
         final int times = 100000;

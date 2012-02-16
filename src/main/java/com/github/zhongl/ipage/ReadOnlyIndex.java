@@ -17,6 +17,7 @@ package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.Entry;
 import com.github.zhongl.util.ReadOnlyMappedBuffers;
+import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
 
 import java.io.File;
@@ -28,25 +29,8 @@ import static java.util.Collections.unmodifiableList;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class ReadOnlyIndex extends Index {
 
-    private volatile int alives;
-
     protected ReadOnlyIndex(final List<Entry<File, Key>> entries) {
         super(unmodifiableList(new PageList(entries)));
-        alives = -1;
-    }
-
-    public double aliveRadio(int delta) {
-        return (alives() + delta) * 1.0 / size();
-    }
-
-    public int alives() {
-        if (alives < 0) {
-            alives = 0;
-            for (Entry<Key, Range> entry : entries()) {
-                if (!entry.value().equals(Range.NIL)) alives++;
-            }
-        }
-        return alives;
     }
 
     public Collection<Entry<Key, Range>> entries() {
@@ -73,18 +57,25 @@ public class ReadOnlyIndex extends Index {
         return sum;
     }
 
+    public void foreachEntry(Function<Boolean, Void> function) {
+        for (Entry<Key, Range> entry : entries())
+            function.apply(!entry.value().equals(Range.NIL));
+    }
+
     private static class InnerPage extends Index.InnerPage {
 
         private final int size;
+        private final ByteBuffer buffer;
 
         protected InnerPage(File file, Key key) {
             super(file, key);
             size = (int) (file.length() / ENTRY_LENGTH);
+            buffer = ReadOnlyMappedBuffers.getOrMap(this.file);
         }
 
         @Override
         protected ByteBuffer buffer() {
-            return ReadOnlyMappedBuffers.getOrMap(file);
+            return buffer;
         }
 
         Collection<Entry<Key, Range>> entries() {
