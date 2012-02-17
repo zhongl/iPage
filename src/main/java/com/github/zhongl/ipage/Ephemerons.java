@@ -43,35 +43,16 @@ import static com.google.common.base.Preconditions.checkNotNull;
 @ThreadSafe
 @MBean
 public abstract class Ephemerons<V> {
-
     private final AtomicLong id;
     private final Map<Key, Record> map;
     private final Semaphore flowControl;
     private final AtomicBoolean flushing;
-
 
     protected Ephemerons() {
         id = new AtomicLong(0L);
         map = new ConcurrentHashMap<Key, Record>();
         flowControl = new Semaphore(0, true);
         flushing = new AtomicBoolean(false);
-    }
-
-    @ManagedOperation
-    public int throughout(@Parameter("delta") int delta) {
-        if (delta > 0) flowControl.release(delta);
-        if (delta < 0) flowControl.acquireUninterruptibly(-delta);
-        return flowControl.availablePermits();
-    }
-
-    @ManagedAttribute
-    public boolean isFlushing() {
-        return flushing.get();
-    }
-
-    @ManagedAttribute
-    public int getSize() {
-        return map.size();
     }
 
     public void add(final Key key, final V value, final FutureCallback<Void> removedOrDurableCallback) {
@@ -122,10 +103,8 @@ public abstract class Ephemerons<V> {
                 foreachKey(new Function<Key, Void>() {
                     @Override
                     public Void apply(@Nullable Key key) {
-                        if (!release(key, Nils.VOID)) {
-                            // Remove the key which had been removed during flushing
-                            remove(key, FutureCallbacks.<Void>ignore());
-                        }
+                        // Remove the key which had been removed during flushing
+                        if (!release(key, Nils.VOID)) remove(key, FutureCallbacks.<Void>ignore());
                         return Nils.VOID;
                     }
 
@@ -157,6 +136,19 @@ public abstract class Ephemerons<V> {
     /** This method supposed be thread safed. */
     protected abstract V getMiss(Key key);
 
+    @ManagedOperation
+    public int throughout(@Parameter("delta") int delta) {
+        if (delta > 0) flowControl.release(delta);
+        if (delta < 0) flowControl.acquireUninterruptibly(-delta);
+        return flowControl.availablePermits();
+    }
+
+    @ManagedAttribute
+    public boolean isFlushing() { return flushing.get(); }
+
+    @ManagedAttribute
+    public int getSize() { return map.size(); }
+
     private void acquire() {
         try {
             while (!flowControl.tryAcquire(500L, TimeUnit.MILLISECONDS)) flush();
@@ -170,10 +162,8 @@ public abstract class Ephemerons<V> {
         if (record == null) return false;
 
         flowControl.release();
-        if (voidOrThrowable == Nils.VOID)
-            record.callback.onSuccess(Nils.VOID);
-        else
-            record.callback.onFailure((Throwable) voidOrThrowable);
+        if (voidOrThrowable == Nils.VOID) record.callback.onSuccess(Nils.VOID);
+        else record.callback.onFailure((Throwable) voidOrThrowable);
         return true;
     }
 
@@ -191,9 +181,7 @@ public abstract class Ephemerons<V> {
         }
 
         @Override
-        public int compareTo(Record o) {
-            return id.compareTo(o.id);
-        }
+        public int compareTo(Record o) { return id.compareTo(o.id); }
     }
 
 }

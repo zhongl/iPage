@@ -83,10 +83,8 @@ public class ReadOnlyIndex extends Index {
                 @Override
                 public Entry<Key, Range> get(int index) {
                     int position = index * ENTRY_LENGTH;
-                    ByteBuffer byteBuffer = (ByteBuffer) buffer().position(position);
-                    byte[] bytes = new byte[Key.BYTE_LENGTH];
-                    byteBuffer.get(bytes);
-                    Key key = new Key(bytes);
+                    ByteBuffer byteBuffer = buffer().duplicate();
+                    Key key = getKey(byteBuffer, position);
                     Range range = new Range(byteBuffer.getLong(), byteBuffer.getLong());
                     return new Entry<Key, Range>(key, range);
                 }

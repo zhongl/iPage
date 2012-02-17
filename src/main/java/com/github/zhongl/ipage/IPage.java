@@ -20,12 +20,12 @@ import com.github.zhongl.util.Entry;
 import com.github.zhongl.util.Nils;
 import com.google.common.util.concurrent.FutureCallback;
 import org.softee.management.helper.MBeanRegistration;
+import org.softee.management.helper.ObjectNameBuilder;
 
 import javax.annotation.concurrent.ThreadSafe;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import java.io.File;
-import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.Callable;
@@ -41,32 +41,28 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
     private final Ephemerons<V> ephemerons;
     private final CallByCountOrElapse callByCountOrElapse;
 
-    public IPage(File dir,
-                 Codec<V> codec,
-                 int ephemeronThroughout,
-                 long flushMillis,
-                 int flushCount) throws Exception {
-
-        super("IPage", (flushMillis / 2));
+    protected IPage(File dir, Codec<V> codec, int throughout, long flushMillis, int flushCount) throws Exception {
+        super("IPage@" + dir.getName(), flushMillis / 2);
         this.storage = new Storage<V>(dir, codec);
         this.ephemerons = new Ephemerons<V>() {
             @Override
-            protected void requestFlush(
-                    final Collection<Entry<Key, V>> appendings,
-                    final Collection<Key> removings,
-                    final FutureCallback<Void> flushedCallback
-            ) {
-                merge(appendings, removings, flushedCallback);
+            protected void requestFlush(final Collection<Entry<Key, V>> appendings,
+                                        final Collection<Key> removings,
+                                        final FutureCallback<Void> flushedCallback) {
+                submit(new Callable<Void>() {
+                    @Override
+                    public Void call() throws Exception {
+                        storage.merge(appendings, removings, flushedCallback);
+                        return Nils.VOID;
+                    }
+                });
             }
 
             @Override
-            protected V getMiss(Key key) {
-                return storage.get(key);
-            }
-
+            protected V getMiss(Key key) { return storage.get(key); }
         };
 
-        ephemerons.throughout(ephemeronThroughout);
+        ephemerons.throughout(throughout);
 
         this.callByCountOrElapse = new CallByCountOrElapse(flushCount, flushMillis, new Callable<Void>() {
             @Override
@@ -80,20 +76,6 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
         new MBeanRegistration(storage, objectName(STORAGE)).register();
     }
 
-    private void merge(
-            final Collection<Entry<Key, V>> appendings,
-            final Collection<Key> removings,
-            final FutureCallback<Void> flushedCallback
-    ) {
-        submit(new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                storage.merge(appendings, removings, flushedCallback);
-                return Nils.VOID;
-            }
-        });
-    }
-
     public void add(final K key, final V value, FutureCallback<Void> removedOrDurableCallback) {
         ephemerons.add(transform(key), value, removedOrDurableCallback);
         tryCallByCount();
@@ -104,14 +86,10 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
         tryCallByCount();
     }
 
-    public V get(K key) {
-        return ephemerons.get(transform(key));
-    }
+    public V get(K key) { return ephemerons.get(transform(key)); }
 
     @Override
-    public Iterator<V> iterator() {
-        return storage.iterator();
-    }
+    public Iterator<V> iterator() { return storage.iterator(); }
 
     @Override
     public void stop() {
@@ -123,9 +101,7 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
     }
 
     @Override
-    protected void heartbeat() throws Throwable {
-        callByCountOrElapse.tryCallByElapse();
-    }
+    protected void heartbeat() throws Throwable { callByCountOrElapse.tryCallByElapse(); }
 
     @Override
     protected boolean onInterruptedBy(Throwable t) {
@@ -144,7 +120,7 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
         });
     }
 
-    private ObjectName objectName(String ephemerons1) throws MalformedObjectNameException {
-        return new ObjectName(MessageFormat.format("com.github.zhongl.ipage:type={0},belongs={1}", ephemerons1, this));
+    private ObjectName objectName(String type) throws MalformedObjectNameException {
+        return new ObjectNameBuilder("com.github.zhongl.ipage").withType(type).withName(toString()).build();
     }
 }

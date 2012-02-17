@@ -3,6 +3,8 @@ package com.github.zhongl.ipage;
 import com.github.zhongl.util.CallbackFuture;
 import com.github.zhongl.util.FutureCallbacks;
 
+import java.util.Iterator;
+
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class KVEngine<K, V> {
     private final IPage<K, V> iPage;
@@ -13,19 +15,17 @@ public class KVEngine<K, V> {
         this.qoS = qoS;
     }
 
-    public void add(K key, V value) {
-        qoS.add(iPage, key, value);
-    }
+    public void add(K key, V value) { qoS.add(iPage, key, value); }
 
-    public void remove(K key) {
-        qoS.remove(iPage, key);
-    }
+    public void remove(K key) { qoS.remove(iPage, key); }
 
-    public V get(K key) {
-        return iPage.get(key);
-    }
+    public V get(K key) { return iPage.get(key); }
 
-    public enum QoS {
+    public void stop() { iPage.stop(); }
+
+    public Iterator<V> iterator() { return iPage.iterator(); }
+
+    public static enum QoS {
         LATENCY {
             @Override
             <K, V> void add(IPage<K, V> iPage, K key, V value) {

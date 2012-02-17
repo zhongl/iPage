@@ -19,6 +19,7 @@ import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.concurrent.*;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
@@ -28,22 +29,20 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  */
 @ThreadSafe
 public abstract class Actor {
-
     public static final long TIMEOUT = Long.getLong("ipage.actor.poll.timeout", 500L);
 
     private final Core core;
+    private final long timeout;
     private final BlockingQueue<Runnable> tasks; // TODO monitor
 
     private final Runnable SHUTDOWN = new Runnable() {
         public void run() { core.running = false; }
     };
-    private final long timeout;
 
-    protected Actor(String name) {
-        this(name, TIMEOUT);
-    }
+    protected Actor(String name) { this(name, TIMEOUT); }
 
-    public Actor(String name, long timeout) {
+    protected Actor(String name, long timeout) {
+        checkArgument(timeout > 0);
         this.timeout = timeout;
         this.tasks = new LinkedBlockingQueue<Runnable>();
         core = new Core(name);
@@ -70,13 +69,10 @@ public abstract class Actor {
     protected boolean onInterruptedBy(Throwable t) { return true; }
 
     private class Core extends Thread {
-
         @GuardedBy("this")
         private Boolean running = true;
 
-        public Core(String name) {
-            super(name);
-        }
+        public Core(String name) { super(name); }
 
         @Override
         public void run() {
@@ -88,7 +84,6 @@ public abstract class Actor {
                     task.run();
                 } catch (Throwable t) {
                     running = onInterruptedBy(t);
-
                 }
             }
         }

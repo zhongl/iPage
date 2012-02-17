@@ -26,8 +26,12 @@ import java.util.RandomAccess;
 public abstract class Index extends Binder {
     public static final int ENTRY_LENGTH = Key.BYTE_LENGTH + 16;
 
-    public Index(List<Page> pages) {
-        super(pages);
+    public Index(List<Page> pages) { super(pages); }
+
+    protected static Key getKey(ByteBuffer buffer, int position) {
+        byte[] bytes = new byte[Key.BYTE_LENGTH];
+        ((ByteBuffer) buffer.position(position)).get(bytes);
+        return new Key(bytes);
     }
 
     public Range get(Key key) {
@@ -62,20 +66,11 @@ public abstract class Index extends Binder {
         protected abstract ByteBuffer buffer();
 
         private class Keys extends AbstractList<Key> implements RandomAccess {
+            @Override
+            public Key get(int index) { return getKey(buffer().duplicate(), index * ENTRY_LENGTH); }
 
             @Override
-            public Key get(int index) {
-                ByteBuffer duplicate = buffer();
-                byte[] bytes = new byte[Key.BYTE_LENGTH];
-                duplicate.position(index * ENTRY_LENGTH);
-                duplicate.get(bytes);
-                return new Key(bytes);
-            }
-
-            @Override
-            public int size() {
-                return buffer().capacity() / ENTRY_LENGTH;
-            }
+            public int size() { return buffer().capacity() / ENTRY_LENGTH; }
         }
     }
 

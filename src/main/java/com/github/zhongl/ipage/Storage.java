@@ -70,19 +70,13 @@ public class Storage<V> implements Iterable<V> {
     }
 
     @ManagedAttribute
-    public int getSize() {
-        return snapshot.size();
-    }
+    public int getSize() { return snapshot.size(); }
 
     @ManagedAttribute
-    public long getLastMergeElapseMillis() {
-        return lastMergeElapseMillis;
-    }
+    public long getLastMergeElapseMillis() { return lastMergeElapseMillis; }
 
     @ManagedAttribute
-    public int getAlives() {
-        return total.get() - removed.get();
-    }
+    public int getAlives() { return total.get() - removed.get(); }
 
     public void merge(final Collection<Entry<Key, V>> appendings, Collection<Key> removings, FutureCallback<Void> flushedCallback) {
         if (appendings.isEmpty() && removings.isEmpty()) {
@@ -121,14 +115,10 @@ public class Storage<V> implements Iterable<V> {
         }
     }
 
-    public V get(Key key) {
-        return snapshot.get(key);
-    }
+    public V get(Key key) { return snapshot.get(key); }
 
     @Override
-    public Iterator<V> iterator() {
-        return snapshot.iterator();
-    }
+    public Iterator<V> iterator() { return snapshot.iterator(); }
 
     private File tryMkdir(File dir) {
         if (!dir.exists()) checkState(dir.mkdirs());
