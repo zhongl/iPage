@@ -21,8 +21,8 @@ Please see [issues](https://github.com/zhongl/iPage/issues?sort=created&directio
     | Case            |   Times   | Total Eplase | Average Elapse | TPS         | Concurrency |
     |-----------------|-----------|--------------|----------------|-------------|-------------|
     | Random get      | 1,000,000 | 7.034 s      | 7,033ns        | 142,186.83  | 8           |
-    | Async remove    | 1,000,000 | 23.04 s      | 23,044ns       | 43,395.24   | 2           |
-    | Async add       | 1,000,000 | 18.18 s      | 18,180ns       | 55,005.5    | 2           |
+    | Async remove    | 1,000,000 | 23.04 s      | 23,044ns       | 43,395.24   | 16          |
+    | Async add       | 1,000,000 | 18.18 s      | 18,180ns       | 55,005.5    | 16          |
     | Sync add        | 16,384    | 4.820 s      | 294,214ns      | 3,399.17    | 32          |
 
 * Read and write data is 1KB
