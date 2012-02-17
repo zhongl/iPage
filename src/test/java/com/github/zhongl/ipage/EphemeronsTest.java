@@ -15,173 +15,144 @@
 
 package com.github.zhongl.ipage;
 
-import com.github.zhongl.util.*;
+import com.github.zhongl.util.Entry;
+import com.github.zhongl.util.FutureCallbacks;
+import com.github.zhongl.util.Md5;
+import com.github.zhongl.util.Nils;
 import com.google.common.util.concurrent.FutureCallback;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Map;
-import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.*;
 import java.util.concurrent.Semaphore;
 
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.*;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class EphemeronsTest {
-    SecondLevelStore secondLevelStore;
-    Ephemerons4T ephemerons4T;
+    private Store store;
+    private Ephemerons<Integer> ephemerons;
+    private Semaphore mergeBefore;
+    private Semaphore mergeAfter;
+    private FutureCallback<Void> ignore;
 
     @Before
     public void setUp() throws Exception {
-        secondLevelStore = spy(new SecondLevelStore());
-        ephemerons4T = new Ephemerons4T();
-    }
+        store = new Store();
+        mergeBefore = new Semaphore(0);
+        mergeAfter = new Semaphore(0);
 
-    @Test
-    public void phantom() throws Exception {
-        Key key = key(1);
-        ephemerons4T.add(key, 1, FutureCallbacks.<Void>ignore());
-        ephemerons4T.remove(key, FutureCallbacks.<Void>ignore());
-        ephemerons4T.flush();
-        verify(secondLevelStore, never()).merge(any(Collection.class), any(Collection.class), any(FutureCallback.class));
-    }
-
-    @Test
-    public void remove() throws Exception {
-        Key key = key(1);
-        ephemerons4T.remove(key, FutureCallbacks.<Void>ignore());
-        assertThat(ephemerons4T.get(key), is(nullValue()));
-        ephemerons4T.flush();
-        verify(secondLevelStore).merge(any(Collection.class), eq(Arrays.asList(key)), any(FutureCallback.class));
-    }
-
-    @Test
-    public void removeDuringFlushing() throws Exception {
-        final Semaphore before = new Semaphore(0);
-        final Semaphore after = new Semaphore(0);
-
-        Ephemerons<Integer> ephemerons = new Ephemerons<Integer>() {
+        ephemerons = new Ephemerons<Integer>() {
             @Override
-            protected void requestFlush(final Collection<Entry<Key, Integer>> appendings,
-                                        final Collection<Key> removings,
-                                        final FutureCallback<Void> flushedCallback) {
-                before.release();
+            protected void requestFlush(
+                    final Collection<Entry<Key, Integer>> appendings,
+                    final Collection<Key> removings,
+                    final FutureCallback<Void> flushedCallback) {
+
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        secondLevelStore.merge(appendings, removings, flushedCallback);
-                        after.release();
+                        mergeBefore.release();
+                        store.merge(appendings, removings, flushedCallback);
+                        mergeAfter.release();
                     }
                 }).start();
             }
 
             @Override
             protected Integer getMiss(Key key) {
-                return secondLevelStore.get(key);
+                return store.get(key);
             }
         };
-        ephemerons.throughout(5);
+        ignore = FutureCallbacks.ignore();
+    }
+
+    private void afterMerging() throws InterruptedException {mergeAfter.acquire();}
+
+    private void beforeMerging() throws InterruptedException {mergeBefore.acquire();}
+
+    @Test
+    public void removeBeforeFlushing() throws Exception {
         Key key = key(1);
-        ephemerons.add(key, 1, FutureCallbacks.<Void>ignore());
+        ephemerons.throughout(10);
+        ephemerons.add(key, 1, ignore);
+        ephemerons.remove(key, ignore);
         ephemerons.flush();
-        before.acquire();
-        ephemerons.remove(key, FutureCallbacks.<Void>ignore());
-        assertThat(ephemerons.get(key), is(nullValue()));
-        after.acquire();
+        afterMerging();
+        assertThat(store.removings.isEmpty(), is(true));
+    }
 
-        assertThat(secondLevelStore.get(key), is(1));
+    @Test
+    public void removeAfterFlushing() throws Exception {
+        Key key = key(1);
+        ephemerons.throughout(10);
+        ephemerons.remove(key, ignore);
+        assertThat(ephemerons.get(key), is(nullValue()));
+        ephemerons.flush();
+        afterMerging();
+        assertThat(store.removings, hasItem(key));
+    }
+
+    @Test
+    public void removeDuringFlushing() throws Exception {
+        ephemerons.throughout(5);
+
+        Key key = key(1);
+        ephemerons.add(key, 1, ignore);
+        ephemerons.flush();
+
+        beforeMerging();
+        ephemerons.remove(key, ignore);
+        assertThat(ephemerons.get(key), is(nullValue()));
+
+        afterMerging();
+        assertThat(store.get(key), is(1));
         assertThat(ephemerons.get(key), is(nullValue()));
 
         ephemerons.flush();
-        after.acquire();
 
-        assertThat(secondLevelStore.get(key), is(nullValue()));
+        afterMerging();
+        assertThat(store.get(key), is(nullValue()));
         assertThat(ephemerons.get(key), is(nullValue()));
     }
 
     @Test
     public void flowControlAndOrdering() throws Exception {
+        ephemerons.throughout(4);
 
-        CallbackFuture<Void> future = null;
-        for (int i = 0; i < 8; i++) {
-            try {
-                future = new CallbackFuture<Void>();
-                ephemerons4T.add(key(i), i, future);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+        for (int i = 0; i < 8; i++) ephemerons.add(key(i), i, ignore);
 
-        ephemerons4T.flush();
-        future.get();
+        afterMerging();
+        for (int i = 0; i < store.ordering.size(); i++) assertThat(store.ordering.get(i), is(i));
 
-        ArgumentCaptor<Collection> appendingsCaptor = ArgumentCaptor.forClass(Collection.class);
-        ArgumentCaptor<Collection> removingsCaptor = ArgumentCaptor.forClass(Collection.class);
-        verify(secondLevelStore, times(2)).merge(appendingsCaptor.capture(), removingsCaptor.capture(), any(FutureCallback.class));
+        ephemerons.flush(); // merge rest 4
 
-        // verify the ordering
-        int i = 0;
-
-        for (Collection allValue : appendingsCaptor.getAllValues()) {
-            for (Object o : allValue) {
-                Entry<Key, Integer> entry = (Entry<Key, Integer>) o;
-                assertThat(entry.value(), is(i++));
-            }
-        }
-
+        afterMerging();
+        for (int i = 0; i < store.ordering.size(); i++) assertThat(store.ordering.get(i), is(i));
     }
 
     private Key key(int i) {return new Key(Md5.md5((i + "").getBytes()));}
 
-    class SecondLevelStore {
-        final Map<Key, Integer> secondLevel = new ConcurrentSkipListMap<Key, Integer>();
+    class Store {
+        final Map<Key, Integer> appendings = Collections.synchronizedMap(new HashMap<Key, Integer>());
+        final Set<Key> removings = Collections.synchronizedSet(new HashSet<Key>());
+        final List<Integer> ordering = Collections.synchronizedList(new ArrayList<Integer>());
 
         public Integer get(Key key) {
-            return secondLevel.get(key);
+            if (removings.contains(key)) return null;
+            return appendings.get(key);
         }
 
         public void merge(Collection<Entry<Key, Integer>> appendings, Collection<Key> removings, FutureCallback<Void> flushedCallback) {
-            waitFor(10L); // mock long time flushing
+            try { Thread.sleep(10L); } catch (InterruptedException e) { e.printStackTrace(); }
             for (Entry<Key, Integer> entry : appendings) {
-                if (entry.value() != Nils.OBJECT)
-                    secondLevel.put(entry.key(), entry.value());
+                this.appendings.put(entry.key(), entry.value());
+                ordering.add(entry.value());
             }
-            for (Key key : removings) {
-                secondLevel.remove(key);
-            }
+            for (Key key : removings) this.removings.add(key);
             flushedCallback.onSuccess(Nils.VOID);
         }
     }
 
-    private void waitFor(long millis) {
-        try {
-            Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
-    class Ephemerons4T extends Ephemerons<Integer> {
-
-        protected Ephemerons4T() {
-            throughout(4);
-        }
-
-        @Override
-        protected void requestFlush(Collection<Entry<Key, Integer>> appendings, Collection<Key> removings, FutureCallback<Void> flushedCallback) {
-            secondLevelStore.merge(appendings, removings, flushedCallback);
-        }
-
-        @Override
-        protected Integer getMiss(Key key) {
-            return secondLevelStore.get(key);
-        }
-
-    }
 }

@@ -85,13 +85,17 @@ public class Storage<V> implements Iterable<V> {
     }
 
     public void merge(final Collection<Entry<Key, V>> appendings, Collection<Key> removings, FutureCallback<Void> flushedCallback) {
+        if (appendings.isEmpty() && removings.isEmpty()) {
+            flushedCallback.onSuccess(Nils.VOID);
+            return;
+        }
+
         int cTotal = total.addAndGet(appendings.size());
         int cRemoved = removed.addAndGet(removings.size());
 
         boolean needDefrag = cRemoved * 1.0 / cTotal > DEFEAG_RADIO;
 
         // TODO log merge starting
-
         try {
             Stopwatch stopwatch = new Stopwatch().start();
             String snapshotName;
@@ -110,9 +114,8 @@ public class Storage<V> implements Iterable<V> {
             flushedCallback.onSuccess(Nils.VOID);
             // TODO log merge ending
         } catch (Throwable t) {
-            flushedCallback.onFailure(t);
             // TODO log merge error
-            return;
+            flushedCallback.onFailure(t);
         } finally {
             cleanUp();
         }

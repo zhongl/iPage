@@ -116,11 +116,6 @@ public abstract class Ephemerons<V> {
             else appendings.add(new Entry<Key, V>(record.key, record.value));
         }
 
-        if (appendings.isEmpty() && removings.isEmpty()) {
-            flushing.set(false);
-            return;
-        }
-
         requestFlush(appendings, removings, new FutureCallback<Void>() {
             @Override
             public void onSuccess(Void v) {

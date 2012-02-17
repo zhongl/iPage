@@ -65,7 +65,6 @@ public class IPageTest extends FileTestContext {
 
         String key3 = "key3";
         service.futureAdd(key3, value).get();
-        System.out.println("get");
         assertThat(iPage.get(key3), is(value));
         service.futureRemove(key3).get();
         assertThat(iPage.get(key3), is(nullValue()));
