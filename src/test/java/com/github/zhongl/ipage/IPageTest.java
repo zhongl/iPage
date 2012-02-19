@@ -125,13 +125,15 @@ public class IPageTest extends FileTestContext {
     }
 
     private IPage<String, String> stringIPage(File dir, int throughout, int flushCount, long flushMillis) throws Exception {
-        return new IPage<String, String>(dir, new StringCodec(), throughout, flushMillis, flushCount) {
+        IPage<String, String> stringIPage = new IPage<String, String>(dir, new StringCodec(), throughout, flushMillis, flushCount) {
 
             @Override
             protected Key transform(String key) {
                 return new Key(Md5.md5(key.getBytes()));
             }
         };
+        stringIPage.start();
+        return stringIPage;
     }
 
 }

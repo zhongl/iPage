@@ -238,6 +238,8 @@ public class IPageBenchmark extends FileTestContext {
                 return new Key(Md5.md5(key.toString().getBytes()));
             }
         };
+
+        iPage.start();
     }
 
     private void initService(int threads) {

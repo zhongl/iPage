@@ -46,6 +46,10 @@ public abstract class Actor {
         this.timeout = timeout;
         this.tasks = new LinkedBlockingQueue<Runnable>();
         core = new Core(name);
+    }
+
+    public synchronized void start() {
+        if (core.isAlive()) return;
         core.start();
     }
 
