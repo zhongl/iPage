@@ -21,8 +21,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Stopwatch;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.FutureCallback;
-import org.softee.management.annotation.MBean;
-import org.softee.management.annotation.ManagedAttribute;
+import org.softee.management.annotation.*;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -38,13 +37,15 @@ import static com.google.common.base.Preconditions.checkState;
 @MBean
 public class Storage<V> implements Iterable<V> {
 
-    private static final double DEFRAG_RATIO = Integer.getInteger("ipage.snapshot.defrag.ratio", 8) * 0.1;
+    private static final int DEFRAG_RATIO = Integer.getInteger("ipage.snapshot.defrag.ratio", 7);
+
     private final File head;
     private final File pages;
     private final Codec<V> codec;
 
     private final AtomicInteger total;
     private final AtomicInteger removed;
+    private final AtomicInteger defragRatio;
 
     private volatile long lastMergeElapseMillis;
     private volatile Snapshot<V> snapshot;
@@ -58,6 +59,7 @@ public class Storage<V> implements Iterable<V> {
         this.snapshot = loadHead();
         this.total = new AtomicInteger(0);
         this.removed = new AtomicInteger(0);
+        this.defragRatio = new AtomicInteger(DEFRAG_RATIO);
 
         snapshot.foreachIndexEntry(new Function<Boolean, Void>() {
             @Override
@@ -78,6 +80,16 @@ public class Storage<V> implements Iterable<V> {
     @ManagedAttribute
     public int getAlives() { return total.get() - removed.get(); }
 
+    @ManagedOperation
+    @Description("positive delta for up, negative delta for down, then return the final ratio which must be in [1,9].")
+    public int defragRatio(@Parameter("delta") int delta) {
+        if (delta == 0) return defragRatio.get();
+        int current = defragRatio.get();
+        int next = Math.min(9, Math.max(1, current + delta));
+        while (!defragRatio.compareAndSet(current, next)) {}
+        return next;
+    }
+
     public void merge(final Collection<Entry<Key, V>> appendings, Collection<Key> removings, FutureCallback<Void> flushedCallback) {
         if (appendings.isEmpty() && removings.isEmpty()) {
             flushedCallback.onSuccess(Nils.VOID);
@@ -87,7 +99,7 @@ public class Storage<V> implements Iterable<V> {
         int cTotal = total.addAndGet(appendings.size());
         int cRemoved = removed.addAndGet(removings.size());
 
-        boolean needDefrag = cRemoved * 1.0 / cTotal > DEFRAG_RATIO;
+        boolean needDefrag = cRemoved * 1.0 / cTotal >= defragRatio.get() * 0.1;
 
         // TODO log merge starting
         try {

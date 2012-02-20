@@ -20,10 +20,7 @@ import com.github.zhongl.util.FutureCallbacks;
 import com.github.zhongl.util.Nils;
 import com.google.common.base.Function;
 import com.google.common.util.concurrent.FutureCallback;
-import org.softee.management.annotation.MBean;
-import org.softee.management.annotation.ManagedAttribute;
-import org.softee.management.annotation.ManagedOperation;
-import org.softee.management.annotation.Parameter;
+import org.softee.management.annotation.*;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -137,6 +134,7 @@ public abstract class Ephemerons<V> {
     protected abstract V getMiss(Key key);
 
     @ManagedOperation
+    @Description("positive delta for up, negative delta for down.")
     public int throughout(@Parameter("delta") int delta) {
         if (delta > 0) flowControl.release(delta);
         if (delta < 0) flowControl.acquireUninterruptibly(-delta);
