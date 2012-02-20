@@ -31,7 +31,6 @@ import java.util.TreeSet;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class Snapshot<T> implements Iterable<T> {
 
-    private static final double DEFRAG_RADIO = Integer.getInteger("ipage.snapshot.defrag.radio", 2) * 0.1;
     private final LineEntryCodec<T> lineEntryCodec;
     private final ReadOnlyLine<T> readOnlyLine;
     private final ReadOnlyIndex readOnlyIndex;

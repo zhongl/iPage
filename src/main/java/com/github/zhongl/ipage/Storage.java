@@ -38,7 +38,7 @@ import static com.google.common.base.Preconditions.checkState;
 @MBean
 public class Storage<V> implements Iterable<V> {
 
-    public static final double DEFEAG_RADIO = 0.8;
+    private static final double DEFRAG_RATIO = Integer.getInteger("ipage.snapshot.defrag.ratio", 8) * 0.1;
     private final File head;
     private final File pages;
     private final Codec<V> codec;
@@ -87,7 +87,7 @@ public class Storage<V> implements Iterable<V> {
         int cTotal = total.addAndGet(appendings.size());
         int cRemoved = removed.addAndGet(removings.size());
 
-        boolean needDefrag = cRemoved * 1.0 / cTotal > DEFEAG_RADIO;
+        boolean needDefrag = cRemoved * 1.0 / cTotal > DEFRAG_RATIO;
 
         // TODO log merge starting
         try {

@@ -67,16 +67,21 @@ public class ReadOnlyLine<T> extends Binder implements Iterable<Entry<Key, T>> {
     public Iterator<Entry<Key, T>> iterator() {
         return new AbstractIterator<Entry<Key, T>>() {
             Iterator<Page> pItr = pages.iterator();
-            ByteBuffer buffer;
+            Page current;
+            long position;
 
             @Override
             protected Entry<Key, T> computeNext() {
-                if (buffer == null || !buffer.hasRemaining()) {
+                if (current == null || position >= current.file().length()) {
                     if (!pItr.hasNext()) return endOfData();
-                    File file = pItr.next().file();
-                    buffer = ReadOnlyMappedBuffers.getOrMap(file);
+                    current = pItr.next();
+                    position = 0L;
+                    if (!current.file().exists()) return endOfData();
                 }
+                ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(current.file());
+                buffer.position((int) position);
                 LineEntryCodec.LazyDecoder<T> decoder = lineEntryCodec.lazyDecoder(buffer);
+                position = buffer.position();
                 return new Entry<Key, T>(decoder.key(), decoder.value());
             }
         };
@@ -94,8 +99,8 @@ public class ReadOnlyLine<T> extends Binder implements Iterable<Entry<Key, T>> {
 
         public ByteBuffer bufferIn(Range range) {
             return (ByteBuffer) ReadOnlyMappedBuffers.getOrMap(file())
-                                                     .limit(refer(range.to()))
-                                                     .position(refer(range.from()));
+                    .limit(refer(range.to()))
+                    .position(refer(range.from()));
         }
 
         private int refer(long absolute) {
