@@ -99,8 +99,8 @@ public class ReadOnlyLine<T> extends Binder implements Iterable<Entry<Key, T>> {
 
         public ByteBuffer bufferIn(Range range) {
             return (ByteBuffer) ReadOnlyMappedBuffers.getOrMap(file())
-                    .limit(refer(range.to()))
-                    .position(refer(range.from()));
+                                                     .limit(refer(range.to()))
+                                                     .position(refer(range.from()));
         }
 
         private int refer(long absolute) {

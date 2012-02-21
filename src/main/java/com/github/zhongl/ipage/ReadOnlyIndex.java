@@ -65,17 +65,15 @@ public class ReadOnlyIndex extends Index {
     private static class InnerPage extends Index.InnerPage {
 
         private final int size;
-        private final ByteBuffer buffer;
 
         protected InnerPage(File file, Key key) {
             super(file, key);
             size = (int) (file.length() / ENTRY_LENGTH);
-            buffer = ReadOnlyMappedBuffers.getOrMap(this.file);
         }
 
         @Override
         protected ByteBuffer buffer() {
-            return buffer;
+            return ReadOnlyMappedBuffers.getOrMap(this.file);
         }
 
         Collection<Entry<Key, Range>> entries() {

@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.*;
 
+import static com.github.zhongl.ipage.TextFile.Type.*;
 import static com.google.common.io.Files.readLines;
 
 /**
@@ -67,7 +68,7 @@ class TextFile {
             File pageFile = new File(this.parent, parts[2]);
             links.add(pageFile);
 
-            switch (Type.valueOf(parts[0])) {
+            switch (valueOf(parts[0])) {
                 case L:
                     lineEntries.add(new Entry<File, Offset>(pageFile, new Offset(parts[1])));
                     break;
@@ -102,16 +103,16 @@ class TextFile {
 
         if (append) {
             for (Entry<File, Offset> entry : lineEntries) {
-                appendLineTo(sb, TextFile.Type.L, entry.value(), entry.key());
+                appendLineTo(sb, L, entry.value(), entry.key());
             }
         }
 
         Page line = lineAppender.page();
         if (line.file().length() > 0)
-            appendLineTo(sb, TextFile.Type.L, line.number(), line.file());
+            appendLineTo(sb, L, line.number(), line.file());
 
         for (Page page : indexMerger.pages)
-            appendLineTo(sb, Type.I, page.number(), page.file());
+            appendLineTo(sb, I, page.number(), page.file());
 
         try {
             File sFile = new File(parent, System.nanoTime() + ".s");
