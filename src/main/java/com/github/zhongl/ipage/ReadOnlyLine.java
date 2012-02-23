@@ -39,11 +39,11 @@ public class ReadOnlyLine<T> extends Binder implements Iterable<Entry<Key, T>> {
         this.lineEntryCodec = lineEntryCodec;
     }
 
-    public <T> T get(Range range) {
+    public T get(Range range) {
         if (range.equals(Range.NIL)) return null;
         if (pages.isEmpty()) return null;
         ByteBuffer buffer = ((InnerPage) binarySearch(number(range))).bufferIn(range);
-        LineEntryCodec.LazyDecoder<T> decoder = (LineEntryCodec.LazyDecoder<T>) lineEntryCodec.lazyDecoder(buffer);
+        LineEntryCodec.LazyDecoder<T> decoder = lineEntryCodec.lazyDecoder(buffer);
         return decoder.value();
     }
 
