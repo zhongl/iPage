@@ -15,9 +15,12 @@
 
 package com.github.zhongl.ipage;
 
+import com.github.zhongl.util.DirectByteBufferCleaner;
 import com.github.zhongl.util.Entry;
 
 import java.nio.ByteBuffer;
+
+import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class LineEntryCodec<V> {
@@ -40,18 +43,19 @@ class LineEntryCodec<V> {
     }
 
     public LazyDecoder<V> lazyDecoder(final ByteBuffer buffer) {
+        checkState(DirectByteBufferCleaner.isNotCleaned(buffer));
         int from = buffer.position();
-        buffer.position(from + Key.BYTE_LENGTH);
-        int length = buffer.getInt();
+        int length = ((ByteBuffer) buffer.position(from + Key.BYTE_LENGTH)).getInt();
         int to = buffer.position() + length;
+
         buffer.position(to);
-        ByteBuffer duplicate = buffer.duplicate();
-        duplicate.limit(to).position(from);
-        final ByteBuffer origin = duplicate.slice();
+
+        final ByteBuffer origin = ((ByteBuffer) buffer.duplicate().limit(to).position(from)).slice();
         return new LazyDecoder() {
 
             @Override
             public Key key() {
+                checkState(DirectByteBufferCleaner.isNotCleaned(buffer));
                 byte[] bytes = new byte[Key.BYTE_LENGTH];
                 origin.position(0);
                 origin.get(bytes);
@@ -59,12 +63,14 @@ class LineEntryCodec<V> {
             }
 
             public V value() {
+                checkState(DirectByteBufferCleaner.isNotCleaned(buffer));
                 origin.position(KEY_AND_LEN);
                 return vCodec.decode(origin);
             }
 
             @Override
             public ByteBuffer origin() {
+                checkState(DirectByteBufferCleaner.isNotCleaned(buffer));
                 return (ByteBuffer) origin.position(0);
             }
         };
