@@ -37,7 +37,7 @@ public final class DirectByteBufferCleaner {
     public static void clean(final ByteBuffer buffer) {
         if (!buffer.isDirect()) return;
         try {
-            invoke(invoke(buffer, "cleaner"), "clean");
+            invoke(invoke(viewed(buffer), "cleaner"), "clean");
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
