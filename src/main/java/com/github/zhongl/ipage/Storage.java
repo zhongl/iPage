@@ -18,7 +18,9 @@ package com.github.zhongl.ipage;
 import com.github.zhongl.util.Entry;
 import com.github.zhongl.util.Nils;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.Collections2;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.FutureCallback;
 import org.softee.management.annotation.*;
@@ -90,11 +92,18 @@ public class Storage<V> implements Iterable<V> {
         return next;
     }
 
-    public void merge(final Collection<Entry<Key, V>> appendings, Collection<Key> removings, FutureCallback<Void> flushedCallback) {
+    public void merge(Collection<Entry<Key, V>> appendings, Collection<Key> removings, FutureCallback<Void> flushedCallback) {
         if (appendings.isEmpty() && removings.isEmpty()) {
             flushedCallback.onSuccess(Nils.VOID);
             return;
         }
+
+        removings = Collections2.filter(removings, new Predicate<Key>() {
+            @Override
+            public boolean apply(@Nullable Key key) {
+                return get(key) != null;
+            }
+        });
 
         int cTotal = total.addAndGet(appendings.size());
         int cRemoved = removed.addAndGet(removings.size());

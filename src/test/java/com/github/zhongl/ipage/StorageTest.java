@@ -45,12 +45,18 @@ public class StorageTest extends FileTestContext {
         FutureCallbacks.getUnchecked(callback);
 
         assertThat(storage.get(key), is(value));
+        assertThat(storage.getAlives(), is(1));
 
         callback = new CallbackFuture<Void>();
         storage.merge(Collections.<Entry<Key, String>>emptyList(), Arrays.asList(key), callback);
         FutureCallbacks.getUnchecked(callback);
 
         assertThat(storage.get(key), is(nullValue()));
+
+        // issue #31 : Negative alives
+        storage.merge(Collections.<Entry<Key, String>>emptyList(), Arrays.asList(key, key), callback);
+        FutureCallbacks.getUnchecked(callback);
+        assertThat(storage.getAlives(), is(0));
     }
 
     @Test
