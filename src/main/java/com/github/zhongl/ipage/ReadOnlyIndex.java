@@ -16,12 +16,15 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.Entry;
-import com.github.zhongl.util.ReadOnlyMappedBuffers;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
+import com.google.common.io.Files;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.*;
 
 import static java.util.Collections.unmodifiableList;
@@ -30,7 +33,23 @@ import static java.util.Collections.unmodifiableList;
 public class ReadOnlyIndex extends Index {
 
     protected ReadOnlyIndex(final List<Entry<File, Key>> entries) {
-        super(unmodifiableList(new PageList(entries)));
+        super(toPages(entries));
+    }
+
+    private static List<Page> toPages(final List<Entry<File, Key>> entries) {
+        return unmodifiableList(new ArrayList<Page>(new AbstractList<Page>() {
+
+            @Override
+            public Page get(int index) {
+                Entry<File, Key> entry = entries.get(index);
+                return new InnerPage(entry.key(), entry.value());
+            }
+
+            @Override
+            public int size() {
+                return entries.size();
+            }
+        }));
     }
 
     public Collection<Entry<Key, Range>> entries() {
@@ -63,53 +82,37 @@ public class ReadOnlyIndex extends Index {
     }
 
     private static class InnerPage extends Index.InnerPage {
-
         private final int size;
+        private final MappedByteBuffer buffer; // reclaimed by GC.
 
         protected InnerPage(File file, Key key) {
             super(file, key);
             size = (int) (file.length() / ENTRY_LENGTH);
-        }
-
-        @Override
-        protected ByteBuffer buffer() {
-            return ReadOnlyMappedBuffers.getOrMap(this.file);
+            try {
+                buffer = Files.map(file, FileChannel.MapMode.PRIVATE);
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
         }
 
         Collection<Entry<Key, Range>> entries() {
             return new AbstractList<Entry<Key, Range>>() {
                 @Override
-                public Entry<Key, Range> get(int index) {
+                public Entry<Key, Range> get(final int index) {
                     int position = index * ENTRY_LENGTH;
-                    ByteBuffer byteBuffer = buffer().duplicate();
-                    Key key = getKey(byteBuffer, position);
-                    Range range = new Range(byteBuffer.getLong(), byteBuffer.getLong());
+                    ByteBuffer duplicate = buffer();
+                    Key key = getKey(duplicate, position);
+                    Range range = new Range(duplicate.getLong(), duplicate.getLong());
                     return new Entry<Key, Range>(key, range);
                 }
 
                 @Override
-                public int size() {
-                    return size;
-                }
+                public int size() { return size; }
             };
         }
 
+        @Override
+        protected ByteBuffer buffer() { return buffer.duplicate(); }
     }
 
-    private static class PageList extends AbstractList<Page> implements RandomAccess {
-        private final List<Entry<File, Key>> entries;
-
-        public PageList(List<Entry<File, Key>> entries) {this.entries = entries;}
-
-        @Override
-        public Page get(int index) {
-            Entry<File, Key> entry = entries.get(index);
-            return new InnerPage(entry.key(), entry.value());
-        }
-
-        @Override
-        public int size() {
-            return entries.size();
-        }
-    }
 }

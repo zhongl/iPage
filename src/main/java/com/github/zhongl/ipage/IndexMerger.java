@@ -105,11 +105,12 @@ abstract class IndexMerger extends Index {
 
         protected InnerPage(Key key) {
             super(new File(dir, System.nanoTime() + ".i"), key);
+
             try {
-                int size = Math.min(PAGE_CAPACITY, capacity - position) * ENTRY_LENGTH;
-                buffer = Files.map(file(), FileChannel.MapMode.READ_WRITE, size);
+                int quantity = Math.min(PAGE_CAPACITY, capacity - position);
+                buffer = Files.map(file(), FileChannel.MapMode.READ_WRITE, quantity * ENTRY_LENGTH);
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                throw new IllegalStateException(e);
             }
         }
 
@@ -129,7 +130,9 @@ abstract class IndexMerger extends Index {
         }
 
         public void set(Key key, Range range) {
-            positionedBufferByBinarySearch(key).putLong(range.from()).putLong(range.to());
+            ByteBuffer duplicate = buffer();
+            duplicate.position(positionOf(key));
+            duplicate.putLong(range.from()).putLong(range.to());
         }
 
         @Override

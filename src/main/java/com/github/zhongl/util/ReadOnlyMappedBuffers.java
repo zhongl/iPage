@@ -15,6 +15,7 @@
 
 package com.github.zhongl.util;
 
+import com.google.common.base.Function;
 import com.google.common.cache.*;
 import com.google.common.io.Files;
 
@@ -23,7 +24,6 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.nio.channels.FileChannel.MapMode.PRIVATE;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
@@ -51,32 +51,8 @@ public class ReadOnlyMappedBuffers {
     }
 
 
-    public static ByteBuffer getOrMap(File file) {
-        checkNotNull(file);
-
-/*
-        CAUTION : mapped may be not sync with file content.
-
-        MappedByteBuffer buffer = CACHE.getUnchecked(file);
-        if (ByteBuffers.lengthOf(buffer) == file.length()) {
-            //
-            if (!buffer.isLoaded()) buffer.load();
-            return buffer.duplicate();
-        }
-
-        clearMappedOf(file); // clear for reload.
-*/
-        return CACHE.getUnchecked(file).duplicate();
-    }
-
-    public static void clearMappedOf(File file) {
-        CACHE.invalidate(file);
-        CACHE.cleanUp();
-    }
-
-    public static void clearAll() {
-        CACHE.invalidateAll();
-        CACHE.cleanUp();
+    public static <T> T read(File file, Function<ByteBuffer, T> function) {
+        return function.apply(CACHE.getUnchecked(file).duplicate());
     }
 
     public static CacheStats stats() {

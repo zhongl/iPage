@@ -169,7 +169,11 @@ public class IPageBenchmark extends FileTestContext {
                     service.submit(new Runnable() {
                         @Override
                         public void run() {
-                            iPage.get(random.nextInt(times));
+                            try {
+                                iPage.get(random.nextInt(times));
+                            } catch (Exception e) {
+                                e.printStackTrace();  // TODO right
+                            }
                             gLatch.countDown();
                         }
                     });
@@ -182,6 +186,7 @@ public class IPageBenchmark extends FileTestContext {
                 }
             }
         }, times * 10);
+
     }
 
     @Test

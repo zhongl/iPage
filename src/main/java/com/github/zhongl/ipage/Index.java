@@ -44,6 +44,7 @@ public abstract class Index extends Binder {
     }
 
     protected static abstract class InnerPage extends Page {
+
         protected final Keys keys;
 
         protected InnerPage(File file, Key key) {
@@ -51,27 +52,28 @@ public abstract class Index extends Binder {
             keys = new Keys();
         }
 
-        public Range get(Key key) {
-            ByteBuffer byteBuffer = positionedBufferByBinarySearch(key);
-            return new Range(byteBuffer.getLong(), byteBuffer.getLong());
-        }
-
-        protected ByteBuffer positionedBufferByBinarySearch(Key key) {
+        protected int positionOf(Key key) {
             int index = Collections.binarySearch(keys, key);
             if (index < 0) throw new IndexOutOfBoundsException(index + "");
-            int position = index * ENTRY_LENGTH + Key.BYTE_LENGTH;
-            return (ByteBuffer) buffer().position(position);
+            return index * ENTRY_LENGTH + Key.BYTE_LENGTH;
+        }
+
+        public Range get(Key key) {
+            ByteBuffer duplicate = buffer();
+            duplicate.position(positionOf(key));
+            return new Range(duplicate.getLong(), duplicate.getLong());
         }
 
         protected abstract ByteBuffer buffer();
 
-        private class Keys extends AbstractList<Key> implements RandomAccess {
+        protected class Keys extends AbstractList<Key> implements RandomAccess {
             @Override
-            public Key get(int index) { return getKey(buffer().duplicate(), index * ENTRY_LENGTH); }
+            public Key get(int index) { return getKey(buffer(), index * ENTRY_LENGTH); }
 
             @Override
             public int size() { return buffer().capacity() / ENTRY_LENGTH; }
         }
+
     }
 
 }

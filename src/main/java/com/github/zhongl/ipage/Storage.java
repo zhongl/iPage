@@ -16,9 +16,9 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.Entry;
+import com.github.zhongl.util.FutureCallbacks;
 import com.github.zhongl.util.Nils;
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Collections2;
 import com.google.common.io.Files;
@@ -29,9 +29,13 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -40,6 +44,8 @@ import static com.google.common.base.Preconditions.checkState;
 public class Storage<V> implements Iterable<V> {
 
     private static final int DEFRAG_RATIO = Integer.getInteger("ipage.snapshot.defrag.ratio", 7);
+    private static final int MAX_PARALLEL_THREADS = Integer.getInteger("ipage.snapshot.max.parallel.threads", 100);
+    private static final int KEEP_ALIVE_TIME = Integer.getInteger("ipage.snapshot.parallel.thread.alives", 5);
 
     private final File head;
     private final File pages;
@@ -48,6 +54,8 @@ public class Storage<V> implements Iterable<V> {
     private final AtomicInteger total;
     private final AtomicInteger removed;
     private final AtomicInteger defragRatio;
+    private final ExecutorService parallelService;
+    private final Logger logger = Logger.getLogger(getClass().getSimpleName());
 
     private volatile long lastMergeElapseMillis;
     private volatile Snapshot<V> snapshot;
@@ -63,6 +71,23 @@ public class Storage<V> implements Iterable<V> {
         this.removed = new AtomicInteger(0);
         this.defragRatio = new AtomicInteger(DEFRAG_RATIO);
 
+        parallelService = new ThreadPoolExecutor(
+                Runtime.getRuntime().availableProcessors(),
+                MAX_PARALLEL_THREADS,
+                KEEP_ALIVE_TIME, TimeUnit.SECONDS,
+                new SynchronousQueue<Runnable>(),
+                new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        Thread t = new Thread(r);
+                        t.setName("Storage-get-" + t.getId());
+                        t.setDaemon(true);
+                        return t;
+                    }
+                },
+                new ThreadPoolExecutor.CallerRunsPolicy()
+        );
+
         snapshot.foreachIndexEntry(new Function<Boolean, Void>() {
             @Override
             public Void apply(@Nullable Boolean alived) {
@@ -74,13 +99,13 @@ public class Storage<V> implements Iterable<V> {
     }
 
     @ManagedAttribute
-    public int getSize() { return snapshot.size(); }
+    public int getTotal() { return total.get(); }
+
+    @ManagedAttribute
+    public int getRemoved() { return removed.get(); }
 
     @ManagedAttribute
     public long getLastMergeElapseMillis() { return lastMergeElapseMillis; }
-
-    @ManagedAttribute
-    public int getAlives() { return total.get() - removed.get(); }
 
     @ManagedOperation
     @Description("positive delta for up, negative delta for down, then return the final ratio which must be in [1,9].")
@@ -93,25 +118,20 @@ public class Storage<V> implements Iterable<V> {
     }
 
     public void merge(Collection<Entry<Key, V>> appendings, Collection<Key> removings, FutureCallback<Void> flushedCallback) {
+        removings = filter(removings);
+
         if (appendings.isEmpty() && removings.isEmpty()) {
             flushedCallback.onSuccess(Nils.VOID);
             return;
         }
-
-        removings = Collections2.filter(removings, new Predicate<Key>() {
-            @Override
-            public boolean apply(@Nullable Key key) {
-                return get(key) != null;
-            }
-        });
 
         int cTotal = total.addAndGet(appendings.size());
         int cRemoved = removed.addAndGet(removings.size());
 
         boolean needDefrag = cRemoved * 1.0 / cTotal >= defragRatio.get() * 0.1;
 
-        // TODO log merge starting
         try {
+            logger.finest("Begin merging...");
             Stopwatch stopwatch = new Stopwatch().start();
             String snapshotName;
             if (needDefrag) {
@@ -127,13 +147,38 @@ public class Storage<V> implements Iterable<V> {
             setHead(snapshotName);
             snapshot = new Snapshot<V>(pages, snapshotName, codec);
             flushedCallback.onSuccess(Nils.VOID);
-            // TODO log merge ending
+            logger.finest("End merging...");
         } catch (Throwable t) {
-            // TODO log merge error
+            logger.log(Level.WARNING, "Merge failed: {}", t);
             flushedCallback.onFailure(t);
         } finally {
             cleanUp();
         }
+    }
+
+    private Collection<Key> filter(Collection<Key> removings) {
+        Collection<Callable<Key>> tasks = Collections2.transform(removings, new Function<Key, Callable<Key>>() {
+            @Override
+            public Callable<Key> apply(@Nullable final Key key) {
+                return new Callable<Key>() {
+                    @Override
+                    public Key call() throws Exception { return get(key) == null ? null : key; }
+                };
+            }
+        });
+
+        try {
+            ArrayList<Key> result = new ArrayList<Key>();
+            for (Future<Key> future : parallelService.invokeAll(tasks)) {
+                Key key = FutureCallbacks.getUnchecked(future);
+                if (key != null) result.add(key);
+            }
+            return result;
+        } catch (Throwable e) {
+            logger.severe(e.toString());
+            throw new IllegalStateException(e);
+        }
+
     }
 
     public V get(Key key) { return snapshot.get(key); }
@@ -158,10 +203,6 @@ public class Storage<V> implements Iterable<V> {
 
     protected void cleanUp() {
         File[] files = pages.listFiles();
-        for (File file : files) {
-            if (!snapshot.isLinkTo(file)) checkState(file.delete());
-        }
+        for (File file : files) if (!snapshot.isLinkTo(file)) checkState(file.delete());
     }
-
-
 }

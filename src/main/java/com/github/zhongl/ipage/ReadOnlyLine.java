@@ -16,12 +16,19 @@
 package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.Entry;
+import com.github.zhongl.util.Nils;
 import com.github.zhongl.util.ReadOnlyMappedBuffers;
+import com.google.common.base.Function;
 import com.google.common.collect.AbstractIterator;
+import com.google.common.io.Closeables;
 
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.AbstractList;
 import java.util.Iterator;
 import java.util.List;
@@ -35,25 +42,28 @@ public class ReadOnlyLine<T> extends Binder implements Iterable<Entry<Key, T>> {
     protected final LineEntryCodec<T> lineEntryCodec;
 
     protected ReadOnlyLine(final List<Entry<File, Offset>> tuples, LineEntryCodec<T> lineEntryCodec) {
-        super(unmodifiableList(new PageList(tuples)));
+        super(unmodifiableList(new PageList<T>(tuples, lineEntryCodec)));
         this.lineEntryCodec = lineEntryCodec;
     }
 
     public T get(Range range) {
         if (range.equals(Range.NIL)) return null;
         if (pages.isEmpty()) return null;
-        ByteBuffer buffer = ((InnerPage) binarySearch(number(range))).bufferIn(range);
-        LineEntryCodec.LazyDecoder<T> decoder = lineEntryCodec.lazyDecoder(buffer);
-        return decoder.value();
+        return ((InnerPage<T>) binarySearch(number(range))).get(range);
     }
 
-    public void migrateBy(Migrater migrater) {
+    public void migrateBy(final Migrater migrater) {
         for (Page page : pages) {
-            ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(page.file());
-            while (buffer.hasRemaining()) {
-                LineEntryCodec.LazyDecoder<T> decoder = lineEntryCodec.lazyDecoder(buffer);
-                migrater.migrate(decoder.key(), decoder.origin());
-            }
+            ReadOnlyMappedBuffers.read(page.file(), new Function<ByteBuffer, Void>() {
+                @Override
+                public Void apply(@Nullable ByteBuffer buffer) {
+                    while (buffer.hasRemaining()) {
+                        LineEntryCodec.LazyDecoder<T> decoder = lineEntryCodec.lazyDecoder(buffer);
+                        migrater.migrate(decoder.key(), decoder.origin());
+                    }
+                    return Nils.VOID;
+                }
+            });
         }
     }
 
@@ -68,21 +78,27 @@ public class ReadOnlyLine<T> extends Binder implements Iterable<Entry<Key, T>> {
         return new AbstractIterator<Entry<Key, T>>() {
             Iterator<Page> pItr = pages.iterator();
             Page current;
-            long position;
+            int position;
 
             @Override
             protected Entry<Key, T> computeNext() {
                 if (current == null || position >= current.file().length()) {
                     if (!pItr.hasNext()) return endOfData();
                     current = pItr.next();
-                    position = 0L;
+
+                    position = 0;
                     if (!current.file().exists()) return endOfData();
                 }
-                ByteBuffer buffer = ReadOnlyMappedBuffers.getOrMap(current.file());
-                buffer.position((int) position);
-                LineEntryCodec.LazyDecoder<T> decoder = lineEntryCodec.lazyDecoder(buffer);
-                position = buffer.position();
-                return new Entry<Key, T>(decoder.key(), decoder.value());
+
+                return ReadOnlyMappedBuffers.read(current.file, new Function<ByteBuffer, Entry<Key, T>>() {
+                    @Override
+                    public Entry<Key, T> apply(@Nullable ByteBuffer buffer) {
+                        buffer.position(position);
+                        LineEntryCodec.LazyDecoder<T> decoder = lineEntryCodec.lazyDecoder(buffer);
+                        position = buffer.position();
+                        return new Entry<Key, T>(decoder.key(), decoder.value());
+                    }
+                });
             }
         };
     }
@@ -91,32 +107,61 @@ public class ReadOnlyLine<T> extends Binder implements Iterable<Entry<Key, T>> {
         return new Offset(range.from());
     }
 
-    private static class InnerPage extends Page {
+    private static class InnerPage<T> extends Page {
 
-        protected InnerPage(File file, Offset number) {
+        private final LineEntryCodec<T> lineEntryCodec;
+
+        protected InnerPage(File file, Offset number, LineEntryCodec<T> lineEntryCodec) {
             super(file, number);
+            this.lineEntryCodec = lineEntryCodec;
         }
 
-        public ByteBuffer bufferIn(Range range) {
-            return (ByteBuffer) ReadOnlyMappedBuffers.getOrMap(file())
-                                                     .limit(refer(range.to()))
-                                                     .position(refer(range.from()));
+        public T get(final Range range) {
+            try {
+                FileInputStream stream = new FileInputStream(file());
+                ByteBuffer buffer = read(stream, refer(range.from()), refer(range.to()));
+                return lineEntryCodec.lazyDecoder(buffer).value();
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
         }
 
-        private int refer(long absolute) {
-            return (int) (absolute - ((Offset) number()).value());
+        private int refer(long absolute) { return (int) (absolute - ((Offset) number()).value()); }
+
+        private ByteBuffer read(FileInputStream stream, int begin, int end) throws IOException {
+            try {
+                FileChannel channel = stream.getChannel();
+                ByteBuffer buffer = ByteBuffer.allocate(end - begin);
+                read(channel, begin, buffer);
+                return (ByteBuffer) buffer.flip();
+            } finally {
+                Closeables.closeQuietly(stream);
+            }
+        }
+
+        private void read(FileChannel channel, int begin, ByteBuffer buffer) throws IOException {
+            try {
+                channel.position(begin);
+                channel.read(buffer);
+            } finally {
+                Closeables.closeQuietly(channel);
+            }
         }
     }
 
-    private static class PageList extends AbstractList<Page> {
+    private static class PageList<T> extends AbstractList<Page> {
         private final List<Entry<File, Offset>> entries;
+        private final LineEntryCodec<T> lineEntryCodec;
 
-        public PageList(List<Entry<File, Offset>> entries) {this.entries = entries;}
+        public PageList(List<Entry<File, Offset>> entries, LineEntryCodec<T> lineEntryCodec) {
+            this.entries = entries;
+            this.lineEntryCodec = lineEntryCodec;
+        }
 
         @Override
         public Page get(int index) {
             Entry<File, Offset> entry = entries.get(index);
-            return new InnerPage(entry.key(), entry.value());
+            return new InnerPage<T>(entry.key(), entry.value(), lineEntryCodec);
         }
 
         @Override
