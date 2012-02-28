@@ -56,7 +56,7 @@ class Snapshot<T> implements Iterable<T> {
                 while (iterator.hasNext()) {
                     Entry<Key, T> entry = iterator.next();
                     Range range = readOnlyIndex.get(entry.key());
-                    if (range != null) return entry.value();
+                    if (!range.equals(Range.NIL)) return entry.value();
                 }
                 return endOfData();
             }
