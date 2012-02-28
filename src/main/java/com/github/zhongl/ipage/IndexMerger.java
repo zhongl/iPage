@@ -21,6 +21,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.io.Files;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -30,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
+@NotThreadSafe
 abstract class IndexMerger extends Index {
     public static final int PAGE_CAPACITY = Integer.getInteger("ipage.index.page.capacity", (1 << 20) * 64 / ENTRY_LENGTH);
 

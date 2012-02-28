@@ -105,6 +105,7 @@ public abstract class IPage<K, V> extends Actor implements Iterable<V> {
 
     @Override
     protected boolean onInterruptedBy(Throwable t) {
+        t.printStackTrace();
         return super.onInterruptedBy(t);    // TODO log error
     }
 

@@ -19,6 +19,7 @@ import com.github.zhongl.util.CallbackFuture;
 import com.github.zhongl.util.FileTestContext;
 import com.github.zhongl.util.FutureCallbacks;
 import com.github.zhongl.util.Md5;
+import com.google.common.util.concurrent.FutureCallback;
 import org.junit.After;
 import org.junit.Test;
 import org.softee.management.helper.ObjectNameBuilder;
@@ -28,6 +29,10 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.io.File;
 import java.lang.management.ManagementFactory;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNull.nullValue;
@@ -115,6 +120,70 @@ public class IPageTest extends FileTestContext {
             fail("MBean should be unregistered.");
         } catch (InstanceNotFoundException e) { }
 
+    }
+
+    @Test
+    public void removeOnAdding() throws Exception {
+        dir = testDir("removeOnAdding");
+
+        iPage = stringIPage(dir, 10000, 1000, 100L);
+
+        final BlockingQueue<String> queue = new LinkedBlockingQueue<String>();
+
+        final int times = 10000;
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < times; i++) {
+                    String key = i + "";
+                    iPage.add(key, key, FutureCallbacks.<Void>ignore());
+                    try {
+                        queue.put(key);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
+
+        int count = 0;
+        final CountDownLatch latch = new CountDownLatch(times);
+        while (count++ < times) {
+            String key = queue.take();
+            iPage.remove(key, new FutureCallback<Void>() {
+                @Override
+                public void onSuccess(Void result) {
+                    latch.countDown();
+                }
+
+                @Override
+                public void onFailure(Throwable t) {
+                    t.printStackTrace();
+                    latch.countDown();
+                }
+            });
+        }
+
+        while (!latch.await(3L, TimeUnit.SECONDS)) {
+            System.out.println("rest = " + latch.getCount());
+        }
+
+        Thread.sleep(500L);
+        MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+
+        String domain = "com.github.zhongl.ipage";
+        String name = iPage.toString();
+        ObjectName ephemerons = new ObjectNameBuilder(domain).withType("Ephemerons")
+                                                             .withName(name)
+                                                             .build();
+        ObjectName storage = new ObjectNameBuilder(domain).withType("Storage")
+                                                          .withName(name)
+                                                          .build();
+
+        assertThat((Integer) server.getAttribute(ephemerons, "size"), is(0));
+        assertThat((Integer) server.getAttribute(storage, "total"), is(0));
+        assertThat((Integer) server.getAttribute(storage, "removed"), is(0));
     }
 
     @Override

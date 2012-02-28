@@ -100,7 +100,7 @@ class Snapshot<T> implements Iterable<T> {
     protected String defrag(Collection<Entry<Key, T>> appendings, Collection<Key> removings, int capacity) {
         SortedSet<Entry<Key, Range>> entries = new TreeSet<Entry<Key, Range>>();
 
-        for (Entry<Key, T> entry : appendings) entries.add(new Entry<Key, Range>(entry.key(), Range.NIL));
+        for (Entry<Key, T> entry : appendings) entries.add(new Entry<Key, Range>(entry.key(), Range.PLACE_HOLD));
         for (Key key : removings) entries.add(new Entry<Key, Range>(key, Range.NIL));
 
         final IndexMerger indexMerger = new IndexMerger(textFile.parent(), capacity) {

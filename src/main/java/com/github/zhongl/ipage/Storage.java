@@ -60,7 +60,6 @@ public class Storage<V> implements Iterable<V> {
     private volatile long lastMergeElapseMillis;
     private volatile Snapshot<V> snapshot;
 
-
     public Storage(File dir, Codec<V> codec) throws IOException {
         this.codec = codec;
         this.head = new File(dir, "HEAD");
@@ -131,7 +130,10 @@ public class Storage<V> implements Iterable<V> {
         boolean needDefrag = cRemoved * 1.0 / cTotal >= defragRatio.get() * 0.1;
 
         try {
-            logger.finest("Begin merging...");
+            logger.log(Level.FINEST, "Begin {0}: [+] {1}, [-] {2}", new Object[] {
+                    (needDefrag ? "defrag" : "append"),
+                    appendings.size(),
+                    removings.size()});
             Stopwatch stopwatch = new Stopwatch().start();
             String snapshotName;
             if (needDefrag) {
@@ -147,7 +149,7 @@ public class Storage<V> implements Iterable<V> {
             setHead(snapshotName);
             snapshot = new Snapshot<V>(pages, snapshotName, codec);
             flushedCallback.onSuccess(Nils.VOID);
-            logger.finest("End merging...");
+            logger.log(Level.FINEST, "End merge: total={0}, removed={1}", new Object[] {total.get(), removed.get()});
         } catch (Throwable t) {
             logger.log(Level.WARNING, "Merge failed: {}", t);
             flushedCallback.onFailure(t);

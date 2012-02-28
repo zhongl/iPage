@@ -19,6 +19,7 @@ package com.github.zhongl.ipage;
 class Range {
 
     public static final Range NIL = new Range(-1L, 0L);
+    public static final Range PLACE_HOLD = new Range(Long.MAX_VALUE, 0L);
 
     private final long from;
     private final long to;

@@ -107,6 +107,42 @@ public class StorageTest extends FileTestContext {
         assertIterate(storage, "3");
     }
 
+    @Test
+    public void issue36() throws Exception {
+        // Fixed #36 : Appendings should not be removed during defragment.
+
+        dir = testDir("issue36");
+
+        final Storage<String> storage = new Storage<String>(dir, new StringCodec());
+
+        List<Entry<Key, String>> appendings;
+        appendings = Arrays.asList(
+                new Entry<Key, String>(key("1"), "1"),
+                new Entry<Key, String>(key("2"), "2"),
+                new Entry<Key, String>(key("3"), "3")
+        );
+
+        CallbackFuture<Void> callback;
+
+        callback = new CallbackFuture<Void>();
+        storage.merge(appendings, Collections.<Key>emptyList(), callback);
+        FutureCallbacks.getUnchecked(callback);
+
+        appendings = Arrays.asList(
+                new Entry<Key, String>(key("4"), "4"),
+                new Entry<Key, String>(key("5"), "5")
+        );
+
+        List<Key> removings = Arrays.asList(key("1"), key("2"), key("3"));
+
+        callback = new CallbackFuture<Void>();
+        storage.merge(appendings, removings, callback);
+        FutureCallbacks.getUnchecked(callback);
+
+        assertThat(storage.get(key("4")), is("4"));
+        assertThat(storage.get(key("5")), is("5"));
+    }
+
     private <T> void assertIterate(Iterable<T> iterable, T... values) {
         Iterator<T> iterator = iterable.iterator();
         for (T value : values) {
