@@ -53,3 +53,14 @@ Make sure your enviroment has:
 ## Run benchmark
 
     > mvn clean test -Dtest=IPageBenchmark -DargLine="-Xmx512m -Xms512m"
+
+## Usage
+
+Please see:
+
+- [KVEngineTest](https://github.com/zhongl/iPage/blob/master/src/test/java/com/github/zhongl/ipage/KVEngineTest.java)
+- [IPageTest](https://github.com/zhongl/iPage/blob/master/src/test/java/com/github/zhongl/ipage/IPageTest.java)
+
+# More
+
+[Design Doc](https://github.com/zhongl/iPage/blob/master/doc/DESIGN.md)
