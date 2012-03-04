@@ -169,7 +169,6 @@ public class IPageTest extends FileTestContext {
             System.out.println("rest = " + latch.getCount());
         }
 
-        Thread.sleep(500L);
         MBeanServer server = ManagementFactory.getPlatformMBeanServer();
 
         String domain = "com.github.zhongl.ipage";
@@ -181,7 +180,11 @@ public class IPageTest extends FileTestContext {
                                                           .withName(name)
                                                           .build();
 
-        assertThat((Integer) server.getAttribute(ephemerons, "size"), is(0));
+
+        while ((Integer) server.getAttribute(ephemerons, "size") != 0) {
+            Thread.sleep(500L);
+        }
+
         assertThat((Integer) server.getAttribute(storage, "total"), is(0));
         assertThat((Integer) server.getAttribute(storage, "removed"), is(0));
     }
