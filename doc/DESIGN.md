@@ -14,7 +14,9 @@
                         |      |                           |                        |
                         |      |   +----Snapshot----+      |      +-----Merge-----+ |
                         +-->>>-|--+|  ReadOnlyIndex |----->+>----+|  IndexMerge   | |
+                        |      |   |  ###           |             |  ###          | |
                         +-->>>-|--+|  ReadOnlyLine  |----->+>----+|  LineAppender | |
+                               |   |  ############  |             |  ##########   | |
                                |   +----------------+             +---------------+ |
                                |           +--------------<<<--------------+        |
                                |                          swap                      |
@@ -28,6 +30,18 @@
     Range   := (from, to)
     Line    := [Entry...]
     Entry   := (key, length, value)
+
+# Pagination
+
+    offset  0                 1                 2                ...                n
+            |-----------------|-----------------|-----------------|-----------------|
+            |<---- page1 ---->|<---- page2 ---->|<---- ..... ---->|<---- pageN ---->|
+            |<------------------------------- Binder ------------------------------>|
+
+## References
+
+- [Page](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/ipage/Page.java)
+- [Binder](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/ipage/Binder.java)
 
 # Group commit
 
