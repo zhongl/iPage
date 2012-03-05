@@ -18,9 +18,10 @@ package com.github.zhongl.api;
 import com.github.zhongl.codec.Codec;
 import com.github.zhongl.index.Key;
 import com.github.zhongl.util.Entry;
-import com.github.zhongl.util.FutureCallbacks;
 import com.github.zhongl.util.Nils;
+import com.github.zhongl.util.Parallel;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Collections2;
 import com.google.common.io.Files;
@@ -31,10 +32,8 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -56,7 +55,6 @@ public class Storage<V> implements Iterable<V> {
     private final AtomicInteger total;
     private final AtomicInteger removed;
     private final AtomicInteger defragRatio;
-    private final ExecutorService parallelService;
     private final Logger logger = Logger.getLogger(getClass().getSimpleName());
 
     private volatile long lastMergeElapseMillis;
@@ -71,23 +69,6 @@ public class Storage<V> implements Iterable<V> {
         this.total = new AtomicInteger(0);
         this.removed = new AtomicInteger(0);
         this.defragRatio = new AtomicInteger(DEFRAG_RATIO);
-
-        parallelService = new ThreadPoolExecutor(
-                Runtime.getRuntime().availableProcessors(),
-                MAX_PARALLEL_THREADS,
-                KEEP_ALIVE_TIME, TimeUnit.SECONDS,
-                new SynchronousQueue<Runnable>(),
-                new ThreadFactory() {
-                    @Override
-                    public Thread newThread(Runnable r) {
-                        Thread t = new Thread(r);
-                        t.setName("Storage-get-" + t.getId());
-                        t.setDaemon(true);
-                        return t;
-                    }
-                },
-                new ThreadPoolExecutor.CallerRunsPolicy()
-        );
 
         snapshot.foreachIndexEntry(new Function<Boolean, Void>() {
             @Override
@@ -161,23 +142,26 @@ public class Storage<V> implements Iterable<V> {
     }
 
     private Collection<Key> filter(Collection<Key> removings) {
-        Collection<Callable<Key>> tasks = Collections2.transform(removings, new Function<Key, Callable<Key>>() {
-            @Override
-            public Callable<Key> apply(@Nullable final Key key) {
-                return new Callable<Key>() {
-                    @Override
-                    public Key call() throws Exception { return get(key) == null ? null : key; }
-                };
-            }
-        });
-
         try {
-            ArrayList<Key> result = new ArrayList<Key>();
-            for (Future<Key> future : parallelService.invokeAll(tasks)) {
-                Key key = FutureCallbacks.getUnchecked(future);
-                if (key != null) result.add(key);
-            }
-            return result;
+
+            return Collections2.filter(
+                    Parallel.map(
+                            removings,
+                            new Function<Key, Key>() {
+                                @Override
+                                public Key apply(@Nullable Key key) {
+                                    return get(key) == null ? null : key;
+                                }
+                            },
+                            Parallel.ioBoundExecutor()
+                    ),
+                    new Predicate<Key>() {
+                        @Override
+                        public boolean apply(@Nullable Key input) {
+                            return input != null;
+                        }
+                    });
+
         } catch (Throwable e) {
             logger.severe(e.toString());
             throw new IllegalStateException(e);

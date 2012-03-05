@@ -25,6 +25,7 @@ import com.github.zhongl.line.LineAppender;
 import com.github.zhongl.line.Migrater;
 import com.github.zhongl.line.ReadOnlyLine;
 import com.github.zhongl.util.Entry;
+import com.github.zhongl.util.Parallel;
 import com.google.common.base.Function;
 import com.google.common.collect.AbstractIterator;
 
@@ -32,10 +33,10 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 class Snapshot<T> implements Iterable<T> {
@@ -85,8 +86,6 @@ class Snapshot<T> implements Iterable<T> {
             position += length;
         }
 
-        lineAppender.force();
-
         for (Key key : removings) entries.add(new Entry<Key, Range>(key, Range.NIL));
 
         int capacity = readOnlyIndex.entries().size() + appendings.size();
@@ -101,7 +100,7 @@ class Snapshot<T> implements Iterable<T> {
         };
 
         indexMerger.merge(readOnlyIndex.entries().iterator(), entries.iterator());
-        indexMerger.force();
+        force(indexMerger, lineAppender);
 
         return textFile.create(indexMerger, lineAppender, true).getName();
     }
@@ -142,10 +141,40 @@ class Snapshot<T> implements Iterable<T> {
             migrater.migrate(entry.key(), lineEntryCodec.encode(entry));
         }
 
-        indexMerger.force();
-        lineAppender.force();
+        force(indexMerger, lineAppender);
 
         return textFile.create(indexMerger, lineAppender, false).getName();
+    }
+
+    private void force(final IndexMerger indexMerger, final LineAppender lineAppender) {
+        try {
+            List<Future<Void>> futures = Parallel.cpuBoundExecutor().invokeAll(
+                    Arrays.asList(
+                            new Callable<Void>() {
+
+                                @Override
+                                public Void call() throws Exception {
+                                    indexMerger.force();
+                                    return null;
+                                }
+                            },
+                            new Callable<Void>() {
+
+                                @Override
+                                public Void call() throws Exception {
+                                    lineAppender.force();
+                                    return null;
+                                }
+                            }
+                    ));
+            for (Future<Void> future : futures) {
+                future.get();
+            }
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(e);
+        } catch (ExecutionException e) {
+            throw new IllegalStateException(e.getCause());
+        }
     }
 
 
