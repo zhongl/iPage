@@ -45,8 +45,6 @@ import static com.google.common.base.Preconditions.checkState;
 public class Storage<V> implements Iterable<V> {
 
     private static final int DEFRAG_RATIO = Integer.getInteger("ipage.snapshot.defrag.ratio", 7);
-    private static final int MAX_PARALLEL_THREADS = Integer.getInteger("ipage.snapshot.max.parallel.threads", 100);
-    private static final int KEEP_ALIVE_TIME = Integer.getInteger("ipage.snapshot.parallel.thread.alives", 5);
 
     private final File head;
     private final File pages;
