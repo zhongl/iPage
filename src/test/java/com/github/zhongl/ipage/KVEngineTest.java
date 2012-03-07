@@ -40,6 +40,8 @@ public class KVEngineTest extends FileTestContext {
                     }
                 }, QoS.LATENCY);
 
+        engine.start();
+
         String key = "key";
         byte[] value = key.getBytes();
 
@@ -66,6 +68,8 @@ public class KVEngineTest extends FileTestContext {
                         return new Key(Md5.md5(key.getBytes()));
                     }
                 }, QoS.RELIABLE);
+
+        engine.start();
 
         String key = "key";
         byte[] value = key.getBytes();

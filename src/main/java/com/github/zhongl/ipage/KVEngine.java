@@ -17,18 +17,22 @@ package com.github.zhongl.ipage;
 
 import com.github.zhongl.util.CallbackFuture;
 import com.github.zhongl.util.FutureCallbacks;
+import com.google.common.util.concurrent.FutureCallback;
 
 import java.util.Iterator;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class KVEngine<K, V> {
+    private static final Logger LOGGER = Logger.getLogger(KVEngine.class.getName());
+
     private final IPage<K, V> iPage;
-    private QoS qoS;
+    private final QoS qoS;
 
     public KVEngine(IPage<K, V> iPage, QoS qoS) {
         this.iPage = iPage;
         this.qoS = qoS;
-        iPage.start();
     }
 
     public void add(K key, V value) { qoS.add(iPage, key, value); }
@@ -39,13 +43,23 @@ public class KVEngine<K, V> {
 
     public void stop() { iPage.stop(); }
 
+    public void start() { iPage.start(); }
+
     public Iterator<V> iterator() { return iPage.iterator(); }
 
     public static enum QoS {
         LATENCY {
             @Override
             <K, V> void add(IPage<K, V> iPage, K key, V value) {
-                iPage.add(key, value, FutureCallbacks.<Void>ignore());
+                iPage.add(key, value, new FutureCallback<Void>() {
+                    @Override
+                    public void onSuccess(Void result) { }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                        LOGGER.log(Level.SEVERE, "Unexpected", t);
+                    }
+                });
             }
         }, RELIABLE {
             @Override
