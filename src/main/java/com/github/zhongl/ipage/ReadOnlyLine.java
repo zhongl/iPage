@@ -94,9 +94,11 @@ public class ReadOnlyLine<T> extends Binder implements Iterable<Entry<Key, T>> {
                     @Override
                     public Entry<Key, T> apply(@Nullable ByteBuffer buffer) {
                         buffer.position(position);
+                        long from = position + ((Offset) current.number()).value();
                         LineEntryCodec.LazyDecoder<T> decoder = lineEntryCodec.lazyDecoder(buffer);
                         position = buffer.position();
-                        return new Entry<Key, T>(decoder.key(), decoder.value());
+                        long to = position + ((Offset) current.number()).value();
+                        return new EnhancedEntry<Key, T>(decoder.key(), decoder.value(), new Range(from, to));
                     }
                 });
             }
@@ -105,6 +107,20 @@ public class ReadOnlyLine<T> extends Binder implements Iterable<Entry<Key, T>> {
 
     protected Number number(Range range) {
         return new Offset(range.from());
+    }
+
+    public static class EnhancedEntry<K, V> extends Entry<K, V> {
+
+        private final Range range;
+
+        public EnhancedEntry(K key, V value, Range range) {
+            super(key, value);
+            this.range = range;
+        }
+
+        public boolean matchs(Range range) {
+            return this.range.equals(range);
+        }
     }
 
     private static class InnerPage<T> extends Page {

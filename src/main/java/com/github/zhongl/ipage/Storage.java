@@ -116,15 +116,23 @@ public class Storage<V> implements Iterable<V> {
         return next;
     }
 
-    public void merge(Collection<Entry<Key, V>> appendings, Collection<Key> removings, FutureCallback<Void> flushedCallback) {
-        removings = filter(removings);
+    public void merge(Collection<Entry<Key, V>> updatings, Collection<Key> removings, FutureCallback<Void> flushedCallback) {
+        removings = filter(removings, new Function<Key, Callable<Key>>() {
+            @Override
+            public Callable<Key> apply(@Nullable final Key key) {
+                return new Callable<Key>() {
+                    @Override
+                    public Key call() throws Exception { return get(key) == null ? null : key; }
+                };
+            }
+        });
 
-        if (appendings.isEmpty() && removings.isEmpty()) {
+        if (updatings.isEmpty() && removings.isEmpty()) {
             flushedCallback.onSuccess(Nils.VOID);
             return;
         }
 
-        int cTotal = total.addAndGet(appendings.size());
+        int cTotal = total.addAndGet(appendingsIn(updatings).size());
         int cRemoved = removed.addAndGet(removings.size());
 
         boolean needDefrag = cRemoved * 1.0 / cTotal >= defragRatio.get() * 0.1;
@@ -132,17 +140,17 @@ public class Storage<V> implements Iterable<V> {
         try {
             logger.log(Level.FINEST, "Begin {0}: [+] {1}, [-] {2}", new Object[] {
                     (needDefrag ? "defrag" : "append"),
-                    appendings.size(),
+                    updatings.size(),
                     removings.size()});
             Stopwatch stopwatch = new Stopwatch().start();
             String snapshotName;
             if (needDefrag) {
                 int alive = cTotal - cRemoved;
-                snapshotName = snapshot.defrag(appendings, removings, alive);
+                snapshotName = snapshot.defrag(updatings, removings, alive);
                 total.set(alive);
                 removed.set(0);
             } else {
-                snapshotName = snapshot.append(appendings, removings);
+                snapshotName = snapshot.append(updatings, removings, cTotal);
             }
             lastMergeElapseMillis = stopwatch.elapsedMillis();
 
@@ -158,21 +166,29 @@ public class Storage<V> implements Iterable<V> {
         }
     }
 
-    private Collection<Key> filter(Collection<Key> removings) {
-        Collection<Callable<Key>> tasks = Collections2.transform(removings, new Function<Key, Callable<Key>>() {
+    private Collection<Entry<Key, V>> appendingsIn(Collection<Entry<Key, V>> updatings) {
+
+        return filter(updatings, new Function<Entry<Key, V>, Callable<Entry<Key, V>>>() {
             @Override
-            public Callable<Key> apply(@Nullable final Key key) {
-                return new Callable<Key>() {
+            public Callable<Entry<Key, V>> apply(@Nullable final Entry<Key, V> entry) {
+                return new Callable<Entry<Key, V>>() {
                     @Override
-                    public Key call() throws Exception { return get(key) == null ? null : key; }
+                    public Entry<Key, V> call() throws Exception {
+                        return get(entry.key()) == null ? entry : null;
+                    }
                 };
             }
         });
+    }
+
+    private <T> Collection<T> filter(Collection<T> collection, Function<? super T, Callable<T>> function) {
+
+        Collection<Callable<T>> tasks = Collections2.transform(collection, function);
 
         try {
-            ArrayList<Key> result = new ArrayList<Key>();
-            for (Future<Key> future : parallelService.invokeAll(tasks)) {
-                Key key = FutureCallbacks.getUnchecked(future);
+            ArrayList<T> result = new ArrayList<T>();
+            for (Future<T> future : parallelService.invokeAll(tasks)) {
+                T key = FutureCallbacks.getUnchecked(future);
                 if (key != null) result.add(key);
             }
             return result;

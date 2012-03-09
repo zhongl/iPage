@@ -54,16 +54,16 @@ class Snapshot<T> implements Iterable<T> {
             @Override
             protected T computeNext() {
                 while (iterator.hasNext()) {
-                    Entry<Key, T> entry = iterator.next();
+                    ReadOnlyLine.EnhancedEntry<Key, T> entry = (ReadOnlyLine.EnhancedEntry<Key, T>) iterator.next();
                     Range range = readOnlyIndex.get(entry.key());
-                    if (!range.equals(Range.NIL)) return entry.value();
+                    if (entry.matchs(range)) return entry.value();
                 }
                 return endOfData();
             }
         };
     }
 
-    protected String append(Collection<Entry<Key, T>> appendings, Collection<Key> removings) {
+    protected String append(Collection<Entry<Key, T>> appendings, Collection<Key> removings, int capacity) {
         SortedSet<Entry<Key, Range>> entries = new TreeSet<Entry<Key, Range>>();
 
         LineAppender lineAppender = new LineAppender(textFile.parent(), readOnlyLine.length());
@@ -79,8 +79,6 @@ class Snapshot<T> implements Iterable<T> {
         lineAppender.force();
 
         for (Key key : removings) entries.add(new Entry<Key, Range>(key, Range.NIL));
-
-        int capacity = readOnlyIndex.entries().size() + appendings.size();
 
         IndexMerger indexMerger = new IndexMerger(textFile.parent(), capacity) {
 

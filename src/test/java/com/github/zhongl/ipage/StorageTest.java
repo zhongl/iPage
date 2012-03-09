@@ -143,6 +143,68 @@ public class StorageTest extends FileTestContext {
         assertThat(storage.get(key("5")), is("5"));
     }
 
+    @Test
+    public void issue42() throws Exception {
+        // Fixed #42 : Duplicate key can cause value missing
+
+        dir = testDir("issue42");
+
+        final Storage<String> storage = new Storage<String>(dir, new StringCodec());
+
+        List<Entry<Key, String>> appendings;
+        appendings = Arrays.asList(
+                new Entry<Key, String>(key("3"), "3")
+        );
+
+        CallbackFuture<Void> callback;
+
+        callback = new CallbackFuture<Void>();
+        storage.merge(appendings, Collections.<Key>emptyList(), callback);
+        FutureCallbacks.getUnchecked(callback);
+
+        callback = new CallbackFuture<Void>();
+        storage.merge(appendings, Collections.<Key>emptyList(), callback);
+        FutureCallbacks.getUnchecked(callback);
+
+        callback = new CallbackFuture<Void>();
+        storage.merge(appendings, Collections.<Key>emptyList(), callback);
+        FutureCallbacks.getUnchecked(callback);
+
+        assertThat(storage.get(key("3")), is("3"));
+    }
+
+    @Test
+    public void issue38() throws Exception {
+        // Fixed #38 : Multi-version value
+
+        dir = testDir("issue38");
+
+        final Storage<String> storage = new Storage<String>(dir, new StringCodec());
+
+        List<Entry<Key, String>> appendings;
+        appendings = Arrays.asList(
+                new Entry<Key, String>(key("3"), "3")
+        );
+
+        CallbackFuture<Void> callback;
+
+        callback = new CallbackFuture<Void>();
+        storage.merge(appendings, Collections.<Key>emptyList(), callback);
+        FutureCallbacks.getUnchecked(callback);
+
+        appendings = Arrays.asList(
+                new Entry<Key, String>(key("3"), "4")
+        );
+
+        callback = new CallbackFuture<Void>();
+        storage.merge(appendings, Collections.<Key>emptyList(), callback);
+        FutureCallbacks.getUnchecked(callback);
+
+
+        assertThat(storage.get(key("3")), is("4"));
+        assertIterate(storage, "4");
+    }
+
     private <T> void assertIterate(Iterable<T> iterable, T... values) {
         Iterator<T> iterator = iterable.iterator();
         for (T value : values) {
