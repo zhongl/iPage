@@ -1,5 +1,6 @@
 /*
  * Copyright 2012 zhongl
+ *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -24,7 +25,6 @@ import com.github.zhongl.util.Nils;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Collections2;
 import com.google.common.util.concurrent.FutureCallback;
 import org.softee.management.annotation.MBean;
 import org.softee.management.annotation.ManagedAttribute;
@@ -114,18 +114,12 @@ class Storage<V> implements Iterable<V> {
     private void defrag(Collection<WriteOperation<Entry<Key, V>>> addOrUpdates,
                         Collection<WriteOperation<Key>> removes) throws IOException {
         final Difference difference = new Difference(new TreeSet<Index>());
-        final Collection<Key> removedKeys = Collections2.transform(removes, new Function<WriteOperation<Key>, Key>() {
-            @Override
-            public Key apply(WriteOperation<Key> operation) {
-                return operation.attachement();
-            }
-        });
 
         snapshot.defrag(
                 new Predicate<Element<Entry<Key, V>>>() {
                     @Override
                     public boolean apply(final Element<Entry<Key, V>> element) {
-                        return !removedKeys.contains(element.value().key()) && !snapshot.isRemoved(element);
+                        return !snapshot.isRemoved(element);
                     }
                 },
                 new Function<Element<Entry<Key, V>>, Void>() {
