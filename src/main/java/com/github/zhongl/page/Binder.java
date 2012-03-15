@@ -1,5 +1,6 @@
 /*
  * Copyright 2012 zhongl
+ *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -65,9 +66,17 @@ public class Binder<V> implements Iterable<Element<V>> {
                 long offset = 0;
                 FileAppender fileAppender = new FileAppender(new File(dir, System.nanoTime() + SUFFIX));
                 for (Page<V> page : list) {
+                    RangeJoiner joiner = new RangeJoiner();
                     for (Element<V> element : page) {
-                        if (filter.apply(element)) offset += append(element.value(), fileAppender, collector, offset);
+                        if (filter.apply(element)) {
+                            Range range = element.range();
+                            joiner.join(range);
+                            long length = range.to() - range.from();
+                            collector.apply(new Element<V>(element.value(), new Range(offset, offset + length)));
+                            offset += length;
+                        }
                     }
+                    page.transferTo(fileAppender, joiner);
                 }
                 File file = fileAppender.force();
                 if (file.length() == 0) return Collections.emptyList();

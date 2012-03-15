@@ -16,30 +16,22 @@
 
 package com.github.zhongl.index;
 
-import javax.annotation.concurrent.NotThreadSafe;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.SortedSet;
+import org.junit.Test;
+
+import java.util.TreeSet;
+
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-@NotThreadSafe
-public class Difference implements Iterable<Index> {
-
-    private final SortedSet<Index> set;
-
-    public Difference(SortedSet<Index> set) {this.set = set;}
-
-    public void addAll(Collection<? extends Index> c) {
-        for (Index index : c) add(index);
+public class DifferenceTest {
+    @Test
+    public void add() throws Exception {
+        Difference difference = new Difference(new TreeSet<Index>());
+        difference.add(new TestIndex(1, false));
+        difference.add(new TestIndex(1, true));
+        assertThat(difference.iterator().next().isRemoved(), is(true));
     }
 
-    public void add(Index index) {
-        set.remove(index);
-        set.add(index);
-    }
 
-    @Override
-    public Iterator<Index> iterator() {
-        return set.iterator();
-    }
 }

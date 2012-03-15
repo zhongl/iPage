@@ -14,32 +14,36 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.index;
+package com.github.zhongl.page;
 
 import javax.annotation.concurrent.NotThreadSafe;
-import java.util.Collection;
 import java.util.Iterator;
-import java.util.SortedSet;
+import java.util.LinkedList;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 @NotThreadSafe
-public class Difference implements Iterable<Index> {
+class RangeJoiner implements Iterable<Range> {
 
-    private final SortedSet<Index> set;
+    private LinkedList<Range> ranges;
 
-    public Difference(SortedSet<Index> set) {this.set = set;}
-
-    public void addAll(Collection<? extends Index> c) {
-        for (Index index : c) add(index);
+    RangeJoiner() {
+        ranges = new LinkedList<Range>();
     }
 
-    public void add(Index index) {
-        set.remove(index);
-        set.add(index);
+    public void join(Range range) {
+        Range joined = range;
+        if (!ranges.isEmpty()) {
+            Range last = ranges.getLast();
+            if (last.to() == range.from()) {
+                ranges.removeLast();
+                joined = new Range(last.from(), range.to());
+            }
+        }
+        ranges.add(joined);
     }
 
     @Override
-    public Iterator<Index> iterator() {
-        return set.iterator();
+    public Iterator<Range> iterator() {
+        return ranges.iterator();
     }
 }

@@ -1,5 +1,6 @@
 /*
  * Copyright 2012 zhongl
+ *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -72,7 +73,7 @@ public class FileAppender {
 
     public int transferFrom(FileChannel channel, long position, int length) throws IOException {
         checkState(
-                channel.transferTo(position, length, thisChannel()) != length,
+                channel.transferTo(position, length, thisChannel()) == length,
                 "Unexpected transfer length, there may be a bug in FileChannelImpl#transferTo, you should take care of it."
         );
         return length;

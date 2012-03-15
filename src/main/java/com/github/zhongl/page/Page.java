@@ -1,5 +1,6 @@
 /*
  * Copyright 2012 zhongl
+ *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -16,7 +17,9 @@
 package com.github.zhongl.page;
 
 import com.github.zhongl.codec.Decoder;
+import com.github.zhongl.io.FileAppender;
 import com.github.zhongl.io.IterableFile;
+import com.github.zhongl.util.Nils;
 import com.google.common.base.Function;
 import com.google.common.io.Closeables;
 
@@ -41,35 +44,14 @@ public class Page<V> extends Numbered<Offset> implements Iterable<Element<V>> {
     public String fileName() {return file.getName();}
 
     public V get(final Range range) {
-        try {
-            FileInputStream stream = new FileInputStream(file);
-            ByteBuffer buffer = read(stream, refer(range.from()), refer(range.to()));
-            return decoder.decode(buffer);
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
-    private int refer(long absolute) { return (int) (absolute - number().value()); }
-
-    private ByteBuffer read(FileInputStream stream, int begin, int end) throws IOException {
-        try {
-            FileChannel channel = stream.getChannel();
-            ByteBuffer buffer = ByteBuffer.allocate(end - begin);
-            read(channel, begin, buffer);
-            return (ByteBuffer) buffer.flip();
-        } finally {
-            Closeables.closeQuietly(stream);
-        }
-    }
-
-    private void read(FileChannel channel, int begin, ByteBuffer buffer) throws IOException {
-        try {
-            channel.position(begin);
-            channel.read(buffer);
-        } finally {
-            Closeables.closeQuietly(channel);
-        }
+        return read(new FileChannelFunction<V>() {
+            @Override
+            public V apply(FileChannel channel) throws IOException {
+                ByteBuffer buffer = ByteBuffer.allocate((int) (range.to() - range.from()));
+                read(channel, refer(range.from()), buffer);
+                return decoder.decode(buffer);
+            }
+        });
     }
 
     public Offset nextPageNumber() {
@@ -94,4 +76,57 @@ public class Page<V> extends Numbered<Offset> implements Iterable<Element<V>> {
         });
     }
 
+    public void transferTo(final FileAppender fileAppender, final RangeJoiner joiner) {
+        read(new FileChannelFunction<Void>() {
+
+            @Override
+            public Void apply(FileChannel channel) throws IOException {
+                for (Range range : joiner) {
+                    fileAppender.transferFrom(channel, refer(range.from()), (int) (range.to() - range.from()));
+                }
+                return Nils.VOID;
+            }
+        });
+    }
+
+    private int refer(long absolute) { return (int) (absolute - number().value()); }
+
+    private void read(FileChannel channel, int begin, ByteBuffer buffer) throws IOException {
+        try {
+            channel.position(begin);
+            channel.read(buffer);
+            buffer.flip();
+        } finally {
+            Closeables.closeQuietly(channel);
+        }
+    }
+
+    private <T> T read(FileChannelFunction<T> function) {
+        try {
+            FileInputStream stream = new FileInputStream(file);
+            return read(stream, function);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private <T> T read(FileInputStream stream, FileChannelFunction<T> function) throws IOException {
+        try {
+            return read(stream.getChannel(), function);
+        } finally {
+            Closeables.closeQuietly(stream);
+        }
+    }
+
+    private <T> T read(FileChannel channel, FileChannelFunction<T> function) throws IOException {
+        try {
+            return function.apply(channel);
+        } finally {
+            Closeables.closeQuietly(channel);
+        }
+    }
+
+    private interface FileChannelFunction<T> {
+        public T apply(FileChannel channel) throws IOException;
+    }
 }

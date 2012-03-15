@@ -14,32 +14,23 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.index;
+package com.github.zhongl.page;
 
-import javax.annotation.concurrent.NotThreadSafe;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.SortedSet;
+import com.github.zhongl.util.IteratorAsserts;
+import org.junit.Test;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-@NotThreadSafe
-public class Difference implements Iterable<Index> {
+public class RangeJoinerTest {
 
-    private final SortedSet<Index> set;
+    @Test
+    public void join() throws Exception {
+        RangeJoiner joiner = new RangeJoiner();
 
-    public Difference(SortedSet<Index> set) {this.set = set;}
+        joiner.join(new Range(0, 5));
+        joiner.join(new Range(5, 10));
+        joiner.join(new Range(22, 30));
+        joiner.join(new Range(30, 54));
 
-    public void addAll(Collection<? extends Index> c) {
-        for (Index index : c) add(index);
-    }
-
-    public void add(Index index) {
-        set.remove(index);
-        set.add(index);
-    }
-
-    @Override
-    public Iterator<Index> iterator() {
-        return set.iterator();
+        IteratorAsserts.assertIteratorOf(joiner, new Range(0, 10), new Range(22, 54));
     }
 }

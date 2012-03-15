@@ -1,5 +1,6 @@
 /*
  * Copyright 2012 zhongl
+ *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -17,10 +18,7 @@ package com.github.zhongl.api;
 
 import com.github.zhongl.codec.Codec;
 import com.github.zhongl.index.Key;
-import com.github.zhongl.util.Entry;
-import com.github.zhongl.util.FileTestContext;
-import com.github.zhongl.util.FutureCallbacks;
-import com.github.zhongl.util.Md5;
+import com.github.zhongl.util.*;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.FutureCallback;
 import org.junit.Before;
@@ -30,7 +28,6 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
@@ -93,7 +90,7 @@ public class StorageTest extends FileTestContext {
         assertThat(storage.get(key(2)), is(2));
         assertThat(storage.get(key(3)), is(3));
 
-        assertIteratorOf(storage, 1, 2, 3);
+        IteratorAsserts.assertIteratorOf(storage, 1, 2, 3);
 
         addOrUpdates = Collections.emptySet();
         removes = Arrays.asList(
@@ -103,7 +100,7 @@ public class StorageTest extends FileTestContext {
         doReturn(true).when(defragPolicy).evaluate(anyInt(), anyInt());
         storage.merge(addOrUpdates, removes, ignore);
 
-        assertIteratorOf(storage, 2, 3);
+        IteratorAsserts.assertIteratorOf(storage, 2, 3);
     }
 
     @Test
@@ -142,7 +139,7 @@ public class StorageTest extends FileTestContext {
 
         storage.merge(addOrUpdates, removes, ignore);
 
-        assertIteratorOf(storage, 4, 5);
+        IteratorAsserts.assertIteratorOf(storage, 4, 5);
     }
 
     @Test
@@ -172,7 +169,7 @@ public class StorageTest extends FileTestContext {
         storage.merge(addOrUpdates, removes, ignore);
 
         assertThat(storage.get(key(3)), is(4));
-        assertIteratorOf(storage, 4);
+        IteratorAsserts.assertIteratorOf(storage, 4);
     }
 
 
@@ -199,13 +196,6 @@ public class StorageTest extends FileTestContext {
         storage.merge(addOrUpdates, removes, ignore);
 
         assertThat(storage.get(key(3)), is(3));
-    }
-
-
-    private static <V> void assertIteratorOf(Iterable<V> iterable, V... values) {
-        Iterator<V> iterator = iterable.iterator();
-        for (V value : values) assertThat(iterator.next(), is(value));
-        assertThat(iterator.hasNext(), is(false));
     }
 
     private static Entry<Key, Integer> entry(int i) {

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2012 zhongl
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
+
 package com.github.zhongl.page;
 
 import com.github.zhongl.codec.Codec;
@@ -9,8 +25,12 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
+import static com.github.zhongl.util.IteratorAsserts.assertIteratorOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
@@ -68,17 +88,15 @@ public class BinderTest extends FileTestContext {
             public Void apply(Element<Integer> element) { return null; }
         });
 
-        Iterator<Element<Integer>> iterator;
-        iterator = binder.iterator();
 
-        assertThat(iterator.next(), is(element(1, range(0, 4))));
-        assertThat(iterator.next(), is(element(2, range(4, 8))));
-        assertThat(iterator.next(), is(element(3, range(8, 12))));
-        assertThat(iterator.next(), is(element(4, range(12, 16))));
-        assertThat(iterator.next(), is(element(5, range(16, 20))));
-        assertThat(iterator.next(), is(element(6, range(20, 24))));
-        assertThat(iterator.hasNext(), is(false));
-
+        assertIteratorOf(binder,
+                element(1, range(0, 4)),
+                element(2, range(4, 8)),
+                element(3, range(8, 12)),
+                element(4, range(12, 16)),
+                element(5, range(16, 20)),
+                element(6, range(20, 24))
+        );
 
         collector.clear();
 
@@ -103,13 +121,9 @@ public class BinderTest extends FileTestContext {
                 element(6, range(4, 8))
         )));
 
-
-        iterator = binder.iterator();
-
-        assertThat(iterator.next(), is(element(5, range(0, 4))));
-        assertThat(iterator.next(), is(element(6, range(4, 8))));
-        assertThat(iterator.hasNext(), is(false));
-
+        assertIteratorOf(binder,
+                element(5, range(0, 4)),
+                element(6, range(4, 8)));
     }
 
 
