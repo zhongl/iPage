@@ -131,7 +131,7 @@ public class IPageBenchmark extends FileTestContext {
         initService(8);
         initIPage(EPHEMERON_THROUGHOUT, FLUSH_MILLIS, FLUSH_COUNT);
 
-        final int times = 10;
+        final int times = 100000;
         final CountDownLatch aLatch = new CountDownLatch(times);
 
         for (int i = 0; i < times; i++) {
@@ -160,8 +160,6 @@ public class IPageBenchmark extends FileTestContext {
             e.printStackTrace();
         }
 
-        System.out.println("start getting.");
-
         final Random random = new Random();
 
         final CountDownLatch gLatch = new CountDownLatch(times * 10);
@@ -173,8 +171,7 @@ public class IPageBenchmark extends FileTestContext {
                         @Override
                         public void run() {
                             try {
-                                byte[] bytes = iPage.get(random.nextInt(times));
-                                System.out.println(bytes.length);
+                                iPage.get(random.nextInt(times));
                             } catch (Exception e) {
                                 e.printStackTrace();  // TODO right
                             }
