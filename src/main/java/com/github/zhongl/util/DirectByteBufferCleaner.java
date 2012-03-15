@@ -15,7 +15,7 @@
 
 package com.github.zhongl.util;
 
-import java.lang.reflect.Field;
+import javax.annotation.Nullable;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
@@ -30,26 +30,12 @@ import java.security.PrivilegedAction;
 public final class DirectByteBufferCleaner {
     private DirectByteBufferCleaner() {}
 
-    public static void clean(final ByteBuffer buffer) {
-        if (!buffer.isDirect()) return;
-        try {
-            invoke(invoke(viewed(buffer), "cleaner"), "clean");
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
+    public static void clean(@Nullable final ByteBuffer buffer) {
+        if (buffer == null || !buffer.isDirect() || buffer.capacity() == 0) return;
+        invoke(invoke(viewed(buffer), "cleaner"), "clean");
     }
 
-    public static boolean isNotCleaned(ByteBuffer buffer) {
-        if (!buffer.isDirect()) return false;
-        try {
-            Long address = (Long) get(get(invoke(viewed(buffer), "cleaner"), "thunk"), "address");
-            return address != 0L;
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
-    private static Object invoke(final Object target, final String methodName, final Class<?>... args) throws Exception {
+    private static Object invoke(final Object target, final String methodName, final Class<?>... args) {
         return AccessController.doPrivileged(new PrivilegedAction<Object>() {
             @Override
             public Object run() {
@@ -58,22 +44,7 @@ public final class DirectByteBufferCleaner {
                     method.setAccessible(true);
                     return method.invoke(target);
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        });
-    }
-
-    private static Object get(final Object target, final String fieldName) throws Exception {
-        return AccessController.doPrivileged(new PrivilegedAction<Object>() {
-            @Override
-            public Object run() {
-                try {
-                    Field field = field(target, fieldName);
-                    field.setAccessible(true);
-                    return field.get(target);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    throw new IllegalStateException(e);
                 }
             }
         });
@@ -87,15 +58,7 @@ public final class DirectByteBufferCleaner {
         }
     }
 
-    private static Field field(Object target, String fieldName) throws NoSuchFieldException {
-        try {
-            return target.getClass().getField(fieldName);
-        } catch (NoSuchFieldException e) {
-            return target.getClass().getDeclaredField(fieldName);
-        }
-    }
-
-    private static ByteBuffer viewed(ByteBuffer buffer) throws Exception {
+    private static ByteBuffer viewed(ByteBuffer buffer) {
         ByteBuffer viewedBuffer = (ByteBuffer) invoke(buffer, "viewedBuffer");
         if (viewedBuffer == null) return buffer;
         else return viewed(viewedBuffer);

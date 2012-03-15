@@ -13,29 +13,33 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.util;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+package com.github.zhongl.page;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class Entry<K, V> {
+public class Offset extends Number<Offset> {
 
-    private final K key;
-    private final V value;
+    private final Long value;
 
-    public Entry(K key, V value) {
-        this.key = checkNotNull(key);
-        this.value = checkNotNull(value);
+    public Offset(long value) {
+        this.value = value;
     }
 
-    public K key() {
-        return key;
+    public Offset(String text) {
+        this(Long.parseLong(text));
     }
 
-    public V value() {
+    public long value() {
         return value;
     }
 
     @Override
-    public String toString() { return "Entry{key=" + key + ", value=" + value + '}'; }
+    public String toString() {
+        return value.toString();
+    }
+
+    @Override
+    public int compareTo(Offset o) {
+        return value.compareTo(o.value);
+    }
+
 }

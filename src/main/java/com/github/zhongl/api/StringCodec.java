@@ -1,5 +1,6 @@
 /*
  * Copyright 2012 zhongl
+ *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -13,29 +14,25 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.util;
+package com.github.zhongl.api;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+
+import com.github.zhongl.codec.Codec;
+
+import java.nio.ByteBuffer;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class Entry<K, V> {
-
-    private final K key;
-    private final V value;
-
-    public Entry(K key, V value) {
-        this.key = checkNotNull(key);
-        this.value = checkNotNull(value);
-    }
-
-    public K key() {
-        return key;
-    }
-
-    public V value() {
-        return value;
+public class StringCodec implements Codec<String> {
+    @Override
+    public String decode(ByteBuffer buffer) {
+        int length = buffer.remaining();
+        byte[] bytes = new byte[length];
+        buffer.get(bytes);
+        return new String(bytes);
     }
 
     @Override
-    public String toString() { return "Entry{key=" + key + ", value=" + value + '}'; }
+    public ByteBuffer encode(String object) {
+        return ByteBuffer.wrap(object.getBytes());
+    }
 }

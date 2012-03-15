@@ -15,14 +15,8 @@
 
 package com.github.zhongl.util;
 
-import com.google.common.io.Files;
-
-import java.io.File;
-import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-
-import static com.google.common.base.Preconditions.checkState;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class Md5 {
@@ -54,14 +48,4 @@ public class Md5 {
         return new String(chars);
     }
 
-    public static File renameToMd5(File file) {
-        try {
-            String name = toHex(Files.getDigest(file, messageDigest()));
-            File dest = new File(file.getParentFile(), name);
-            checkState(file.renameTo(dest));
-            return dest;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
 }

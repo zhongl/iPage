@@ -5,19 +5,19 @@
                  +---Ephemerons----+
     [add|remove] |                 |
     ------------+|  key -> record  |    flush
-                 |                 |---------->>>----------+
-        get      |  key -> nil     |                       |
-    ------------+|                 |                       |
-                 +-----------------+                       |
-                        |                                  |
+                 |                 |---------->>>---------+
+        get      |  key -> nil     |                      |
+    ------------+|                 |                      |
+                 +-----------------+                      |
+                        |                                 |
                 getMiss |      +--------------Storage-------------------------------+
-                        |      |                           |                        |
-                        |      |   +----Snapshot----+      |      +-----Merge-----+ |
-                        +-->>>-|--+|  ReadOnlyIndex |----->+>----+|  IndexMerge   | |
-                        |      |   |  ###           |             |  ###          | |
-                        +-->>>-|--+|  ReadOnlyLine  |----->+>----+|  LineAppender | |
-                               |   |  ############  |             |  ##########   | |
-                               |   +----------------+             +---------------+ |
+                        |      |       <current>          |          <merging>      |
+                        |      |   +----Snapshot----+     |      +----Snapshot----+ |
+                        +-->>>-|--+|  Indices       |---->+>----+|  Indices       | |
+                        |      |   |  #             |            |  #             | |
+                        +-->>>-|--+|  Binder        |---->+>----+|  Binder        | |
+                               |   |  ############  |            |  ############  | |
+                               |   +----------------+            +----------------+ |
                                |           +--------------<<<--------------+        |
                                |                          swap                      |
                                +----------------------------------------------------+
@@ -40,8 +40,8 @@
 
 ## References
 
-- [Page](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/ipage/Page.java)
-- [Binder](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/ipage/Binder.java)
+- [Page](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/page/Page.java)
+- [Binder](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/page/Binder.java)
 
 # Group commit
 
@@ -52,13 +52,13 @@
 
 ## References
 
-- [LineAppender](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/ipage/LineAppender.java)
+- [FileAppender](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/io/FileAppender.java)
 
 # Index
 
 - Sorted by key;
 - Binary search on **PRIVATE MODE** MappedByteBuffer;
-- Split files by max size.
+-
 
 ## Merging
 
@@ -82,7 +82,7 @@
                 aItr.next();
             }
 
-            if (remove(c)) continue; // remove this entry
+            if (isRemoved(c)) continue; // remove this entry
             append(c);
         }
 
@@ -92,8 +92,8 @@
 
 ## References
 
-- [ReadOnlyIndex](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/ipage/ReadOnlyIndex.java)
-- [IndexMerger](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/ipage/IndexMerger.java)
+- [Indices](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/index/Indices.java)
+- [Merger](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/index/Merger.java)
 
 # Fault tolerant
 
@@ -101,15 +101,14 @@
 
      HEAD             // Reference to *.s
     -pages
-       *.l            // line file
+       *.p            // page file
        *.i            // index file
        *.s            // References to *.l and *.i
 
 ## References
 
-- [Storage](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/ipage/Storage.java)
-- [Snapshot](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/ipage/Snapshot.java)
-- [TextFile](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/ipage/TextFile.java)
+- [Storage](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/api/Storage.java)
+- [Snapshot](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/api/Snapshot.java)
 
 # Reliable
 
@@ -124,9 +123,16 @@
 
 ## References
 
-- [LineAppender](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/ipage/LineAppender.java)
 - [CallByCountOrElapse](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/util/CallByCountOrElapse.java)
-- [IPage](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/ipage/IPage.java)
+- [IPage](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/api/IPage.java)
+
+# Defragment
+
+TODO
+
+## References
+
+- [DefragPolicy](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/api/DefragPolicy.java)
 
 # More...
 

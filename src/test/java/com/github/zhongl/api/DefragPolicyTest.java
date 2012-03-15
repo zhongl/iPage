@@ -13,29 +13,19 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.util;
+package com.github.zhongl.api;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import org.junit.Test;
+
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class Entry<K, V> {
-
-    private final K key;
-    private final V value;
-
-    public Entry(K key, V value) {
-        this.key = checkNotNull(key);
-        this.value = checkNotNull(value);
+public class DefragPolicyTest {
+    @Test
+    public void usage() throws Exception {
+        DefragPolicy defragPolicy = new DefragPolicy();
+        assertThat(defragPolicy.evaluate(10, 0), is(false));
+        assertThat(defragPolicy.evaluate(2, 0), is(true));
     }
-
-    public K key() {
-        return key;
-    }
-
-    public V value() {
-        return value;
-    }
-
-    @Override
-    public String toString() { return "Entry{key=" + key + ", value=" + value + '}'; }
 }

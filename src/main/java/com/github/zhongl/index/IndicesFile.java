@@ -13,29 +13,30 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.util;
+package com.github.zhongl.index;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import com.github.zhongl.codec.Encoder;
+import com.github.zhongl.io.FileAppender;
+
+import java.io.File;
+import java.io.IOException;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class Entry<K, V> {
+class IndicesFile {
 
-    private final K key;
-    private final V value;
+    private final FileAppender appender;
+    private final Encoder<Index> encoder;
 
-    public Entry(K key, V value) {
-        this.key = checkNotNull(key);
-        this.value = checkNotNull(value);
+    IndicesFile(File dir, Encoder<Index> encoder) throws IOException {
+        appender = new FileAppender(new File(dir, System.nanoTime() + ".i"));
+        this.encoder = encoder;
     }
 
-    public K key() {
-        return key;
+    public void append(Index index) throws IOException {
+        appender.append(encoder.encode(index));
     }
 
-    public V value() {
-        return value;
+    public File toFile() throws IOException {
+        return appender.force();
     }
-
-    @Override
-    public String toString() { return "Entry{key=" + key + ", value=" + value + '}'; }
 }

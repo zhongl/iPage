@@ -13,29 +13,9 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.util;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+package com.github.zhongl.page;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class Entry<K, V> {
-
-    private final K key;
-    private final V value;
-
-    public Entry(K key, V value) {
-        this.key = checkNotNull(key);
-        this.value = checkNotNull(value);
-    }
-
-    public K key() {
-        return key;
-    }
-
-    public V value() {
-        return value;
-    }
-
-    @Override
-    public String toString() { return "Entry{key=" + key + ", value=" + value + '}'; }
+public abstract class Number<T extends Number> implements Comparable<T> {
+    public abstract String toString();
 }

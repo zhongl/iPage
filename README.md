@@ -10,7 +10,9 @@ iPage is a java key-value store library, which is designed for message system.
 * Flush By write count or time elpase
 * Group commit
 * Date recovery after crash
-* \[Auto\] garbage data collecting
+* Garbage data collecting (or Defragment)
+* Degrade after OOM
+* Monitor and control by JMX
 
 ## More
 
@@ -20,10 +22,10 @@ Please see [issues](https://github.com/zhongl/iPage/issues?sort=created&directio
 
     | Case            |   Times   | Total Eplase | Average Elapse | TPS         | Concurrency |
     |-----------------|-----------|--------------|----------------|-------------|-------------|
-    | Random get      | 1,000,000 | 7.034 s      | 7,033ns        | 142,186.83  | 8           |
-    | Async remove    | 1,000,000 | 23.04 s      | 23,044ns       | 43,395.24   | 16          |
-    | Async add       | 1,000,000 | 18.18 s      | 18,180ns       | 55,005.5    | 16          |
-    | Sync add        | 16,384    | 4.820 s      | 294,214ns      | 3,399.17    | 32          |
+    | Random get      | 1,000,000 | 6.009 s      | 6,008   ns     | 166444.74   | 8           |
+    | Async add       | 1,000,000 | 24.90 s      | 24,904  ns     | 40154.19    | 16          |
+    | Async remove    | 1,000,000 | 32.84 s      | 32,842  ns     | 30448.82    | 16          |
+    | Sync add        | 16,384    | 5.142 s      | 313,857 ns     | 3186.31     | 32          |
 
 * Read and write data is 1KB
 
@@ -58,8 +60,7 @@ Make sure your enviroment has:
 
 Please see:
 
-- [KVEngineTest](https://github.com/zhongl/iPage/blob/master/src/test/java/com/github/zhongl/ipage/KVEngineTest.java)
-- [IPageTest](https://github.com/zhongl/iPage/blob/master/src/test/java/com/github/zhongl/ipage/IPageTest.java)
+- [IPageTest](https://github.com/zhongl/iPage/blob/master/src/test/java/com/github/zhongl/api/IPageTest.java)
 
 # More
 

@@ -41,7 +41,7 @@ public abstract class FileTestContext {
         if (file != null && file.exists()) file.delete();
     }
 
-    private void delete(File file) throws IOException {
+    public static void delete(File file) throws IOException {
         if (file.isDirectory()) {
             for (File f : file.listFiles()) delete(f);
             if (!file.delete()) throw new IOException("Can't delete dir " + file);
