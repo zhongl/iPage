@@ -1,5 +1,6 @@
 /*
  * Copyright 2012 zhongl
+ *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -39,7 +40,7 @@ class DefragPolicy {
         setGapRatioThreshold(2);
     }
 
-    public boolean evaluate(int aliveSize, int probableDelta) {
+    public boolean evaluate(final int aliveSize, final int probableDelta) {
         int delta = aliveSize - lastAliveSize;
         if (delta > 0) increment += delta;
         else decrement -= delta;
@@ -47,8 +48,16 @@ class DefragPolicy {
         this.lastAliveSize = aliveSize;
 
         double availableMemoryForCollectAliveIndex = Runtime.getRuntime().freeMemory() * availableFreeMemoryRatio * 0.1;
-        return deltaRatio() <= gapRatioThreshold * 0.1
+
+        boolean needDefrag = deltaRatio() <= gapRatioThreshold * 0.1
                 && availableMemoryForCollectAliveIndex >= (aliveSize + probableDelta) * aliveIndexOccupied;
+
+        if (needDefrag) {
+            increment = aliveSize;
+            decrement = 0;
+        }
+
+        return needDefrag;
     }
 
     @ManagedAttribute
