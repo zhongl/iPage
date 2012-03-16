@@ -25,14 +25,20 @@ import java.nio.ByteBuffer;
 public class Md5KeyCodec implements KeyCodec {
     @Override
     public Md5Key decode(ByteBuffer byteBuffer) {
-        byte[] bytes = new byte[Md5Key.BYTE_LENGTH];
+        byte[] bytes = new byte[length()];
         byteBuffer.get(bytes);
         return new Md5Key(bytes);
     }
 
     @Override
     public ByteBuffer encode(Key value) {
-        return (ByteBuffer) ByteBuffer.allocate(Md5Key.BYTE_LENGTH).put(((Md5Key) value).toBytes()).flip();
+        return (ByteBuffer) ByteBuffer.allocate(length()).put(((Md5Key) value).toBytes()).flip();
+    }
+
+    @Override
+    public int encode(Key value, ByteBuffer byteBuffer) {
+        byteBuffer.put(((Md5Key) value).toBytes());
+        return length();
     }
 
     @Override

@@ -33,4 +33,10 @@ public class BytesCodec implements Codec<byte[]> {
     public ByteBuffer encode(byte[] object) {
         return ByteBuffer.wrap(object);
     }
+
+    @Override
+    public int encode(byte[] value, ByteBuffer byteBuffer) {
+        byteBuffer.put(value);
+        return value.length;
+    }
 }

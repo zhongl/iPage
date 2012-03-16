@@ -63,6 +63,12 @@ public class StorageTest extends FileTestContext {
             public ByteBuffer encode(Integer value) {
                 return (ByteBuffer) ByteBuffer.allocate(4).putInt(value).flip();
             }
+
+            @Override
+            public int encode(Integer value, ByteBuffer byteBuffer) {
+                byteBuffer.putInt(value);
+                return 4;
+            }
         });
     }
 

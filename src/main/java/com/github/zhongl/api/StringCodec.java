@@ -35,4 +35,10 @@ public class StringCodec implements Codec<String> {
     public ByteBuffer encode(String object) {
         return ByteBuffer.wrap(object.getBytes());
     }
+
+    @Override
+    public int encode(String value, ByteBuffer byteBuffer) {
+        byteBuffer.put(value.getBytes());
+        return value.length();
+    }
 }

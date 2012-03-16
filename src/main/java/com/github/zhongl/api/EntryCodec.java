@@ -52,4 +52,14 @@ class EntryCodec<V> implements Codec<Entry<Key, V>> {
                                       .put(vBuffer)
                                       .flip();
     }
+
+    @Override
+    public int encode(Entry<Key, V> value, ByteBuffer byteBuffer) {
+        keyCodec.encode(value.key(), byteBuffer);
+        int position = byteBuffer.position();
+        byteBuffer.putInt(0);
+        int length = valueCodec.encode(value.value(), byteBuffer);
+        byteBuffer.putInt(position, length);
+        return keyCodec.length() + 4 + length;
+    }
 }

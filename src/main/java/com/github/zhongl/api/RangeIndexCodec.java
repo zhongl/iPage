@@ -53,6 +53,19 @@ public class RangeIndexCodec implements IndexCodec, IndexFactory {
     }
 
     @Override
+    public int encode(Index value, final ByteBuffer byteBuffer) {
+        keyCodec.encode(value.key(), byteBuffer);
+        value.get(new Function<Range, Void>() {
+            @Override
+            public Void apply(Range range) {
+                byteBuffer.putLong(range.from()).putLong(range.to());
+                return null;
+            }
+        });
+        return length();
+    }
+
+    @Override
     public int length() {
         return keyCodec.length() + 16;
     }

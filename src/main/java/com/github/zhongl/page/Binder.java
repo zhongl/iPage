@@ -18,13 +18,16 @@ package com.github.zhongl.page;
 
 import com.github.zhongl.codec.Codec;
 import com.github.zhongl.io.FileAppender;
+import com.github.zhongl.util.Nils;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -108,8 +111,14 @@ public class Binder<V> implements Iterable<Element<V>> {
         return fileAppender.force();
     }
 
-    private long append(V value, FileAppender fileAppender, Function<Element<V>, Void> collector, long offset) throws IOException {
-        int appended = fileAppender.append(codec.encode(value));
+    private long append(final V value, FileAppender fileAppender, Function<Element<V>, Void> collector, long offset) throws IOException {
+        int appended = fileAppender.append(new Function<ByteBuffer, Void>() {
+            @Override
+            public Void apply(@Nullable ByteBuffer input) {
+                codec.encode(value, input);
+                return Nils.VOID;
+            }
+        });
         collector.apply(new Element<V>(value, new Range(offset, offset + appended)));
         return appended;
     }

@@ -74,6 +74,12 @@ public class IndicesBenchmark extends FileTestContext {
         }
 
         @Override
+        public int encode(Index value, ByteBuffer byteBuffer) {
+            codec.encode(value.key(), byteBuffer);
+            return codec.length();
+        }
+
+        @Override
         public int length() {
             return codec.length();
         }

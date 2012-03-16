@@ -56,6 +56,12 @@ public class BinderTest extends FileTestContext {
             public ByteBuffer encode(Integer integer) {
                 return (ByteBuffer) ByteBuffer.allocate(4).putInt(integer).flip();
             }
+
+            @Override
+            public int encode(Integer value, ByteBuffer byteBuffer) {
+                byteBuffer.putInt(value);
+                return 4;
+            }
         });
     }
 

@@ -52,6 +52,12 @@ public class BinderBenchmark extends FileTestContext {
             public ByteBuffer encode(byte[] value) {
                 return ByteBuffer.wrap(value);
             }
+
+            @Override
+            public int encode(byte[] value, ByteBuffer byteBuffer) {
+                byteBuffer.put(value);
+                return value.length;
+            }
         };
         empty = Collections.emptyList();
         collector = new Function<Element<byte[]>, Void>() {
