@@ -24,7 +24,6 @@ import com.google.common.base.Predicate;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.AbstractList;
@@ -34,6 +33,7 @@ import java.util.List;
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
 public class BinderBenchmark extends FileTestContext {
 
+    public static final int LENGTH = 1024;
     private Codec<byte[]> codec;
     private List<Page<byte[]>> empty;
     private Function<Element<byte[]>, Void> collector;
@@ -56,7 +56,7 @@ public class BinderBenchmark extends FileTestContext {
         empty = Collections.emptyList();
         collector = new Function<Element<byte[]>, Void>() {
             @Override
-            public Void apply(@Nullable Element<byte[]> input) {
+            public Void apply(Element<byte[]> input) {
                 return null;
             }
         };
@@ -88,6 +88,37 @@ public class BinderBenchmark extends FileTestContext {
     }
 
     @Test
+    public void get() throws Exception {
+        dir = testDir("get");
+        final Binder<byte[]> binder = new Binder<byte[]>(dir, empty, codec);
+
+        final int times = 1000000;
+        Benchmarks.benchmark("append", new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    binder.append(list(times), collector);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, times);
+
+        Benchmarks.benchmark("get", new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    for (int i = 0; i < times; i++) {
+                        binder.get(new Range(i * 1024, (i + 1) * 1024));
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, times);
+    }
+
+    @Test
     public void defrag() throws Exception {
         dir = testDir("defrag");
         final Binder<byte[]> binder = new Binder<byte[]>(dir, empty, codec);
@@ -101,7 +132,7 @@ public class BinderBenchmark extends FileTestContext {
                 try {
                     binder.defrag(new Predicate<Element<byte[]>>() {
                         @Override
-                        public boolean apply(@Nullable Element<byte[]> input) {
+                        public boolean apply(Element<byte[]> input) {
                             return true;
                         }
                     }, collector);
@@ -116,7 +147,7 @@ public class BinderBenchmark extends FileTestContext {
         return new AbstractList<byte[]>() {
             @Override
             public byte[] get(int index) {
-                return new byte[1024];
+                return new byte[LENGTH];
             }
 
             @Override
