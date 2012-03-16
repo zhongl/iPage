@@ -93,7 +93,7 @@ public class FileAppender {
 
     private void write() throws IOException {
         batchBuffer.flip();
-        thisChannel().write(batchBuffer);
+        while (batchBuffer.hasRemaining()) thisChannel().write(batchBuffer);
         batchBuffer.rewind();
     }
 
