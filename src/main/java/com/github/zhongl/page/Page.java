@@ -94,7 +94,7 @@ public class Page<V> extends Numbered<Offset> implements Iterable<Element<V>> {
     private void read(FileChannel channel, int begin, ByteBuffer buffer) throws IOException {
         try {
             channel.position(begin);
-            channel.read(buffer);
+            while (buffer.hasRemaining()) channel.read(buffer);
             buffer.flip();
         } finally {
             Closeables.closeQuietly(channel);
