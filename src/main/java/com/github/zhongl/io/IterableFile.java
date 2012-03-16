@@ -1,5 +1,6 @@
 /*
  * Copyright 2012 zhongl
+ *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -27,6 +28,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.Iterator;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
@@ -59,14 +61,14 @@ public class IterableFile {
                         return object;
                     } catch (BufferUnderflowException e) {
                         try {
-                            if (position >= stream.getChannel().size()) {
+                            FileChannel channel = stream.getChannel();
+                            if (position >= channel.size()) {
                                 DirectByteBufferCleaner.clean(byteBuffer);
                                 Closeables.closeQuietly(stream);
                                 return endOfData();
                             }
                             byteBuffer.rewind();
-                            stream.getChannel().position(position).read(byteBuffer);
-                            byteBuffer.flip();
+                            FileChannels.read(channel, position, byteBuffer);
                         } catch (IOException ex) {
                             throw new IllegalStateException(ex);
                         }

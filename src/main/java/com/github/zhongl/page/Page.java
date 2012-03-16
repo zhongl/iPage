@@ -18,13 +18,12 @@ package com.github.zhongl.page;
 
 import com.github.zhongl.codec.Decoder;
 import com.github.zhongl.io.FileAppender;
+import com.github.zhongl.io.FileChannels;
 import com.github.zhongl.io.IterableFile;
 import com.github.zhongl.util.Nils;
 import com.google.common.base.Function;
-import com.google.common.io.Closeables;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -44,19 +43,19 @@ public class Page<V> extends Numbered<Offset> implements Iterable<Element<V>> {
     public String fileName() {return file.getName();}
 
     public V get(final Range range) {
-        return read(new FileChannelFunction<V>() {
-            @Override
-            public V apply(FileChannel channel) throws IOException {
-                ByteBuffer buffer = ByteBuffer.allocate((int) (range.to() - range.from()));
-                read(channel, refer(range.from()), buffer);
-                return decoder.decode(buffer);
-            }
-        });
+        try {
+            return FileChannels.read(file, refer(range.from()), (int) range.length(), new Function<ByteBuffer, V>() {
+                @Override
+                public V apply(ByteBuffer byteBuffer) {
+                    return decoder.decode(byteBuffer);
+                }
+            });
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
-    public Offset nextPageNumber() {
-        return new Offset(number().value() + file.length());
-    }
+    public Offset nextPageNumber() { return new Offset(number().value() + file.length()); }
 
     @Override
     public Iterator<Element<V>> iterator() {
@@ -77,56 +76,22 @@ public class Page<V> extends Numbered<Offset> implements Iterable<Element<V>> {
     }
 
     public void transferTo(final FileAppender fileAppender, final RangeJoiner joiner) {
-        read(new FileChannelFunction<Void>() {
+        try {
+            FileChannels.read(file, new FileChannels.FileChannelFunction<Void>() {
 
-            @Override
-            public Void apply(FileChannel channel) throws IOException {
-                for (Range range : joiner) {
-                    fileAppender.transferFrom(channel, refer(range.from()), (int) (range.to() - range.from()));
+                @Override
+                public Void apply(FileChannel channel) throws IOException {
+                    for (Range range : joiner) {
+                        fileAppender.transferFrom(channel, refer(range.from()), (int) (range.length()));
+                    }
+                    return Nils.VOID;
                 }
-                return Nils.VOID;
-            }
-        });
-    }
-
-    private int refer(long absolute) { return (int) (absolute - number().value()); }
-
-    private void read(FileChannel channel, int begin, ByteBuffer buffer) throws IOException {
-        try {
-            channel.position(begin);
-            channel.read(buffer);
-            buffer.flip();
-        } finally {
-            Closeables.closeQuietly(channel);
-        }
-    }
-
-    private <T> T read(FileChannelFunction<T> function) {
-        try {
-            FileInputStream stream = new FileInputStream(file);
-            return read(stream, function);
+            });
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
     }
 
-    private <T> T read(FileInputStream stream, FileChannelFunction<T> function) throws IOException {
-        try {
-            return read(stream.getChannel(), function);
-        } finally {
-            Closeables.closeQuietly(stream);
-        }
-    }
+    private int refer(long absolute) { return (int) (absolute - number().value()); }
 
-    private <T> T read(FileChannel channel, FileChannelFunction<T> function) throws IOException {
-        try {
-            return function.apply(channel);
-        } finally {
-            Closeables.closeQuietly(channel);
-        }
-    }
-
-    private interface FileChannelFunction<T> {
-        public T apply(FileChannel channel) throws IOException;
-    }
 }
