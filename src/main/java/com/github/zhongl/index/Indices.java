@@ -1,5 +1,6 @@
 /*
  * Copyright 2012 zhongl
+ *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -37,23 +38,25 @@ public class Indices {
     private final Merger merger;
     private final IndexCodec codec;
     private final DirectBuffer directBuffer;
-    private final SortedIndexList sortedIndexList;
+    private final SortedList<Index> indexList;
+    private final SortedList<Key> keyList;
 
     public Indices(File file, IndexCodec codec) {
         try {
             this.directBuffer = new DirectBuffer().loadFrom(file);
             this.codec = codec;
             this.merger = new Merger(file.getParentFile(), codec);
-            this.sortedIndexList = new SortedIndexList();
+            this.keyList = new KeyList();
+            this.indexList = new IndexList();
         } catch (IOException e) {
             throw new IllegalArgumentException(e);
         }
     }
 
     public Index get(Key key) {
-        int i = Collections.binarySearch(sortedIndexList, new FakeIndex(key));
+        int i = Collections.binarySearch(keyList, key);
         if (i < 0) return null;
-        return sortedIndexList.get(i);
+        return indexList.get(i);
     }
 
     public Indices merge(Difference difference) throws IOException {
@@ -62,26 +65,27 @@ public class Indices {
         return this;
     }
 
-    public Iterator<Index> iterator() { return sortedIndexList.iterator(); }
+    public Iterator<Index> iterator() { return indexList.iterator(); }
 
-    public int size() { return sortedIndexList.size(); }
+    public int size() { return indexList.size(); }
 
     public String fileName() { return directBuffer.backendFile().getName(); }
 
     public long diskOccupiedBytes() { return directBuffer.backendFile().length(); }
 
-    private static class FakeIndex extends Index {
-
-        protected FakeIndex(Key key) { super(key); }
-
+    private abstract class SortedList<T> extends AbstractList<T> implements RandomAccess {
         @Override
-        public boolean isRemoved() { return false; }
-
-        @Override
-        public <Clue, Value> Value get(Function<Clue, Value> function) { throw new UnsupportedOperationException(); }
+        public int size() {
+            return directBuffer.read(new Function<ByteBuffer, Integer>() {
+                @Override
+                public Integer apply(ByteBuffer byteBuffer) {
+                    return byteBuffer.capacity() / codec.length();
+                }
+            });
+        }
     }
 
-    private class SortedIndexList extends AbstractList<Index> implements RandomAccess {
+    private class IndexList extends SortedList<Index> {
 
         @Override
         public Index get(final int index) {
@@ -94,12 +98,16 @@ public class Indices {
             });
         }
 
+    }
+
+    private class KeyList extends SortedList<Key> {
         @Override
-        public int size() {
-            return directBuffer.read(new Function<ByteBuffer, Integer>() {
+        public Key get(final int index) {
+            return directBuffer.read(new Function<ByteBuffer, Key>() {
                 @Override
-                public Integer apply(ByteBuffer byteBuffer) {
-                    return byteBuffer.capacity() / codec.length();
+                public Key apply(ByteBuffer byteBuffer) {
+                    byteBuffer.limit((index + 1) * codec.length()).position(index * codec.length());
+                    return codec.decodeKey(byteBuffer);
                 }
             });
         }

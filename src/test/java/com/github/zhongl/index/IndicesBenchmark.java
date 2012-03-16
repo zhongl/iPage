@@ -77,6 +77,11 @@ public class IndicesBenchmark extends FileTestContext {
         public int length() {
             return codec.length();
         }
+
+        @Override
+        public Key decodeKey(ByteBuffer byteBuffer) {
+            return codec.decode(byteBuffer);
+        }
     }
 
     private static class InnerIndex extends Index {

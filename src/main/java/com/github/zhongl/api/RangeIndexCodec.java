@@ -39,6 +39,11 @@ public class RangeIndexCodec implements IndexCodec, IndexFactory {
     }
 
     @Override
+    public Key decodeKey(ByteBuffer byteBuffer) {
+        return keyCodec.decode(byteBuffer);
+    }
+
+    @Override
     public ByteBuffer encode(Index value) {
         final ByteBuffer buffer = ByteBuffer.allocate(length()).put(keyCodec.encode(value.key()));
 

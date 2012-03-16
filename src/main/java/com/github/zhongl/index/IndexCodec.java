@@ -20,5 +20,9 @@ import com.github.zhongl.codec.Decoder;
 import com.github.zhongl.codec.Encoder;
 import com.github.zhongl.codec.FixedLength;
 
+import java.nio.ByteBuffer;
+
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public interface IndexCodec extends Encoder<Index>, Decoder<Index>, FixedLength {}
+public interface IndexCodec extends Encoder<Index>, Decoder<Index>, FixedLength {
+    Key decodeKey(ByteBuffer byteBuffer);
+}
