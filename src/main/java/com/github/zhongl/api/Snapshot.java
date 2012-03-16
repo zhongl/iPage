@@ -1,5 +1,6 @@
 /*
  * Copyright 2012 zhongl
+ *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -69,13 +70,13 @@ class Snapshot<V> {
                 }
             };
 
-            if (!headFile.exists()) Files.write("null.s".getBytes(), headFile);
-
             if (!pagesDir.exists()) {
                 pagesDir.mkdirs();
                 Files.write(("I\tnull.i\n").getBytes(), new File(pagesDir, "null.s"));
                 new File(pagesDir, "null.i").createNewFile();
             }
+
+            if (!headFile.exists()) Files.write("null.s".getBytes(), headFile);
 
             String snapshotFileName = Files.readFirstLine(headFile, Charset.defaultCharset());
             if (snapshotFileName != null) parser.parse(new File(pagesDir, snapshotFileName));
