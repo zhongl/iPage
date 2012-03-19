@@ -1,5 +1,6 @@
 /*
  * Copyright 2012 zhongl
+ *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
  *    You may obtain a copy of the License at
@@ -44,13 +45,12 @@ public class SnapshotTest extends FileTestContext {
 
         Snapshot<Integer> snapshot = new Snapshot<Integer>(dir, indexCodec, entryCodec);
 
-        snapshot.update();
+        snapshot.updateAndCleanUp();
 
         String snapshotFileName = Files.readFirstLine(headFile, Charset.defaultCharset());
         assertThat(snapshotFileName, is(not("null.s")));
         assertThat(new File(pagesDir, snapshotFileName).exists(), is(true));
 
-        snapshot.cleanUp();
         assertThat(new File(pagesDir, "null.s").exists(), is(false));
     }
 }

@@ -37,12 +37,12 @@ class Snapshot<V> {
     private final File pagesDir;
     private final Indices indices;
     private final Binder<Entry<Key, V>> binder;
-    private final Set<String> fileNames;
+//    private final Set<String> fileNames;
 
     public Snapshot(File dir, final IndexCodec indexCodec, final Codec<Entry<Key, V>> entryCodec) {
         headFile = new File(dir, "HEAD");
         pagesDir = new File(dir, "pages");
-        fileNames = new HashSet<String>();
+//        fileNames = new HashSet<String>();
 
         try {
 
@@ -104,8 +104,10 @@ class Snapshot<V> {
         binder.append(values, collector);
     }
 
-    public void update() throws IOException {
+    public void updateAndCleanUp() throws IOException {
+        final Set<String> fileNames = new HashSet<String>();
         final StringBuilder sb = new StringBuilder();
+
         binder.foreachPage(new Function<Page<Entry<Key, V>>, Void>() {
             @Override
             public Void apply(Page<Entry<Key, V>> page) {
@@ -125,9 +127,7 @@ class Snapshot<V> {
 
         Files.write(sb.toString().getBytes(), snapshotFile);
         Files.write(snapshotFile.getName().getBytes(), headFile);
-    }
 
-    public void cleanUp() {
         File[] files = pagesDir.listFiles();
         for (File file : files) if (!fileNames.contains(file.getName())) file.delete();
         fileNames.clear();

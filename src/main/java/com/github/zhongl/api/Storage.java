@@ -71,9 +71,10 @@ class Storage<V> implements Iterable<V> {
                 append(addOrUpdates, removes);
                 lastBehavior = Behavior.APPEND;
             }
-            snapshot.update();
             onSuccess(addOrUpdates);
             onSuccess(removes);
+            snapshot.updateAndCleanUp();
+
         } catch (OutOfMemoryError e) {
             logger.log(Level.WARNING, "Reject add or update operations because ", e);
             onFailure(addOrUpdates, e);
@@ -87,7 +88,6 @@ class Storage<V> implements Iterable<V> {
             lastBehavior = Behavior.FAIL;
         } finally {
             flushedCallback.onSuccess(Nils.VOID);
-            snapshot.cleanUp();
             lastBehaviorElapseMillis = stopwatch.stop().elapsedMillis();
         }
     }
