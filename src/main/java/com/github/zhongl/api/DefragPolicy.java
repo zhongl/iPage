@@ -112,6 +112,7 @@ class DefragPolicy {
     }
 
     private double deltaRatio() {
+        if (increment == 0) return Double.MAX_VALUE; // avoid defrag
         long gap = increment - decrement;
         if (gap != 0) return gap * 1.0 / increment;
         increment = decrement = 0;
