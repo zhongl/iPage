@@ -56,7 +56,9 @@ public class IterableFile {
                 while (true) {
                     try {
                         int last = byteBuffer.position();
-                        T object = function.apply(byteBuffer);
+                        ByteBuffer duplicate = byteBuffer.duplicate();
+                        T object = function.apply(duplicate);
+                        byteBuffer.position(duplicate.position());
                         position += byteBuffer.position() - last;
                         return object;
                     } catch (BufferUnderflowException e) {

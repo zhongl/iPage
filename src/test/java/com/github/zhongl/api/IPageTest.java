@@ -30,6 +30,7 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import java.io.File;
 import java.lang.management.ManagementFactory;
+import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -195,6 +196,43 @@ public class IPageTest extends FileTestContext {
         }
 
         assertThat((Integer) server.getAttribute(defragPolicy, "lastAliveSize"), is(0));
+
+    }
+
+    @Test
+    public void issue52() throws Exception {
+        // Fixed #52 : Iterated value incorrect
+
+        dir = testDir("issue52");
+
+        iPage = stringIPage(dir, 11, 1000, 100L);
+
+        final int times = 20;
+
+        final CountDownLatch latch = new CountDownLatch(times);
+
+        for (int i = 0; i < times; i++) {
+            String key = i + "";
+            iPage.add(key, key, new FutureCallback<Void>() {
+                @Override
+                public void onSuccess(Void result) {
+                    latch.countDown();
+                }
+
+                @Override
+                public void onFailure(Throwable t) {
+                    t.printStackTrace();
+                    latch.countDown();
+                }
+            });
+        }
+
+        latch.await();
+
+        Iterator<String> iterator = iPage.iterator();
+        for (int i = 0; i < times; i++) {
+            assertThat(iterator.next(), is(i + ""));
+        }
 
     }
 
