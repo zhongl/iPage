@@ -67,7 +67,7 @@ public class IterableFile {
                                 Closeables.closeQuietly(stream);
                                 return endOfData();
                             }
-                            byteBuffer.rewind();
+                            byteBuffer.clear();
                             FileChannels.read(channel, position, byteBuffer);
                         } catch (IOException ex) {
                             throw new IllegalStateException(ex);

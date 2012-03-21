@@ -83,7 +83,7 @@ public class LoadFileBenchmark {
                     } finally {
                         Closeables.closeQuietly(inputStream);
                     }
-                    buffer.rewind();
+                    buffer.clear();
                 }
             }
         }, TIMES);
