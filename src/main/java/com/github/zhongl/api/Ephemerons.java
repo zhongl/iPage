@@ -128,6 +128,7 @@ public abstract class Ephemerons<V> {
                         //  release if it is the same entry
                         Record thatRecord = map.get(record.key);
                         if (thatRecord != null && thatRecord.compareTo(record) == 0) {
+                            map.remove(record.key);
                             flowControl.release();
                             record.callback.onFailure(t);
                         }

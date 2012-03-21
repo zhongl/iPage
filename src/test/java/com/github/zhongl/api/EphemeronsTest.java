@@ -208,7 +208,6 @@ public class EphemeronsTest {
                 onFailure(removes);
                 failed = true;
                 futureCallback.onSuccess(Nils.VOID);
-                System.out.println("failed");
                 return;
             }
 
