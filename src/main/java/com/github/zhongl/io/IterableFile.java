@@ -61,7 +61,8 @@ public class IterableFile {
                         byteBuffer.position(duplicate.position());
                         position += byteBuffer.position() - last;
                         return object;
-                    } catch (BufferUnderflowException e) {
+                    } catch (RuntimeException e) {
+                        if (isNotOutOfBound(e)) throw e;
                         try {
                             FileChannel channel = stream.getChannel();
                             if (position >= channel.size()) {
@@ -78,6 +79,10 @@ public class IterableFile {
                 }
             }
         };
+    }
+
+    private boolean isNotOutOfBound(RuntimeException e) {
+        return !(e instanceof BufferUnderflowException || e instanceof IllegalArgumentException);
     }
 
 }
