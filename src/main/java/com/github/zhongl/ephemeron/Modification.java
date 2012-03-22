@@ -14,33 +14,12 @@
  *    limitations under the License.
  */
 
-package com.github.zhongl.api;
-
-import com.google.common.util.concurrent.FutureCallback;
+package com.github.zhongl.ephemeron;
 
 /** @author <a href="mailto:zhong.lunfu@gmail.com">zhongl<a> */
-public class WriteOperation<V> implements FutureCallback<Void> {
+public class Modification<V> {
+    public Eachable<V> addOrUpdates(){
 
-    private final V attachment;
-    private final FutureCallback<Void> origin;
-
-    public WriteOperation(V attachment, FutureCallback<Void> origin) {
-        this.attachment = attachment;
-        this.origin = origin;
+        return null;
     }
-
-    @Override
-    public void onSuccess(Void result) {
-        origin.onSuccess(result);
-    }
-
-    @Override
-    public void onFailure(Throwable t) {
-        origin.onFailure(t);
-    }
-
-    public V attachement() {
-        return attachment;
-    }
-
 }
