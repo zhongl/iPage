@@ -23,7 +23,7 @@
 
     <groupId>com.github.zhongl</groupId>
     <artifactId>iPage</artifactId>
-    <version>2.0-rc1</version>
+    <version>2.0-rc2</version>
     <build>
         <plugins>
             <plugin>
