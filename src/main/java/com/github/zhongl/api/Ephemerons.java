@@ -28,9 +28,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -44,12 +42,21 @@ public abstract class Ephemerons<V> {
     private final Map<Key, Record> map;
     private final Semaphore flowControl;
     private final AtomicBoolean flushing;
+    private final ExecutorService asyncRemovingService;
 
     protected Ephemerons() {
         id = new AtomicLong(0L);
         map = new ConcurrentHashMap<Key, Record>();
         flowControl = new Semaphore(0, true);
         flushing = new AtomicBoolean(false);
+        asyncRemovingService = Executors.newCachedThreadPool(new ThreadFactory() {
+            @Override
+            public Thread newThread(Runnable r) {
+                Thread thread = new Thread(r, "async-removing");
+                thread.setDaemon(true);
+                return thread;
+            }
+        });
     }
 
     public void add(final Key key, final V value, final FutureCallback<Void> removedOrDurableCallback) {
@@ -110,7 +117,16 @@ public abstract class Ephemerons<V> {
                         Record thatRecord = map.get(record.key);
 
                         if (thatRecord == null) { // Remove the key which had been removed during flushing
-                            remove(record.key, FutureCallbacks.<Void>ignore());
+                            if (flowControl.tryAcquire()) remove(record.key, FutureCallbacks.<Void>ignore());
+                            else {
+                                // TODO refactor this ugly implement.
+                                asyncRemovingService.submit(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        remove(record.key, FutureCallbacks.<Void>ignore());
+                                    }
+                                });
+                            }
                             return;
                         }
 

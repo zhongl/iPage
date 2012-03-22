@@ -182,6 +182,22 @@ public class EphemeronsTest {
 
     }
 
+    @Test
+    public void issue55() throws Exception {
+        // Fixed #55 : Dead lock cause by flushing
+        ephemerons.throughout(2);
+
+        ephemerons.add(key(1), 1, ignore);
+
+        ephemerons.flush();
+        ephemerons.remove(key(1), ignore);
+
+        ephemerons.add(key(2), 2, ignore);
+        ephemerons.add(key(3), 3, ignore);
+
+        assertThat(mergeAfter.tryAcquire(20L, TimeUnit.MILLISECONDS), is(true));
+    }
+
     private Key key(int i) {return new Md5Key(Md5.md5((i + "").getBytes()));}
 
     class Store {
