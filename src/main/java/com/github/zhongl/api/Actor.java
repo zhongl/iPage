@@ -43,7 +43,7 @@ public abstract class Actor {
     protected Actor(String name) { this(name, TIMEOUT); }
 
     protected Actor(String name, long timeout) {
-        checkArgument(timeout > 0);
+        checkArgument(timeout >= 0);
         this.timeout = timeout;
         this.tasks = new LinkedBlockingQueue<Runnable>();
         core = new Core(name);
