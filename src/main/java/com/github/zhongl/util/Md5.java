@@ -40,7 +40,7 @@ public class Md5 {
     }
 
     public static String toHex(byte[] bytes) {
-        char[] chars = new char[HEX_DIGITS.length * 2];
+        char[] chars = new char[bytes.length * 2];
         for (int i = 0; i < bytes.length; i++) {
             chars[i * 2] = HEX_DIGITS[bytes[i] >>> 4 & 0xf];
             chars[i * 2 + 1] = HEX_DIGITS[bytes[i] & 0xf];
