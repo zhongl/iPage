@@ -56,12 +56,13 @@
 
 # Index
 
-- Sorted by key;
-- Binary search on **PRIVATE MODE** MappedByteBuffer;
--
+* Sorted by key;
+* Binary search on **PRIVATE MODE** MappedByteBuffer;
+
 
 ## Merging
 
+  ```java
     public void merge(Iterator<Entry<Key, Range>> base, Iterator<Entry<Key, Range>> delta) {
         PeekingIterator<Entry<Key, Range>> aItr = Iterators.peekingIterator(base);
         PeekingIterator<Entry<Key, Range>> bItr = Iterators.peekingIterator(delta);
@@ -89,11 +90,12 @@
         mergeRestOf(aItr);
         mergeRestOf(bItr);
     }
+```
 
 ## References
 
-- [Indices](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/index/Indices.java)
-- [Merger](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/index/Merger.java)
+* [Indices](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/index/Indices.java)
+* [Merger](https://github.com/zhongl/iPage/blob/master/src/main/java/com/github/zhongl/index/Merger.java)
 
 # Fault tolerant
 
